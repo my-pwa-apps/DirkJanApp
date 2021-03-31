@@ -6,8 +6,8 @@
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta keywords="garfield, gocomics, gocomics.com, gocomics.com/garfield, comic, comics, strip, strips, cartoon, cartoons, cat, jim, davis, webapp, mobile, responsive, paws, pwa, progressive, web, app, ios, android, windows, platform, multi, platforms, independent">
-    <meta name="description" content="Garfield Comics, Current, Next, Previous, Random, First, Specific Date, Swipe">
+    <meta keywords="dirkjan, dirkjan.nl, comic, comics, strip, strips, cartoon, cartoons, mark, retera, webapp, mobile, responsive, pwa, progressive, web, app, ios, android, windows, platform, multi, platforms, independent">
+    <meta name="description" content="DirkJan Strip, Vandaag, Volgende, Vorige, Random, Eerste, Specifieke datum, Swipe">
     <title>Daily DirkJan Comics</title>
 
     <link rel="stylesheet" href="./main.css">
@@ -35,12 +35,12 @@
   
 
   <div class="buttongrid">
-    <button class="button" id="Previous" onclick="PreviousClick()"><i class="fa fa-arrow-circle-left"></i>  Previous</button>
+    <button class="button" id="Previous" onclick="PreviousClick()"><i class="fa fa-arrow-circle-left"></i>  Vorige</button>
     <button class="button" id="Random" onclick="RandomClick()">Random</button>
-    <button class="button" id="Next" onclick="NextClick()">Next  <i class="fa fa-arrow-circle-right"></i></button>
-    <button class="button" id="First"  onclick="FirstClick()">First</button>
+    <button class="button" id="Next" onclick="NextClick()">Volgende  <i class="fa fa-arrow-circle-right"></i></button>
+    <button class="button" id="First"  onclick="FirstClick()">Eerste</button>
     <input id="DatePicker" oninput="DateChange()" type="date" min="2015-05-04">
-    <button class="button" id="Current" onclick="CurrentClick()">Current</button>
+    <button class="button" id="Current" onclick="CurrentClick()">Vandaag</button>
   </div>  
   <br><br>
   <img id="comic" alt="Loading comic from https://dirkjan.nl..." style="width:100vw;  margin-left: -50vw; margin-right: -50vw; position: relative ;right: 50%;left:50%">
@@ -49,10 +49,10 @@
   <br>
   
  <div class="legend"> 
-    <label>Next</label><label>=</label><label>&nbsp;swipe left&nbsp;</label><i class="fa fa-arrow-circle-left"></i>
-    <label>Previous&nbsp;</label><label>=</label><label>&nbsp;swipe right&nbsp;</label><i class="fa fa-arrow-circle-right"></i>
+    <label>Volgende</label><label>=</label><label>&nbsp;swipe left&nbsp;</label><i class="fa fa-arrow-circle-left"></i>
+    <label>Vorige&nbsp;</label><label>=</label><label>&nbsp;swipe right&nbsp;</label><i class="fa fa-arrow-circle-right"></i>
     <label>Random</label><label>=</label><label>&nbsp;swipe down&nbsp;</label><i class="fa fa-arrow-circle-down"></i>
-    <label>Current</label><label>=</label><label>&nbsp;swipe up&nbsp;</label><i class="fa fa-arrow-circle-up"></i>
+    <label>Vandaag</label><label>=</label><label>&nbsp;swipe up&nbsp;</label><i class="fa fa-arrow-circle-up"></i>
  </div>
  <br>
  

@@ -1,6 +1,6 @@
 {
-    "name": "Garfield's App",
-    "short_name": "GarfieldApp",
+    "name": "DirkJan's App",
+    "short_name": "DirkJanApp",
     "start_url": "./index.html",
     "display": "standalone",
     "orientation": "portrait-primary",
