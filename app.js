@@ -7,7 +7,10 @@ function onload()
     
   
     currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
-    
+    if (currentselectedDate.getDay() == 0) 
+    {
+      currentselectedDate.setDate(currentselectedDate.getDate()-1);
+    }
     document.getElementById("Next").disabled = true;
     document.getElementById("Current").disabled = true;
     
@@ -27,6 +30,10 @@ document.addEventListener('swiped-right', function(e)
   
   currentselectedDate = new Date(currentselectedDate.value);
   currentselectedDate.setDate(currentselectedDate.getDate()-1);
+  if (currentselectedDate.getDay() == 0) 
+  {
+    currentselectedDate.setDate(currentselectedDate.getDate()-1);
+  }
 
   CompareDates();
 
@@ -39,7 +46,10 @@ function PreviousClick()
   
   currentselectedDate = new Date(currentselectedDate.value);
   currentselectedDate.setDate(currentselectedDate.getDate()-1);
-
+  if (currentselectedDate.getDay() == 0) 
+  {
+    currentselectedDate.setDate(currentselectedDate.getDate()-1);
+  }
   CompareDates();
 
   doStuff();
@@ -51,6 +61,10 @@ document.addEventListener('swiped-left', function(e)
   currentselectedDate = document.getElementById('DatePicker');
   currentselectedDate = new Date(currentselectedDate.value);
   currentselectedDate.setDate(currentselectedDate.getDate()+1);
+  if (currentselectedDate.getDay() == 0) 
+  {
+    currentselectedDate.setDate(currentselectedDate.getDate()+1);
+  }
 
   CompareDates();
 
@@ -63,7 +77,10 @@ function NextClick()
   currentselectedDate = document.getElementById('DatePicker');
   currentselectedDate = new Date(currentselectedDate.value);
   currentselectedDate.setDate(currentselectedDate.getDate()+1);
-
+  if (currentselectedDate.getDay() == 0) 
+  {
+    currentselectedDate.setDate(currentselectedDate.getDate()+1);
+  }
   CompareDates();
 
   doStuff();
@@ -83,6 +100,10 @@ function FirstClick()
 document.addEventListener('swiped-up', function(e)
  {
   currentselectedDate = new Date();
+  if (currentselectedDate.getDay() == 0) 
+    {
+      currentselectedDate.setDate(currentselectedDate.getDate()-1);
+    }
   
   CompareDates();
 
@@ -92,6 +113,10 @@ document.addEventListener('swiped-up', function(e)
 function CurrentClick()
 {
   currentselectedDate = new Date();
+  if (currentselectedDate.getDay() == 0) 
+    {
+      currentselectedDate.setDate(currentselectedDate.getDate()-1);
+    }
   
   CompareDates();
 
@@ -105,7 +130,10 @@ document.addEventListener('swiped-down', function(e)
   start = new Date("2015-05-04");
   end = new Date();
   currentselectedDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
-
+  if (currentselectedDate.getDay() == 0) 
+  {
+    currentselectedDate.setDate(currentselectedDate.getDate()-1);
+  }
   CompareDates();
   
   doStuff();
@@ -116,7 +144,10 @@ function RandomClick()
   start = new Date("2015-05-04");
   end = new Date();
   currentselectedDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
-
+  if (currentselectedDate.getDay() == 0) 
+  {
+    currentselectedDate.setDate(currentselectedDate.getDate()-1);
+  }
   CompareDates();
   
   doStuff();
@@ -127,7 +158,10 @@ function DateChange()
 {
   currentselectedDate = document.getElementById('DatePicker');
   currentselectedDate = new Date(currentselectedDate.value);
-  
+  if (currentselectedDate.getDay() == 0) 
+    {
+      currentselectedDate.setDate(currentselectedDate.getDate()-1);
+    }
   CompareDates();
   
   doStuff();
@@ -167,7 +201,7 @@ function CompareDates()
   currentselectedDate = currentselectedDate.setHours(0,0,0,0);
   startDate = new Date(startDate);
   currentselectedDate = new Date(currentselectedDate);
-  if (currentselectedDate.getDay() == 0) currentselectedDate.getDate(+1);
+ 
   if (currentselectedDate.getTime() <= startDate.getTime() )
   
   {
