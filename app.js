@@ -150,7 +150,11 @@ function doStuff()
       {
       siteBody = text;
       picturePosition = siteBody.indexOf("https://dirkjan.nl/wp-content/uploads/");
-      pictureUrl = siteBody.substring(picturePosition, picturePosition+82);
+      pictureUrl = siteBody.substring(picturePosition, picturePosition+84);
+      endPosition = pictureUrl.lastIndexOf('"');
+      //endPosition = endPosition-1;
+      pictureUrl = siteBody.substring(picturePosition, picturePosition+endPosition);
+
       document.getElementById("comic").src = pictureUrl;
     });
   });
@@ -163,6 +167,7 @@ function CompareDates()
   currentselectedDate = currentselectedDate.setHours(0,0,0,0);
   startDate = new Date(startDate);
   currentselectedDate = new Date(currentselectedDate);
+  if (currentselectedDate.getDay() == 0) currentselectedDate.getDate(+1);
   if (currentselectedDate.getTime() <= startDate.getTime() )
   
   {
