@@ -158,7 +158,7 @@ function doStuff()
 
 function CompareDates()
 {
-  startDate = new Date("1978/06/19");
+  startDate = new Date("2015/05/04");
   startDate = startDate.setHours(0,0,0,0);
   currentselectedDate = currentselectedDate.setHours(0,0,0,0);
   startDate = new Date(startDate);
@@ -174,7 +174,7 @@ function CompareDates()
     startDate = year+'-'+month+'-'+day;
 
     document.getElementById('DatePicker').value = startDate;
-    currentselectedDate = new Date("1978/06/19");
+    currentselectedDate = new Date("2015/05/04");
   }
   else
   {
