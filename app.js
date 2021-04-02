@@ -2,24 +2,26 @@ if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./serviceworker.js");
 }
 
+notfound = null;
+
 function onload()
 {
     
   
-    currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
+  currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
     if (currentselectedDate.getDay() == 0) 
     {
       currentselectedDate.setDate(currentselectedDate.getDate()-1);
     }
-    document.getElementById("Next").disabled = true;
-    document.getElementById("Current").disabled = true;
+  document.getElementById("Next").disabled = true;
+  document.getElementById("Current").disabled = true;
     
-    formatDate(currentselectedDate);
+  formatDate(currentselectedDate);
 
-    today = year+'-'+month+'-'+day;
-    document.getElementById("DatePicker").setAttribute("max", today);
+  today = year+'-'+month+'-'+day;
+  document.getElementById("DatePicker").setAttribute("max", today);
         
-    doStuff();
+  doStuff();
 
 }
 
@@ -35,7 +37,7 @@ document.addEventListener('swiped-right', function(e)
     currentselectedDate.setDate(currentselectedDate.getDate()-1);
   }
 
-  CompareDates();
+  compareDates();
 
   doStuff();
 });
@@ -50,10 +52,21 @@ function PreviousClick()
   {
     currentselectedDate.setDate(currentselectedDate.getDate()-1);
   }
-  CompareDates();
+  compareDates();
 
   doStuff();
 
+  if (notfound == true)
+  {
+  do
+  {
+    currentselectedDate.setDate(currentselectedDate.getDate()-1);
+    
+    compareDates();
+    
+    doStuff();
+  } while (notfound == true);
+  }
 } 
 
 document.addEventListener('swiped-left', function(e)
@@ -66,7 +79,7 @@ document.addEventListener('swiped-left', function(e)
     currentselectedDate.setDate(currentselectedDate.getDate()+1);
   }
 
-  CompareDates();
+  compareDates();
 
   doStuff();
 });
@@ -81,17 +94,30 @@ function NextClick()
   {
     currentselectedDate.setDate(currentselectedDate.getDate()+1);
   }
-  CompareDates();
+  
+  compareDates();
 
   doStuff();
 
+  if (notfound == true)
+  {
+  do
+  {
+        
+    currentselectedDate.setDate(currentselectedDate.getDate()+1);
+    
+    compareDates();
+    
+    doStuff();
+  } while (notfound == true);
+  }
 }
 
 function FirstClick()
 {
   currentselectedDate = new Date("2015-05-04");
   
-  CompareDates();
+  compareDates();
   
   doStuff();
 
@@ -105,7 +131,7 @@ document.addEventListener('swiped-up', function(e)
       currentselectedDate.setDate(currentselectedDate.getDate()-1);
     }
   
-  CompareDates();
+  compareDates();
 
   doStuff();
 });
@@ -118,7 +144,7 @@ function CurrentClick()
       currentselectedDate.setDate(currentselectedDate.getDate()-1);
     }
   
-  CompareDates();
+  compareDates();
 
   doStuff();
  
@@ -134,7 +160,7 @@ document.addEventListener('swiped-down', function(e)
   {
     currentselectedDate.setDate(currentselectedDate.getDate()-1);
   }
-  CompareDates();
+  compareDates();
   
   doStuff();
 });
@@ -148,11 +174,11 @@ function RandomClick()
   {
     currentselectedDate.setDate(currentselectedDate.getDate()-1);
   }
-  CompareDates();
-  
+  compareDates();
+
   doStuff();
  
-};
+}
 
 function DateChange()
 {
@@ -162,11 +188,11 @@ function DateChange()
     {
       currentselectedDate.setDate(currentselectedDate.getDate()-1);
     }
-  CompareDates();
+  compareDates();
   
   doStuff();
   
-};
+}
 
 function doStuff()
 {
@@ -177,24 +203,29 @@ function doStuff()
   formattedComicDate = year+month+day;
   document.getElementById('DatePicker').value = formattedDate;
   siteUrl = "https://cors.bridged.cc/https://dirkjan.nl/cartoon/"+formattedComicDate;
-  fetch(siteUrl)
+  
+ fetch(siteUrl)
      .then(function(response) 
      {
-      response.text().then(function(text) 
+        response.text().then(function(text) 
       {
-      siteBody = text;
-      picturePosition = siteBody.indexOf("https://dirkjan.nl/wp-content/uploads/");
-      pictureUrl = siteBody.substring(picturePosition, picturePosition+84);
-      endPosition = pictureUrl.lastIndexOf('"');
-      //endPosition = endPosition-1;
-      pictureUrl = siteBody.substring(picturePosition, picturePosition+endPosition);
-
-      document.getElementById("comic").src = pictureUrl;
-    });
-  });
+        siteBody = text;
+        picturePosition = siteBody.indexOf("https://dirkjan.nl/wp-content/uploads/");
+        pictureUrl = siteBody.substring(picturePosition, picturePosition+84);
+        endPosition = pictureUrl.lastIndexOf('"');
+        pictureUrl = siteBody.substring(picturePosition, picturePosition+endPosition);
+        notfound = siteBody.includes("error404");
+        if (notfound !==true) 
+        {
+          document.getElementById("comic").src = pictureUrl;
+          
+        }
+        
+      });
+     });
 }
 
-function CompareDates()
+function compareDates()
 {
   startDate = new Date("2015/05/04");
   startDate = startDate.setHours(0,0,0,0);
@@ -253,6 +284,3 @@ function CompareDates()
   month = ("0"+month).slice(-2);
   day = ("0"+day).slice(-2);
  }
-
-
-
