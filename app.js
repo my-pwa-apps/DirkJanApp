@@ -60,6 +60,7 @@ function PreviousClick()
   {
   do
   {
+    notfound = false;
     currentselectedDate.setDate(currentselectedDate.getDate()-1);
     
     compareDates();
@@ -103,7 +104,7 @@ function NextClick()
   {
   do
   {
-        
+    notfound = false;    
     currentselectedDate.setDate(currentselectedDate.getDate()+1);
     
     compareDates();
