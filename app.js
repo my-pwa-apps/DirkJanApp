@@ -56,7 +56,7 @@ function PreviousClick()
 
   doStuff();
 
-  if (notfound == true)
+  /*if (notfound == true)
   {
   do
   {
@@ -67,7 +67,7 @@ function PreviousClick()
     
     doStuff();
   } while (notfound == true);
-  }
+  }*/
 } 
 
 document.addEventListener('swiped-left', function(e)
@@ -100,7 +100,7 @@ function NextClick()
 
   doStuff();
 
-  if (notfound == true)
+  /*if (notfound == true)
   {
   do
   {
@@ -111,7 +111,7 @@ function NextClick()
     
     doStuff();
   } while (notfound == true);
-  }
+  } */
 }
 
 function FirstClick()
