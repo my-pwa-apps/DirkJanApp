@@ -6,7 +6,6 @@ const OFFLINE_URL =
   "./index.html",
   "./dirk-jan-tekst.svg",
   "./mail.webp",
-  "./paypaldonate.webp",
   "./pwa-pass-3.svg",
   "./swiped-events.min.js",    
   "./app.js",
@@ -18,6 +17,8 @@ const OFFLINE_URL =
   "./favicon-16x16.png",
   "./apple-touch-icon.png",
   "./android-chrome-192x192.png",
+  "./android-chrome-256x256.png",
+  "./android-chrome-512x512.png"
 ];
 
 self.addEventListener('install', (event) => {
