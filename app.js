@@ -9,17 +9,22 @@ function onload()
     
   
   currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
-    if (currentselectedDate.getDay() == 0) 
+  maxDate = new Date(currentselectedDate.setDate(currentselectedDate.getDate()+7));
+    if (maxDate.getDay() == 0) 
     {
-      currentselectedDate.setDate(currentselectedDate.getDate()-1);
+      maxDate.setDate(maxDate.getDate()-1);
     }
   document.getElementById("Next").disabled = true;
   document.getElementById("Current").disabled = true;
     
-  formatDate(currentselectedDate);
-
-  today = year+'-'+month+'-'+day;
-  document.getElementById("DatePicker").setAttribute("max", today);
+  //formatDate(currentselectedDate);
+ // maxDate = new Date(currentselectedDate.setDate(currentselectedDate.getDate()+7));
+  formatDate(maxDate);
+  
+  maxDate = year+'-'+month+'-'+day;
+  document.getElementById("DatePicker").setAttribute("max", maxDate); 
+  document.getElementById("DatePicker").value = maxDate;
+  currentselectedDate = new Date(maxDate);
         
   doStuff();
 
@@ -56,18 +61,6 @@ function PreviousClick()
 
   doStuff();
 
-  /*if (notfound == true)
-  {
-  do
-  {
-    notfound = false;
-    currentselectedDate.setDate(currentselectedDate.getDate()-1);
-    
-    compareDates();
-    
-    doStuff();
-  } while (notfound == true);
-  }*/
 } 
 
 document.addEventListener('swiped-left', function(e)
@@ -100,18 +93,6 @@ function NextClick()
 
   doStuff();
 
-  /*if (notfound == true)
-  {
-  do
-  {
-    notfound = false;    
-    currentselectedDate.setDate(currentselectedDate.getDate()+1);
-    
-    compareDates();
-    
-    doStuff();
-  } while (notfound == true);
-  } */
 }
 
 function FirstClick()
@@ -126,7 +107,7 @@ function FirstClick()
 
 document.addEventListener('swiped-up', function(e)
  {
-  currentselectedDate = new Date();
+  currentselectedDate = new Date(maxDate);
   if (currentselectedDate.getDay() == 0) 
     {
       currentselectedDate.setDate(currentselectedDate.getDate()-1);
@@ -139,7 +120,7 @@ document.addEventListener('swiped-up', function(e)
 
 function CurrentClick()
 {
-  currentselectedDate = new Date();
+  currentselectedDate = new Date(maxDate);
   if (currentselectedDate.getDay() == 0) 
     {
       currentselectedDate.setDate(currentselectedDate.getDate()-1);
@@ -155,7 +136,7 @@ function CurrentClick()
 document.addEventListener('swiped-down', function(e)
  {
   start = new Date("2015-05-04");
-  end = new Date();
+  end = new Date(maxDate);
   currentselectedDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
   if (currentselectedDate.getDay() == 0) 
   {
@@ -169,7 +150,7 @@ document.addEventListener('swiped-down', function(e)
 function RandomClick()
 {
   start = new Date("2015-05-04");
-  end = new Date();
+  end = new Date(maxDate);
   currentselectedDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
   if (currentselectedDate.getDay() == 0) 
   {
@@ -253,7 +234,7 @@ function compareDates()
     document.getElementById("First").disabled = false;
   }
   
-  endDate = new Date();
+  endDate = new Date(maxDate);
   endate = endDate.setHours(0,0,0,0);
   endDate = new Date(endDate);
   if (currentselectedDate.getTime() >= endDate.getTime())
@@ -267,7 +248,7 @@ function compareDates()
     endDate = year+'-'+month+'-'+day;
 
     document.getElementById('DatePicker').value = endDate;
-    currentselectedDate = new Date();
+    currentselectedDate = new Date(maxDate);
   }
   else
   {
