@@ -17,8 +17,6 @@ function onload()
   document.getElementById("Next").disabled = true;
   document.getElementById("Current").disabled = true;
     
-  //formatDate(currentselectedDate);
- // maxDate = new Date(currentselectedDate.setDate(currentselectedDate.getDate()+7));
   formatDate(maxDate);
   
   maxDate = year+'-'+month+'-'+day;
