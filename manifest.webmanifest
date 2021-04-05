@@ -9,25 +9,25 @@
     "categories": ["entertainment"],
     "icons": [
       {
-          "src": "./android-chrome-192x192.webp",
+          "src": "./android-chrome-192x192.png",
           "sizes": "192x192",
-          "type": "image/webp"
+          "type": "image/png"
       },
       {
-        "src": "./android-chrome-192x192.webp",
+        "src": "./android-chrome-192x192.png",
         "sizes": "192x192",
-        "type": "image/webp",
+        "type": "image/png",
         "purpose": "maskable"
     },
       {
-          "src": "./android-chrome-256x256.webp",
+          "src": "./android-chrome-256x256.png",
           "sizes": "256x256",
-          "type": "image/webp"
+          "type": "image/png"
       },
       {
-        "src": "./android-chrome-512x512.webp",
+        "src": "./android-chrome-512x512.png",
         "sizes": "256x256",
-        "type": "image/webp"
+        "type": "image/png"
     }
   ],
     "screenshots" : 
@@ -35,12 +35,12 @@
     {
       "src": "./screenshot1.webp",
       "sizes": "1150x1352",
-      "type": "image/webp"
+      "type": "image/png"
     },
     {
       "src": "./screenshot2.webp",
       "sizes": "1156x1344",
-      "type": "image/webp"
+      "type": "image/png"
     }
   ]
 }
