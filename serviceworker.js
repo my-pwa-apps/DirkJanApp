@@ -11,14 +11,15 @@ const OFFLINE_URL =
   "./app.js",
   "./main.css",
   "./serviceworker.js",
-  "./mstile-150x150.png",
+  "./mstile-150x150.webp",
   "./favicon.ico",
-  "./favicon-32x32.png",
-  "./favicon-16x16.png",
-  "./apple-touch-icon.png",
-  "./android-chrome-192x192.png",
-  "./android-chrome-256x256.png",
-  "./android-chrome-512x512.png"
+  "./favicon-32x32.webp",
+  "./favicon-16x16.webp",
+  "./apple-touch-icon.webp",
+  "./android-chrome-192x192.webp",
+  "./android-chrome-256x256.webp",
+  "./android-chrome-512x512.webp",
+  "./dirkjantransparent.webp"
 ];
 
 self.addEventListener('install', (event) => {
