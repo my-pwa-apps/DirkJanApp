@@ -3,9 +3,9 @@ if ("serviceWorker" in navigator) {
 }
 
 notfound = null;
-const shareButton = document.querySelector('.share-button');
 
-shareButton.addEventListener('click', event => {
+function Share()
+{
   if (navigator.share) {
     navigator.share({
       title: 'Shared from https://dirkjan.nl using https://dirkjanapp.tk',
@@ -17,7 +17,7 @@ shareButton.addEventListener('click', event => {
   } else {
     // fallback
   }
-});
+}
 
 function onload()
 {
