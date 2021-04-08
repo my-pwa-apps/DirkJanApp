@@ -10,13 +10,8 @@ function Share()
     navigator.share({
       title: 'Shared from https://dirkjan.nl using https://dirkjanapp.tk',
       url: pictureUrl
-    }).then(() => {
-      console.log('Thanks for sharing!');
-    })
-    .catch(console.error);
-  } else {
-    // fallback
-  }
+    });
+  } 
 }
 
 function onload()
