@@ -3,6 +3,7 @@ if ("serviceWorker" in navigator) {
 }
 
 notfound = null;
+const shareButton = document.querySelector('.share-button');
 
 shareButton.addEventListener('click', event => {
   if (navigator.share) {
