@@ -8,7 +8,7 @@ function Share()
 {
   if (navigator.share) {
     navigator.share({
-      title: 'Shared from https://dirkjan.nl using https://dirkjanapp.tk',
+      title: 'Gedeeld van https://dirkjan.nl met https://dirkjanapp.tk',
       url: pictureUrl
     });
   } 
@@ -17,10 +17,8 @@ function Share()
 function onload()
 {
     
-  
   currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
-  //maxDate = new Date(currentselectedDate.setDate(currentselectedDate.getDate()+7));
-    if (currentselectedDate.getDay() == 0) 
+  if (currentselectedDate.getDay() == 0) 
     {
       currentselectedDate.setDate(currentselectedDate.getDate()-1);
     }

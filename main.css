@@ -78,14 +78,16 @@ input
 .info
 {
     display: grid;
-    grid-template-columns: 7% 10% 7%;
+    grid-template-columns: 7% 10%;
     gap: 3px;
+    
 }
 
 .info img
 {
     width: 100%;
     height: 70%;
+    
 }
 
 .legend
