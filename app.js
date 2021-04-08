@@ -10,7 +10,7 @@ function Share()
     navigator.share({
       title: 'https://dirkjanapp.tk',
       text: 'https://dirkjanapp.tk',
-      files: pictureUrl
+      url: pictureUrl
     });
   } 
 }
