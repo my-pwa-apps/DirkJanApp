@@ -8,8 +8,9 @@ function Share()
 {
   if (navigator.share) {
     navigator.share({
-      title: 'Gedeeld van https://dirkjan.nl met https://dirkjanapp.tk',
-      url: pictureUrl
+      title: 'https://dirkjanapp.tk',
+      text: 'https://dirkjanapp.tk',
+      files: pictureUrl
     });
   } 
 }
