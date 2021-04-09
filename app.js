@@ -9,7 +9,6 @@ function Share()
   if (navigator.share) {
     navigator.share({
       title: 'https://dirkjanapp.tk',
-      text: 'https://dirkjanapp.tk',
       url: pictureUrl
     });
   } 
