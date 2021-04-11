@@ -30,8 +30,7 @@ function onload()
   today = year+'-'+month+'-'+day;
   document.getElementById("DatePicker").setAttribute("max", today); 
   document.getElementById("DatePicker").value = today;
-  currentselectedDate = new Date();
-        
+          
   doStuff();
 
 }
