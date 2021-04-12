@@ -3,6 +3,7 @@ if ("serviceWorker" in navigator) {
 }
 
 notfound = null;
+textData = null;
 
 function Share()
 {
@@ -30,9 +31,10 @@ function onload()
   today = year+'-'+month+'-'+day;
   document.getElementById("DatePicker").setAttribute("max", today); 
   document.getElementById("DatePicker").value = today;
-          
+  
+  compareDates();
   doStuff();
-
+ 
 }
 
 
@@ -191,25 +193,26 @@ function doStuff()
   document.getElementById('DatePicker').value = formattedDate;
   siteUrl = "https://cors.bridged.cc/https://dirkjan.nl/cartoon/"+formattedComicDate;
   
- fetch(siteUrl)
-     .then(function(response) 
-     {
-        response.text().then(function(text) 
-      {
-        siteBody = text;
-        picturePosition = siteBody.indexOf("https://dirkjan.nl/wp-content/uploads/");
-        pictureUrl = siteBody.substring(picturePosition, picturePosition+84);
-        endPosition = pictureUrl.lastIndexOf('"');
-        pictureUrl = siteBody.substring(picturePosition, picturePosition+endPosition);
-        notfound = siteBody.includes("error404");
-        if (notfound !==true) 
-        {
-          document.getElementById("comic").src = pictureUrl;
-          
-        }
-        
-      });
-     });
+  fetchUrl().then(textData =>
+ {
+
+    siteBody = textData;
+    notfound = siteBody.includes("error404");
+    picturePosition = siteBody.indexOf("https://dirkjan.nl/wp-content/uploads/");
+    if (notfound == false)
+    {
+      pictureUrl = siteBody.substring(picturePosition, picturePosition+84);
+      endPosition = pictureUrl.lastIndexOf('"');
+      pictureUrl = siteBody.substring(picturePosition, picturePosition+endPosition);
+      document.getElementById("comic").src = pictureUrl;
+      
+    }
+    else
+    {
+      document.getElementById("comic").src = "dirkjanvrij.png";
+    }
+  });
+  
 }
 
 function compareDates()
@@ -271,3 +274,10 @@ function compareDates()
   month = ("0"+month).slice(-2);
   day = ("0"+day).slice(-2);
  }
+
+const fetchUrl = async () =>
+{
+  const websiteData = await fetch(siteUrl);
+  const textData = await websiteData.text();
+ return textData;
+};
