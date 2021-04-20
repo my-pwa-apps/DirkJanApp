@@ -19,13 +19,41 @@ function onload()
 {
     
   currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
-  if (currentselectedDate.getDay() == 0) 
+  /*if (currentselectedDate.getDay() == 0) 
     {
       currentselectedDate.setDate(currentselectedDate.getDate()-1);
     }
+
+    */
   document.getElementById("Next").disabled = true;
   document.getElementById("Current").disabled = true;
     
+  //formatDate(currentselectedDate);
+
+  switch (currentselectedDate.getDay())
+  {
+    case 0:
+      currentselectedDate.setDate(currentselectedDate.getDate()+6);
+      break;
+    case 1:
+      currentselectedDate.setDate(currentselectedDate.getDate()+5);
+      break;
+    case 2:
+      currentselectedDate.setDate(currentselectedDate.getDate()+4);
+      break;
+    case 3:
+      currentselectedDate.setDate(currentselectedDate.getDate()+3);
+      break;
+    case 4:
+       currentselectedDate.setDate(currentselectedDate.getDate()+2);
+       break;
+    case 5:
+      currentselectedDate.setDate(currentselectedDate.getDate()+1);
+      break;
+    }
+
+  maxDate = new Date(currentselectedDate);
+   
   formatDate(currentselectedDate);
   
   today = year+'-'+month+'-'+day;
@@ -33,10 +61,10 @@ function onload()
   document.getElementById("DatePicker").value = today;
   
   compareDates();
+  
   doStuff();
  
 }
-
 
 document.addEventListener('swiped-right', function(e)
  {
@@ -127,7 +155,7 @@ document.addEventListener('swiped-up', function(e)
 
 function CurrentClick()
 {
-  currentselectedDate = new Date();
+  currentselectedDate = new Date(maxDate);
   if (currentselectedDate.getDay() == 0) 
     {
       currentselectedDate.setDate(currentselectedDate.getDate()-1);
@@ -242,7 +270,7 @@ function compareDates()
     document.getElementById("First").disabled = false;
   }
   
-  endDate = new Date();
+  endDate = new Date(maxDate);
   endate = endDate.setHours(0,0,0,0);
   endDate = new Date(endDate);
   if (currentselectedDate.getTime() >= endDate.getTime())
@@ -256,7 +284,7 @@ function compareDates()
     endDate = year+'-'+month+'-'+day;
 
     document.getElementById('DatePicker').value = endDate;
-    currentselectedDate = new Date();
+    currentselectedDate = new Date(endDate);
   }
   else
   {
