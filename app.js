@@ -21,6 +21,11 @@ function onload()
   currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
   maxDate = document.getElementById("DatePicker").valueAsDate = new Date();
  
+  if (currentselectedDate.getDay() == 0) 
+  {
+    currentselectedDate.setDate(currentselectedDate.getDate()-1);
+  }
+
   document.getElementById("Next").disabled = true;
   document.getElementById("Current").disabled = true;
     
@@ -44,6 +49,9 @@ function onload()
     case 5:
       maxDate.setDate(maxDate.getDate()+1);
       break;
+    case 6:
+      maxDate.setDate(maxDate.getDate()+7);
+      break;
     }
 
   formatDate(maxDate);
@@ -51,7 +59,7 @@ function onload()
   formattedmaxDate = year+'-'+month+'-'+day;
   document.getElementById("DatePicker").setAttribute("max", formattedmaxDate); 
   
-  compareDates();
+  //compareDates();
   
   displayComic();
  
@@ -162,7 +170,7 @@ function CurrentClick()
 document.addEventListener('swiped-down', function(e)
  {
   start = new Date("2015-05-04");
-  end = new Date();
+  end = new Date(maxDate);
   currentselectedDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
   if (currentselectedDate.getDay() == 0) 
   {
@@ -176,7 +184,7 @@ document.addEventListener('swiped-down', function(e)
 function RandomClick()
 {
   start = new Date("2015-05-04");
-  end = new Date();
+  end = new Date(maxDate);
   currentselectedDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
   if (currentselectedDate.getDay() == 0) 
   {
