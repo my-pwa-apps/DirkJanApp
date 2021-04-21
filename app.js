@@ -59,7 +59,7 @@ function onload()
   formattedmaxDate = year+'-'+month+'-'+day;
   document.getElementById("DatePicker").setAttribute("max", formattedmaxDate); 
   
-  //compareDates();
+  compareDates();
   
   displayComic();
  
