@@ -2,9 +2,6 @@ if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./serviceworker.js");
 }
 
-notfound = null;
-textData = null;
-
 function Share()
 {
   if (navigator.share) {
