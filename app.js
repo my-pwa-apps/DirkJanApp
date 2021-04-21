@@ -26,9 +26,6 @@ function onload()
     currentselectedDate.setDate(currentselectedDate.getDate()-1);
   }
 
-  //document.getElementById("Next").disabled = true;
-  //document.getElementById("Current").disabled = true;
-    
   switch (maxDate.getDay())
   {
     case 0:
