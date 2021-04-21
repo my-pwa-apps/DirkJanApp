@@ -20,18 +20,10 @@ function onload()
     
   currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
   maxDate = document.getElementById("DatePicker").valueAsDate = new Date();
-  /*if (currentselectedDate.getDay() == 0) 
-    {
-      currentselectedDate.setDate(currentselectedDate.getDate()-1);
-    }
-
-    */
+ 
   document.getElementById("Next").disabled = true;
   document.getElementById("Current").disabled = true;
     
-  //formatDate(currentselectedDate);
-  //maxDate = currentselectedDate;
-
   switch (maxDate.getDay())
   {
     case 0:
@@ -54,22 +46,14 @@ function onload()
       break;
     }
 
-  //maxDate = new Date(currentselectedDate);
-   
   formatDate(maxDate);
   
-  max = year+'-'+month+'-'+day;
-  document.getElementById("DatePicker").setAttribute("max", max); 
-  
-  formatDate(currentselectedDate);
-  
-  //today = year+'-'+month+'-'+day;
-
-  //document.getElementById("DatePicker").value = today;
+  formattedmaxDate = year+'-'+month+'-'+day;
+  document.getElementById("DatePicker").setAttribute("max", formattedmaxDate); 
   
   compareDates();
   
-  doStuff();
+  displayComic();
  
 }
 
@@ -86,7 +70,7 @@ document.addEventListener('swiped-right', function(e)
 
   compareDates();
 
-  doStuff();
+  displayComic();
 });
 
 function PreviousClick()
@@ -101,7 +85,7 @@ function PreviousClick()
   }
   compareDates();
 
-  doStuff();
+  displayComic();
 
 } 
 
@@ -117,7 +101,7 @@ document.addEventListener('swiped-left', function(e)
 
   compareDates();
 
-  doStuff();
+  displayComic();
 });
 
 
@@ -133,7 +117,7 @@ function NextClick()
   
   compareDates();
 
-  doStuff();
+  displayComic();
 
 }
 
@@ -143,7 +127,7 @@ function FirstClick()
   
   compareDates();
   
-  doStuff();
+  displayComic();
 
 }
 
@@ -157,7 +141,7 @@ document.addEventListener('swiped-up', function(e)
   
   compareDates();
 
-  doStuff();
+  displayComic();
 });
 
 function CurrentClick()
@@ -170,7 +154,7 @@ function CurrentClick()
   
   compareDates();
 
-  doStuff();
+  displayComic();
  
 }
 
@@ -186,7 +170,7 @@ document.addEventListener('swiped-down', function(e)
   }
   compareDates();
   
-  doStuff();
+  displayComic();
 });
 
 function RandomClick()
@@ -200,7 +184,7 @@ function RandomClick()
   }
   compareDates();
 
-  doStuff();
+  displayComic();
  
 }
 
@@ -214,11 +198,11 @@ function DateChange()
     }
   compareDates();
   
-  doStuff();
+  displayComic();
   
 }
 
-function doStuff()
+function displayComic()
 {
   
   formatDate(currentselectedDate);
@@ -232,9 +216,9 @@ function doStuff()
  {
 
     siteBody = textData;
-    notfound = siteBody.includes("error404");
+    notFound = siteBody.includes("error404");
     picturePosition = siteBody.indexOf("https://dirkjan.nl/wp-content/uploads/");
-    if (notfound == false)
+    if (notFound == false)
     {
       pictureUrl = siteBody.substring(picturePosition, picturePosition+84);
       endPosition = pictureUrl.lastIndexOf('"');
