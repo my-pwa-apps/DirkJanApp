@@ -284,7 +284,6 @@ function compareDates()
   else
   {
     document.getElementById("Next").disabled = false;
-    //document.getElementById("Current").disabled = false;
   } 
 
  }
