@@ -19,6 +19,7 @@ function onload()
 {
     
   currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
+  maxDate = document.getElementById("DatePicker").valueAsDate = new Date();
   /*if (currentselectedDate.getDay() == 0) 
     {
       currentselectedDate.setDate(currentselectedDate.getDate()-1);
@@ -29,36 +30,42 @@ function onload()
   document.getElementById("Current").disabled = true;
     
   //formatDate(currentselectedDate);
+  //maxDate = currentselectedDate;
 
-  switch (currentselectedDate.getDay())
+  switch (maxDate.getDay())
   {
     case 0:
-      currentselectedDate.setDate(currentselectedDate.getDate()+6);
+      maxDate.setDate(maxDate.getDate()+6);
       break;
     case 1:
-      currentselectedDate.setDate(currentselectedDate.getDate()+5);
+      maxDate.setDate(maxDate.getDate()+5);
       break;
     case 2:
-      currentselectedDate.setDate(currentselectedDate.getDate()+4);
+      maxDate.setDate(maxDate.getDate()+4);
       break;
     case 3:
-      currentselectedDate.setDate(currentselectedDate.getDate()+3);
+      maxDate.setDate(maxDate.getDate()+3);
       break;
     case 4:
-       currentselectedDate.setDate(currentselectedDate.getDate()+2);
+       maxDate.setDate(maxDate.getDate()+2);
        break;
     case 5:
-      currentselectedDate.setDate(currentselectedDate.getDate()+1);
+      maxDate.setDate(maxDate.getDate()+1);
       break;
     }
 
-  maxDate = new Date(currentselectedDate);
+  //maxDate = new Date(currentselectedDate);
    
+  formatDate(maxDate);
+  
+  max = year+'-'+month+'-'+day;
+  document.getElementById("DatePicker").setAttribute("max", max); 
+  
   formatDate(currentselectedDate);
   
-  today = year+'-'+month+'-'+day;
-  document.getElementById("DatePicker").setAttribute("max", today); 
-  document.getElementById("DatePicker").value = today;
+  //today = year+'-'+month+'-'+day;
+
+  //document.getElementById("DatePicker").value = today;
   
   compareDates();
   
@@ -86,7 +93,7 @@ function PreviousClick()
 {
   currentselectedDate = document.getElementById('DatePicker');
   
-  currentselectedDate = new Date(currentselectedDate.value);
+  currentselectedDate = new Date(currentselectedDate.value); 
   currentselectedDate.setDate(currentselectedDate.getDate()-1);
   if (currentselectedDate.getDay() == 0) 
   {
