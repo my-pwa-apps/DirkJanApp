@@ -146,7 +146,7 @@ document.addEventListener('swiped-up', function(e)
 
 function CurrentClick()
 {
-  currentselectedDate = new Date(maxDate);
+  currentselectedDate = new Date();
   if (currentselectedDate.getDay() == 0) 
     {
       currentselectedDate.setDate(currentselectedDate.getDate()-1);
