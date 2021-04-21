@@ -273,8 +273,7 @@ function compareDates()
   
   {
     document.getElementById("Next").disabled = true;
-    document.getElementById("Current").disabled = true;
-
+    
     formatDate(endDate);
 
     endDate = year+'-'+month+'-'+day;
@@ -285,7 +284,7 @@ function compareDates()
   else
   {
     document.getElementById("Next").disabled = false;
-    document.getElementById("Current").disabled = false;
+    //document.getElementById("Current").disabled = false;
   } 
 
  }
