@@ -300,3 +300,15 @@ const fetchUrl = async () =>
   const textData = await websiteData.text();
  return textData;
 };
+
+function Rotate() {
+  var element = document.getElementById('comic');
+
+  if (element.className === "normal") {
+    element.className = "rotate";
+  }
+  else if ( element.className === "rotate") {
+    element.className = 'normal';
+  }
+}
+
