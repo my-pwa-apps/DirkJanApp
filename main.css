@@ -90,20 +90,7 @@ input
     
 }
 
-.legend
-{
-  display: grid;
-  grid-template-columns: max-content max-content max-content max-content;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  font-size: xx-small;
-  color: orange;
-  background-color: black;
-  align-items: center;
-  padding: 5px;
-  border: 1px solid white ;
-  width: fit-content;
-  box-shadow: 0 12px 16px 0 rgba(0,0,0,0.24), 0 17px 50px 0 rgba(0,0,0,0.19);
-}
+
 
 
 .rotate {
