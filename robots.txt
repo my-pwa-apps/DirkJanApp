@@ -1,5 +1,5 @@
 User-Agent: *
 Allow: /
 
-Sitemap: https://dirkjanapp.tk/sitemap.xml
+Sitemap: https://dirkjanapp.ml/sitemap.xml
 
