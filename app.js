@@ -118,7 +118,7 @@ function onload() {
 	}
 		currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
 		document.getElementById("Next").disabled = true;
-		document.getElementById("Current").disabled = true;
+		//document.getElementById("Current").disabled = true;
 }
 
 maxDate = document.getElementById("DatePicker").valueAsDate = new Date();
