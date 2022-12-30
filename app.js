@@ -14,7 +14,7 @@ function Share()
 
 function Addfav()
 {
-	formattedComicDate = year+'-'+month+'-'+day;
+	formattedComicDate = year+'/'+month+'/'+day;
 	var favs = JSON.parse(localStorage.getItem('favs'));
 	if(favs == null)
 	{
@@ -39,8 +39,8 @@ function Addfav()
 	}
 	favs.sort();
 	localStorage.setItem('favs', JSON.stringify(favs));
-	compareDates();
-	displayComic();
+	//compareDates();
+	//displayComic();
 }
 
 
@@ -278,6 +278,21 @@ function displayComic()
   document.getElementById('DatePicker').value = formattedDate;
   siteUrl = "https://cors.bridged.cc/https://dirkjan.nl/cartoon/"+formattedComicDate;
   
+  var favs = JSON.parse(localStorage.getItem('favs'));
+	if(favs == null)
+	{
+		favs = [];
+	}
+	if(favs.indexOf(formattedComicDate) == -1)
+	{
+		$(".favicon").css({"color": "black"}).removeClass('fa-star').addClass('fa-star-o');
+
+	}	
+	else
+	{
+		$(".favicon").css({"color": "black"}).removeClass('fa-star-o').addClass('fa-star');
+	}
+
   fetchUrl().then(textData =>
  {
 
@@ -388,8 +403,8 @@ setStatus = document.getElementById('swipe');
         } else {
             localStorage.setItem('stat', "false");
 			//currentselectedDate = new Date();
-			CompareDates();
-			showComic();
+			compareDates();
+			displayComic();
         }
     }
 
@@ -413,8 +428,8 @@ setStatus = document.getElementById('swipe');
 			
         }
 
-		CompareDates();
-		showComic();
+		compareDates();
+		displayComic();
 
 	}
 
