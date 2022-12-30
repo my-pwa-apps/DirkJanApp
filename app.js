@@ -12,7 +12,39 @@ function Share()
   } 
 }
 
-function onload()
+function Addfav()
+{
+	formattedComicDate = year+'-'+month+'-'+day;
+	var favs = JSON.parse(localStorage.getItem('favs'));
+	if(favs == null)
+	{
+		favs = [];
+	}
+	if(favs.indexOf(formattedComicDate) == -1)
+	{
+		favs.push(formattedComicDate);
+		$(".favicon").css({"color": "black"}).removeClass('fa-star-o').addClass('fa-star');
+		document.getElementById("showfavs").disabled = false;
+	}
+	else
+	{
+		favs.splice(favs.indexOf(formattedComicDate), 1);
+		$(".favicon").css({"color": "black"}).removeClass('fa-star').addClass('fa-star-o');
+		if(favs.length === 0)
+		{
+			document.getElementById("showfavs").checked = false;
+			document.getElementById("showfavs").disabled = true;
+			
+		}
+	}
+	favs.sort();
+	localStorage.setItem('favs', JSON.stringify(favs));
+	compareDates();
+	displayComic();
+}
+
+
+/*function onload()
 {
     
   currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
@@ -57,6 +89,76 @@ function onload()
   
   displayComic();
  
+}*/
+
+function onload() {
+	var favs = JSON.parse(localStorage.getItem('favs'));
+	if(favs == null)
+	{
+		favs = [];
+	}
+	if(document.getElementById("showfavs").checked) {
+		currentselectedDate = new Date(favs[0]);
+		if(favs.length === 0)
+		{
+			document.getElementById("showfavs").checked = false;
+			document.getElementById("showfavs").disabled = true;
+			currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
+		
+		}
+		
+	}
+	else{
+
+		if(favs.length === 0)
+		{
+			document.getElementById("showfavs").checked = false;
+			document.getElementById("showfavs").disabled = true;
+			currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
+	}
+		currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
+		document.getElementById("Next").disabled = true;
+		document.getElementById("Current").disabled = true;
+}
+
+maxDate = document.getElementById("DatePicker").valueAsDate = new Date();
+if (currentselectedDate.getDay() == 0) 
+  {
+    currentselectedDate.setDate(currentselectedDate.getDate()-1);
+  }
+switch (maxDate.getDay())
+{
+  case 0:
+    maxDate.setDate(maxDate.getDate()+6);
+    break;
+  case 1:
+    maxDate.setDate(maxDate.getDate()+5);
+    break;
+  case 2:
+    maxDate.setDate(maxDate.getDate()+4);
+    break;
+  case 3:
+    maxDate.setDate(maxDate.getDate()+3);
+    break;
+  case 4:
+     maxDate.setDate(maxDate.getDate()+2);
+     break;
+  case 5:
+    maxDate.setDate(maxDate.getDate()+1);
+    break;
+  case 6:
+    maxDate.setDate(maxDate.getDate()+7);
+    break;
+  }
+
+formatDate(maxDate);
+
+formattedmaxDate = year+'-'+month+'-'+day;
+document.getElementById("DatePicker").setAttribute("max", formattedmaxDate); 
+
+	compareDates();
+	displayComic();
+
 }
 
 document.addEventListener('swiped-right', function(e)
