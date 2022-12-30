@@ -318,7 +318,16 @@ function displayComic()
 
 function compareDates()
 {
-  startDate = new Date(Date.UTC(2015,4,4,12));
+  
+  var favs = JSON.parse(localStorage.getItem('favs'));
+	if(document.getElementById("showfavs").checked) {
+		if(favs.includes(document.getElementById("DatePicker").value)) {}
+		else{	
+		startDate = new Date(favs[0])}}
+	else{	
+		startDate = new Date(Date.UTC(2015,4,4,12));
+	}
+  
   startDate = startDate.setHours(0,0,0,0);
   currentselectedDate = currentselectedDate.setHours(0,0,0,0);
   startDate = new Date(startDate);
@@ -343,7 +352,13 @@ function compareDates()
     document.getElementById("First").disabled = false;
   }
   
-  endDate = new Date(maxDate);
+  if(document.getElementById("showfavs").checked) {
+		endDate = new Date(favs[favs.length - 1]);
+	}
+	else{ 
+		endDate = new Date(maxDate);
+	}
+
   endate = endDate.setHours(0,0,0,0);
   endDate = new Date(endDate);
   if (currentselectedDate.getTime() >= endDate.getTime())
@@ -362,6 +377,17 @@ function compareDates()
   {
     document.getElementById("Next").disabled = false;
   } 
+
+  if(document.getElementById("showfavs").checked) {
+		document.getElementById("Current").disabled = true;
+		if(favs.length == 1) {
+			document.getElementById("Random").disabled = true;
+			document.getElementById("Previous").disabled = true;
+			document.getElementById("First").disabled = true;
+		
+		}}
+	else {
+		document.getElementById("Random").disabled = false;}
 
  }
 
@@ -466,8 +492,8 @@ getStatus = localStorage.getItem('stat');
 getStatus = localStorage.getItem('showfavs');
     if (getStatus == "true") {
         document.getElementById("showfavs").checked = true;
-        document.getElementById("Current").disabled = true;
-    } else {
+      }
+    else {
         document.getElementById("showfavs").checked = false;
     }
 
