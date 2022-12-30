@@ -466,6 +466,7 @@ getStatus = localStorage.getItem('stat');
 getStatus = localStorage.getItem('showfavs');
     if (getStatus == "true") {
         document.getElementById("showfavs").checked = true;
+        document.getElementById("Current").disabled = true;
     } else {
         document.getElementById("showfavs").checked = false;
     }
