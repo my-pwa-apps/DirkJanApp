@@ -279,3 +279,55 @@ function Rotate() {
   }
 }
 
+setStatus = document.getElementById('swipe');
+    setStatus.onclick = function() {
+        if(document.getElementById('swipe').checked) {
+            localStorage.setItem('stat', "true");
+        } else {
+            localStorage.setItem('stat', "false");
+			//currentselectedDate = new Date();
+			CompareDates();
+			showComic();
+        }
+    }
+
+	setStatus = document.getElementById('showfavs');
+	var favs = JSON.parse(localStorage.getItem('favs'));
+    setStatus.onclick = function() {
+        if(document.getElementById('showfavs').checked) {
+            localStorage.setItem('showfavs', "true");
+			if(favs.indexOf(formattedComicDate) == -1)
+			{
+				
+			}
+			else
+			{
+				currentselectedDate = new Date(favs[0]);	
+			}
+			
+	
+       } else {
+           localStorage.setItem('showfavs', "false");
+			
+        }
+
+		CompareDates();
+		showComic();
+
+	}
+
+
+getStatus = localStorage.getItem('stat');
+    if (getStatus == "true") {
+        document.getElementById("swipe").checked = true;
+    } else {
+        document.getElementById("swipe").checked = false;
+    }
+
+getStatus = localStorage.getItem('showfavs');
+    if (getStatus == "true") {
+        document.getElementById("showfavs").checked = true;
+    } else {
+        document.getElementById("showfavs").checked = false;
+    }
+

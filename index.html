@@ -23,6 +23,7 @@
     
     <script src="./app.js"></script>
     <script src="./swiped-events.min.js"></script>
+	  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 
 </head>
 
@@ -54,6 +55,18 @@
  <div class="info">
   <a href = mailto:dirkjanapp@outlook.com><img src="./mail.webp" alt="email address"></a>
 </div>
+<br>
+<br>
+<div>
+  <input type="checkbox" id="swipe" checked cursor="pointer">
+    <label for="swipe" class="labels" cursor="pointer">Swipe enabled</label>	
+  </div>
+<br>
+<div>
+  <input type="checkbox" id="showfavs" cursor="pointer">
+  <label for="showfavs" class="labels" cursor="pointer">Show my favorites only</label>
+  <i onclick="Addfav()" aria-hidden="true" class="fa fa-star-o favicon" style="font-size: 25px; right: 20px; position: absolute"></i>
+</div> 
 
 </body>
   
