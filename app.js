@@ -161,42 +161,41 @@ document.getElementById("DatePicker").setAttribute("max", formattedmaxDate);
 
 }
 
-document.addEventListener('swiped-right', function(e)
- {
- PreviousClick();
-});
 
 function PreviousClick()
 {
-  //currentselectedDate = document.getElementById('DatePicker');
-  
- // currentselectedDate = new Date(currentselectedDate.value); 
-  currentselectedDate.setDate(currentselectedDate.getDate()-1);
-  if (currentselectedDate.getDay() == 0) 
-  {
-    currentselectedDate.setDate(currentselectedDate.getDate()-1);
-  }
+  if(document.getElementById("showfavs").checked) {
+		var favs = JSON.parse(localStorage.getItem('favs'));
+		if(favs.indexOf(formattedComicDate) > 0){
+			currentselectedDate = new Date(favs[favs.indexOf(formattedComicDate) - 1]);}}
+	else{
+		currentselectedDate.setDate(currentselectedDate.getDate() - 1);
+	}
+
+
+
   compareDates();
 
   displayComic();
 
 } 
 
-document.addEventListener('swiped-left', function(e)
- {
- NextClick();
-});
-
 
 function NextClick()
 {
- // currentselectedDate = document.getElementById('DatePicker');
- // currentselectedDate = new Date(currentselectedDate.value);
   currentselectedDate.setDate(currentselectedDate.getDate()+1);
   if (currentselectedDate.getDay() == 0) 
   {
     currentselectedDate.setDate(currentselectedDate.getDate()+1);
   }
+
+  if(document.getElementById("showfavs").checked) {
+		var favs = JSON.parse(localStorage.getItem('favs'));
+		if(favs.indexOf(formattedComicDate) < favs.length - 1){
+			currentselectedDate = new Date(favs[favs.indexOf(formattedComicDate) + 1]);}}
+	else{
+			currentselectedDate.setDate(currentselectedDate.getDate() + 1);
+	}
   
   compareDates();
 
@@ -206,27 +205,27 @@ function NextClick()
 
 function FirstClick()
 {
-  currentselectedDate = new Date(Date.UTC(2015,4,4,12));
-  
+    
+  if(document.getElementById("showfavs").checked) {
+		currentselectedDate = new Date(JSON.parse(localStorage.getItem('favs'))[0]);}
+	else{
+    currentselectedDate = new Date(Date.UTC(2015,4,4,12));
+	}
+
   compareDates();
   
   displayComic();
 
 }
 
-document.addEventListener('swiped-up', function(e)
- {
-  CurrentClick();
-});
-
 function CurrentClick()
 {
-  currentselectedDate = new Date();
-  if (currentselectedDate.getDay() == 0) 
-    {
-      currentselectedDate.setDate(currentselectedDate.getDate()-1);
-    }
-  
+  if(document.getElementById("showfavs").checked) {
+	}
+	else
+	{
+	currentselectedDate = new Date();
+	}
   compareDates();
 
   displayComic();
@@ -234,20 +233,22 @@ function CurrentClick()
 }
 
 
-document.addEventListener('swiped-down', function(e)
- {
-  RandomClick();
-});
-
 function RandomClick()
 {
-  start = new Date(Date.UTC(2015,05,04,12));
-  end = new Date(maxDate);
-  currentselectedDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+  //currentselectedDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
   if (currentselectedDate.getDay() == 0) 
   {
     currentselectedDate.setDate(currentselectedDate.getDate()-1);
   }
+  
+  if(document.getElementById("showfavs").checked) {
+		currentselectedDate = new Date(JSON.parse(localStorage.getItem('favs'))[Math.floor(Math.random() * JSON.parse(localStorage.getItem('favs')).length)]);}
+	else{
+		start = new Date(Date.UTC(2015,05,04,12));
+    end = new Date(maxDate);
+		currentselectedDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+	}
+  
   compareDates();
 
   displayComic();
@@ -395,6 +396,27 @@ function Rotate() {
     element.className = 'normal';
   }
 }
+
+document.addEventListener('swiped-down', function(e) {
+	if(document.getElementById("swipe").checked) {
+		RandomClick()}
+})
+
+document.addEventListener('swiped-right', function(e) {
+	if(document.getElementById("swipe").checked) {
+		PreviousClick()}
+})
+
+
+document.addEventListener('swiped-left', function(e) {
+	if(document.getElementById("swipe").checked) {
+		NextClick()}
+})
+
+document.addEventListener('swiped-up', function(e) {
+	if(document.getElementById("swipe").checked) {
+		CurrentClick()}
+})
 
 setStatus = document.getElementById('swipe');
     setStatus.onclick = function() {
