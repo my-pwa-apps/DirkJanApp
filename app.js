@@ -118,7 +118,7 @@ function onload() {
 	}
 		currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
 		document.getElementById("Next").disabled = true;
-		//document.getElementById("Current").disabled = true;
+		document.getElementById("Previous").disabled = true;
 }
 
 maxDate = document.getElementById("DatePicker").valueAsDate = new Date();
@@ -183,7 +183,6 @@ function PreviousClick()
 
 function NextClick()
 {
-  //currentselectedDate.setDate(currentselectedDate.getDate()+1);
   if (currentselectedDate.getDay() == 0) 
   {
     currentselectedDate.setDate(currentselectedDate.getDate()+1);
@@ -235,7 +234,6 @@ function CurrentClick()
 
 function RandomClick()
 {
-  //currentselectedDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
   if (currentselectedDate.getDay() == 0) 
   {
     currentselectedDate.setDate(currentselectedDate.getDate()-1);
@@ -294,10 +292,9 @@ function displayComic()
 		$(".favicon").css({"color": "black"}).removeClass('fa-star-o').addClass('fa-star');
 	}
 
-  fetchUrl().then(textData =>
+  fetchUrl().then(siteBody =>
  {
 
-    siteBody = textData;
     notFound = siteBody.includes("error404");
     picturePosition = siteBody.indexOf("https://dirkjan.nl/wp-content/uploads/");
     if (notFound == false)
@@ -413,8 +410,8 @@ const fetchUrl = async () =>
       "x-cors-grida-api-key": "77a0175b-4435-49b0-ad18-52d2dea5a548"
     }
   });
-  const textData = await websiteData.text();
- return textData;
+   const siteBody = await websiteData.text();
+ return siteBody;
 };
 
 function Rotate() {
