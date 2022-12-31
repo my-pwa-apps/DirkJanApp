@@ -183,7 +183,7 @@ function PreviousClick()
 
 function NextClick()
 {
-  currentselectedDate.setDate(currentselectedDate.getDate()+1);
+  //currentselectedDate.setDate(currentselectedDate.getDate()+1);
   if (currentselectedDate.getDay() == 0) 
   {
     currentselectedDate.setDate(currentselectedDate.getDate()+1);
@@ -352,6 +352,11 @@ function compareDates()
     document.getElementById("First").disabled = false;
   }
   
+  if (currentselectedDate.getTime() == new Date().setHours(0,0,0,0))
+  {document.getElementById("Current").disabled = true;}
+  else {document.getElementById("Current").disabled = false;}
+
+
   if(document.getElementById("showfavs").checked) {
 		endDate = new Date(favs[favs.length - 1]);
 	}
