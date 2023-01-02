@@ -318,7 +318,10 @@ function compareDates()
   
   var favs = JSON.parse(localStorage.getItem('favs'));
 	if(document.getElementById("showfavs").checked) {
-		if(favs.includes(document.getElementById("DatePicker").value)) {}
+		if(favs.includes(document.getElementById("DatePicker").value)) 
+    {
+      startDate = new Date(document.getElementById("DatePicker").value);
+    }
 		else{	
 		startDate = new Date(favs[0])}}
 	else{	
@@ -479,7 +482,7 @@ setStatus = document.getElementById('swipe');
         }
 
 		compareDates();
-		displayComic();
+		//displayComic();
 
 	}
 
