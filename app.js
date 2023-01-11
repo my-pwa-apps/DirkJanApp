@@ -174,7 +174,7 @@ function displayComic()
   formattedDate = year+"-"+month+"-"+day;
   formattedComicDate = year+month+day;
   document.getElementById('DatePicker').value = formattedDate;
-  siteUrl =  "https://api.codetabs.com/v1/proxy?quest=https://dirkjan.nl/cartoon/"+formattedComicDate;
+  siteUrl =  "https://corsproxy.garfieldapp.workers.dev/cors-proxy?https://dirkjan.nl/cartoon/"+formattedComicDate;
   
   fetchUrl().then(textData =>
  {
