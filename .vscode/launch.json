@@ -16,7 +16,7 @@
             "type": "pwa-msedge",
             "request": "launch",
             "name": "Launch Chrome against localhost",
-            "url": "c://users//bartm//git repositories//dirkjanapp//index.html",
+            "url": "c://users//bartm//github repos//dirkjanapp//index.html",
             "webRoot": "${workspaceFolder}"
         }
     ]
