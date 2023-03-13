@@ -106,21 +106,20 @@ input[type=date]
  }
 
  input[type=checkbox] {
-	
-	cursor: pointer;
+	border: black;
+    background-color: darkgrey;
+	color: black;
 }
 input[type=checkbox]:before {
-	
-	border: 2px solid black;
-	border-radius: 3px;
+	border: black;
 	background-color: darkgrey;
+    color: black;
 }
 input[type=checkbox]:checked:after {
-	content: "";
-	display: block;
-	
 	border: black;
-	position: absolute;
+    background-color: darkgrey;
+    color: black;
+	
 	
 }
  
