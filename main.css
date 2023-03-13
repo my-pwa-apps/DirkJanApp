@@ -1,7 +1,8 @@
 body
 {
-    background-color: darkgrey;
+    background: linear-gradient(black, white) no-repeat;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: white;
 }
 
 main
