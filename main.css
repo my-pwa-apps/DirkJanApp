@@ -3,6 +3,7 @@ body
     background: linear-gradient(black, darkgrey) no-repeat;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background-color: darkgrey;
+    color: black;
 }
 
 main
