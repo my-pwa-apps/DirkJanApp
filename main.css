@@ -108,23 +108,6 @@ input
 	background-color: white;
 }
 
-input[type=date]
-{
-    margin: 0px;
-    border-radius: 0px;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    box-sizing: border-box;
-    max-width: 100%;
-    font-size: 0.8pc;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    text-align: center;
-    background-color: darkgrey;
-    border-color: black;
-    color: black;
-    border-radius: 10px;
-}
-
 .buttongrid
 {
     display: grid;
