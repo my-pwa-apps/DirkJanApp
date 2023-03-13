@@ -14,51 +14,98 @@ main
     text-align: center;
 }
 
+input[type=checkbox]
+{
+	position: absolute;
+	cursor: pointer;
+}
+
+input[type=checkbox]:before
+{
+	content: "";
+	display: block;
+	position: absolute;
+	width: 16px;
+	height: 16px;
+	top: 0;
+	left: 0;
+	border: 2px solid black;
+	border-radius: 3px;
+	background-color: lightgray;
+}
+
+input[type=checkbox]:checked:after
+{
+	content: "";
+	display: block;
+	width: 5px;
+	height: 10px;
+	border: solid black;
+	border-width: 0 2px 2px 0;
+	-webkit-transform: rotate(45deg);
+	-ms-transform: rotate(45deg);
+	transform: rotate(45deg);
+	position: absolute;
+	top: 2px;
+	left: 6px;
+}
 
 .logo img
 {
     width: 100%;
+    
 }
-
-.button 
-{
-    background-color: white; 
-    border-color: white;
-    color: orange;
-    padding-top: 1pc;  
-    padding-bottom: 1pc; 
-    font-size: 0.9pc;
-    font-weight: bolder;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-
-.button:hover
-{
-    background-color:black ;
-    border-color: black;
-    box-shadow: 0 12px 16px 0 rgba(0,0,0,0.24), 0 17px 50px 0 rgba(0,0,0,0.19);
-}
-
-.button:disabled
-{
-    background-color:black;
-    border-color:black;
-    opacity: 0.5;
-    box-shadow: none;
-}
-
-input
-{
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    box-sizing: border-box;
-    max-width: 100%;
-    font-size: 0.8pc;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+.button {
+    margin: 5px 5px 5px 5px;
+    padding: 10px 10px 10px 10px;
     text-align: center;
-    color:orange;
-    background-color: black;
-    border-color: black;
+    
+    transition: 0.5s;
+    background-size: 200% auto;
+    color: black;
+    border-radius: 10px;
+    display: block;
+    font-weight: 700;
+    box-shadow: 0px 0px 10px -7px #f09819;
+    background-image: linear-gradient(45deg, yellow 0%, #F09819  51%, yellow  100%);
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+  
+  .button:active {
+      transform: scale(0.95);
+      border-radius: 10px;
+    }
+  
+  .button:hover {
+    background-position: right center;
+    color: black;
+    text-decoration: none;
+    border-radius: 10px;
+  }
+  
+  .button:disabled {
+      background-color: #f39700;
+      opacity: 0.5;
+      color: black;
+      border-radius: 10px;
+      box-shadow: none;
+  }
+
+input 
+{
+	margin: 5px 5px 5px 5px;
+	padding: 10px 10px 10px 10px;
+	-webkit-appearance: none;
+	-moz-appearance: none;
+	max-width: 100%;
+	font-size: 0.75pc;
+	box-sizing: border-box;
+	text-align: center;
+	border-radius: 10px;
+	background-color: white;
 }
 
 .buttongrid
@@ -77,7 +124,6 @@ input
     display: grid;
     grid-template-columns: 7% 10%;
     gap: 3px;
-    
 }
 
 .info img
@@ -87,10 +133,8 @@ input
     
 }
 
-
-
-
-.rotate {
+.rotate
+{
     -ms-transform: rotate(90deg);
     -webkit-transform: rotate(90deg);
     transform: rotate(90deg);
@@ -98,13 +142,10 @@ input
     margin-top: -10vw;
     width: 150%;
     max-height: 100%;
-    
-    
-    
-    
- }
- 
- .normal {
+}
+  
+ .normal
+ {
     -ms-transform: rotate(0deg);
     -webkit-transform: rotate(0deg);
     transform: rotate(0deg);
@@ -116,3 +157,9 @@ input
     left: 50%;
  }
 
+ .labels
+ {
+     padding-left: 30px;
+     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+     font-size: small;
+ }
