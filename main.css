@@ -105,26 +105,24 @@ input[type=date]
     
  }
 
- input:checked
-    {
-        background-color: black;
-        border-color: black;
-        color: black;
-        
-    }
-
  input[type=checkbox] {
-   
-    
-   
-    background-color: black;
-    border-color: black;
-    color: black;
-    
-    
-    
-    
- }
+	
+	cursor: pointer;
+}
+input[type=checkbox]:before {
+	
+	border: 2px solid black;
+	border-radius: 3px;
+	background-color: darkgrey;
+}
+input[type=checkbox]:checked:after {
+	content: "";
+	display: block;
+	
+	border: black;
+	position: absolute;
+	
+}
  
  .normal {
     -ms-transform: rotate(0deg);
