@@ -297,7 +297,7 @@ getStatus = localStorage.getItem('showfavs');
 		return JSON.parse(localStorage.getItem('djfavs')) || [];
 	  }
 		  
-    function Addfav() {
+   /* function Addfav() {
       formattedDate = currentselectedDate.getFullYear() + "-" + ("0" + (currentselectedDate.getMonth("") +1 )).slice(-2) + "-" + ("0" + (currentselectedDate.getDate(""))).slice(-2);
       formattedComicDate = formattedDate.split('-').join('/');
       djfavs = getFavs();
@@ -320,4 +320,4 @@ getStatus = localStorage.getItem('showfavs');
     
       compareDates();
       displayComic();
-      }
+      } */
