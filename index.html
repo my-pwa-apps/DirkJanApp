@@ -21,9 +21,6 @@
     <link rel="icon" type="image/png" sizes="16x16" href="./favicon-16x16.webp">
     <link rel="manifest" href="./manifest.webmanifest">
     
-    <script src="./app.js"></script>
-    <script src="./swiped-events.min.js"></script>
-
 </head>
 
 <body onload=onload()>
@@ -57,7 +54,7 @@
 <br>
 	<br>
     
-		<input type="checkbox" id="swipe" checked cursor="pointer" disabled="true">
+		<input type="checkbox" id="swipe" checked cursor="pointer">
     	<label for="swipe" class="labels" cursor="pointer">Swipen ingeschakeld</label>	
     
 	<br>
@@ -67,7 +64,9 @@
 		<label for="showfavs" class="labels" cursor="pointer">Alleen favorieten tonen</label>
 		<i onclick="Addfav()" disabled="true" aria-hidden="true" class="fa fa-star-o favicon" style="font-size: 25px; right: 20px; position: absolute"></i>
 	
-
+  <script src="./app.js"></script>
+  <script src="./swiped-events.min.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 </body>
   
 </html>
