@@ -59,16 +59,8 @@ function onload()
  
 }
 
-document.addEventListener('swiped-right', function(e)
- {
- PreviousClick();
-});
-
 function PreviousClick()
 {
-  //currentselectedDate = document.getElementById('DatePicker');
-  
- // currentselectedDate = new Date(currentselectedDate.value); 
   currentselectedDate.setDate(currentselectedDate.getDate()-1);
   if (currentselectedDate.getDay() == 0) 
   {
@@ -80,16 +72,8 @@ function PreviousClick()
 
 } 
 
-document.addEventListener('swiped-left', function(e)
- {
- NextClick();
-});
-
-
 function NextClick()
 {
- // currentselectedDate = document.getElementById('DatePicker');
- // currentselectedDate = new Date(currentselectedDate.value);
   currentselectedDate.setDate(currentselectedDate.getDate()+1);
   if (currentselectedDate.getDay() == 0) 
   {
@@ -97,7 +81,6 @@ function NextClick()
   }
   
   compareDates();
-
   displayComic();
 
 }
@@ -107,15 +90,9 @@ function FirstClick()
   currentselectedDate = new Date(Date.UTC(2015,4,4,12));
   
   compareDates();
-  
   displayComic();
 
 }
-
-document.addEventListener('swiped-up', function(e)
- {
-  CurrentClick();
-});
 
 function CurrentClick()
 {
@@ -126,16 +103,9 @@ function CurrentClick()
     }
   
   compareDates();
-
   displayComic();
  
 }
-
-
-document.addEventListener('swiped-down', function(e)
- {
-  RandomClick();
-});
 
 function RandomClick()
 {
@@ -147,7 +117,6 @@ function RandomClick()
     currentselectedDate.setDate(currentselectedDate.getDate()-1);
   }
   compareDates();
-
   displayComic();
  
 }
@@ -161,7 +130,6 @@ function DateChange()
       currentselectedDate.setDate(currentselectedDate.getDate()-1);
     }
   compareDates();
-  
   displayComic();
   
 }
@@ -276,3 +244,75 @@ function Rotate() {
   }
 }
 
+document.addEventListener('swiped-down', function(e) {
+	if(document.getElementById("swipe").checked) {
+		RandomClick()}
+})
+
+document.addEventListener('swiped-right', function(e) {
+	if(document.getElementById("swipe").checked) {
+		PreviousClick()}
+})
+
+
+document.addEventListener('swiped-left', function(e) {
+	if(document.getElementById("swipe").checked) {
+		NextClick()}
+})
+
+document.addEventListener('swiped-up', function(e) {
+	if(document.getElementById("swipe").checked) {
+		CurrentClick()}
+})
+
+setStatus = document.getElementById("swipe");
+  setStatus.onclick = function() {    
+        if(document.getElementById("swipe").checked) {
+            localStorage.setItem('stat', "true");
+        } else {
+            localStorage.setItem('stat', "false");
+			 }
+    }
+
+    getStatus = localStorage.getItem('stat');
+    if (getStatus == "true") {
+        document.getElementById("swipe").checked = true;
+    } else {
+        document.getElementById("swipe").checked = false;
+    }
+
+getStatus = localStorage.getItem('showfavs');
+    if (getStatus == "true") {
+        document.getElementById("showfavs").checked = true;
+    } else {
+        document.getElementById("showfavs").checked = false;
+    }
+
+	function getFavs() {
+		return JSON.parse(localStorage.getItem('djfavs')) || [];
+	  }
+		  
+    function Addfav() {
+      formattedDate = currentselectedDate.getFullYear() + "-" + ("0" + (currentselectedDate.getMonth("") +1 )).slice(-2) + "-" + ("0" + (currentselectedDate.getDate(""))).slice(-2);
+      formattedComicDate = formattedDate.split('-').join('/');
+      djfavs = getFavs();
+      
+      if (djfavs.includes(formattedComicDate)) {
+        djfavs = djfavs.filter(date => date !== formattedComicDate);
+        $(".favicon").css({ color: "black" }).removeClass("fa-star").addClass("fa-star-o");
+        document.getElementById("showfavs").disabled = djfavs.length === 0;
+      } else {
+        djfavs = [...djfavs, formattedComicDate];
+        $(".favicon").css({ color: "black" }).removeClass("fa-star-o").addClass("fa-star");
+        document.getElementById("showfavs").disabled = false;
+      }
+      
+      djfavs.sort();
+      localStorage.setItem("djfavs", JSON.stringify(djfavs));
+    
+      document.getElementById("Next").disabled = !djfavs.length;
+      document.getElementById("Current").disabled = !djfavs.length;
+    
+      compareDates();
+      displayComic();
+      }
