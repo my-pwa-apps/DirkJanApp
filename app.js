@@ -14,14 +14,36 @@ function Share()
 
 function onload()
 {
-    
-  currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
-  maxDate = document.getElementById("DatePicker").valueAsDate = new Date();
- 
-  if (currentselectedDate.getDay() == 0) 
+  
+  
+  var djfavs = getFavs();
+	djfavs = djfavs || [];
+	previousUrl = null;
+
+   //document.getElementById("showfavs").checked = djfavs.length !== 0;
+	 //document.getElementById("showfavs").disabled = djfavs.length === 0;
+	
+   if(document.getElementById("showfavs").checked)
+   {
+	currentselectedDate = djfavs.length !== 0 
+		? new Date(djfavs[0]) 
+		: document.getElementById("DatePicker").valueAsDate = new Date();
+	
+   }
+    else(currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date());
+
+    document.getElementById("Next").disabled = !djfavs.length;
+    document.getElementById("Current").disabled = !djfavs.length;
+  
+
+  //currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
+  //maxDate = document.getElementById("DatePicker").valueAsDate = new Date();
+  maxDate = new Date();
+
+ /* if (currentselectedDate.getDay() == 0) 
   {
     currentselectedDate.setDate(currentselectedDate.getDate()-1);
-  }
+  }*/
 
   switch (maxDate.getDay())
   {
@@ -48,9 +70,10 @@ function onload()
       break;
     }
 
-  formatDate(maxDate);
+  //formatDate(maxDate);
   
-  formattedmaxDate = year+'-'+month+'-'+day;
+  //formattedmaxDate = year+'-'+month+'-'+day;
+  formattedmaxDate = maxDate.toISOString().substr(0, 10);
   document.getElementById("DatePicker").setAttribute("max", formattedmaxDate); 
   
   compareDates();
@@ -61,11 +84,22 @@ function onload()
 
 function PreviousClick()
 {
-  currentselectedDate.setDate(currentselectedDate.getDate()-1);
+  /*currentselectedDate.setDate(currentselectedDate.getDate()-1);
   if (currentselectedDate.getDay() == 0) 
   {
     currentselectedDate.setDate(currentselectedDate.getDate()-1);
   }
+  */
+  
+  const djfavs = getFavs();
+	const favIndex = djfavs.indexOf(formattedComicDate);
+
+	if (document.getElementById("showfavs").checked && favIndex > 0) {
+		currentselectedDate = new Date(djfavs[favIndex - 1]);
+	} else {
+		currentselectedDate.setDate(currentselectedDate.getDate() - 1);
+	}
+
   compareDates();
 
   displayComic();
@@ -74,12 +108,24 @@ function PreviousClick()
 
 function NextClick()
 {
-  currentselectedDate.setDate(currentselectedDate.getDate()+1);
+  /*currentselectedDate.setDate(currentselectedDate.getDate()+1);
   if (currentselectedDate.getDay() == 0) 
   {
     currentselectedDate.setDate(currentselectedDate.getDate()+1);
   }
-  
+  */
+
+  let djfavs;
+	if (document.getElementById("showfavs").checked) {
+	  djfavs = getFavs();
+	  let index = djfavs.indexOf(formattedComicDate);
+	  if (index < djfavs.length - 1) {
+		currentselectedDate = new Date(djfavs[index + 1]);
+	  }
+	} else {
+	  currentselectedDate.setDate(currentselectedDate.getDate() + 1);
+	}
+
   compareDates();
 
   displayComic();
@@ -88,8 +134,15 @@ function NextClick()
 
 function FirstClick()
 {
-  currentselectedDate = new Date(Date.UTC(2015,4,4,12));
+  //currentselectedDate = new Date(Date.UTC(2015,4,4,12));
   
+  var djfavs = getFavs();
+	if(document.getElementById("showfavs").checked) {
+	currentselectedDate = new Date(djfavs[0]);
+	} else {
+	currentselectedDate = new Date(Date.UTC(2015, 4, 4, 12));
+	}
+
   compareDates();
   
   displayComic();
@@ -112,13 +165,26 @@ function CurrentClick()
 
 function RandomClick()
 {
-  start = new Date(Date.UTC(2015,05,04,12));
+ /* start = new Date(Date.UTC(2015,05,04,12));
   end = new Date(maxDate);
   currentselectedDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
   if (currentselectedDate.getDay() == 0) 
   {
     currentselectedDate.setDate(currentselectedDate.getDate()-1);
   }
+  */
+
+  const djfavs = getFavs();
+	const isShowFavsChecked = document.getElementById("showfavs").checked;
+
+	if (isShowFavsChecked && djfavs.length) {
+		currentselectedDate = new Date(djfavs[Math.floor(Math.random() * djfavs.length)]);
+	} else {
+		const start = new Date("2015-05-04");
+		const end = maxDate;
+		currentselectedDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+	}
+
   compareDates();
 
   displayComic();
@@ -149,6 +215,12 @@ function displayComic()
   document.getElementById('DatePicker').value = formattedDate;
   siteUrl =  "https://corsproxy.garfieldapp.workers.dev/cors-proxy?https://dirkjan.nl/cartoon/"+formattedComicDate;
   
+  djfavs = getFavs();
+  
+  $(".favicon").css({"color": "black"})
+    .removeClass(djfavs.includes(formattedComicDate) ? 'fa-star-o' : 'fa-star')
+    .addClass(djfavs.includes(formattedComicDate) ? 'fa-star' : 'fa-star-o');
+
   fetchUrl().then(textData =>
  {
 
@@ -172,7 +244,7 @@ function displayComic()
   
 }
 
-function compareDates()
+/*function compareDates()
 {
   startDate = new Date(Date.UTC(2015,4,4,12));
   startDate = startDate.setHours(0,0,0,0);
@@ -220,6 +292,57 @@ function compareDates()
   } 
 
  }
+
+ */
+
+ function compareDates() {
+	var djfavs = getFavs();
+	if(document.getElementById("showfavs").checked && djfavs.length !== 0) {
+		if(djfavs.includes(document.getElementById("DatePicker").value)) {}
+		else{	
+		startDate = new Date(djfavs[0])}}
+	else{	
+		startDate = new Date("2015/05/04");
+	}
+	startDate = startDate.setHours(0, 0, 0, 0);
+	currentselectedDate = currentselectedDate.setHours(0, 0, 0, 0);
+	startDate = new Date(startDate);
+	currentselectedDate = new Date(currentselectedDate);
+	if(currentselectedDate.getTime() <= startDate.getTime()) {
+		document.getElementById("Previous").disabled = true;
+		document.getElementById("First").disabled = true;
+		startDate = startDate.toISOString().substr(0, 10);
+	} else {
+		document.getElementById("Previous").disabled = false;
+		document.getElementById("First").disabled = false;
+	}
+	if(document.getElementById("showfavs").checked) {
+		endDate = new Date(djfavs[djfavs.length - 1]);
+	}
+	else{ 
+		endDate = maxDate;
+	}
+	endDate = endDate.setHours(0, 0, 0, 0);
+	endDate = new Date(endDate);
+	if(currentselectedDate.getTime() >= endDate.getTime()) {
+		document.getElementById("Next").disabled = true;
+		//document.getElementById("Current").disabled = true;
+		endDate = endDate.toISOString().substr(0, 10);
+	} else {
+		document.getElementById("Next").disabled = false;
+		document.getElementById("Current").disabled = false;
+	}
+	if(document.getElementById("showfavs").checked) {
+		document.getElementById("Current").disabled = true;
+		if(djfavs.length == 1) {
+			document.getElementById("Random").disabled = true;
+			document.getElementById("Previous").disabled = true;
+			document.getElementById("First").disabled = true;
+		
+		}}
+	else {
+		document.getElementById("Random").disabled = false;}
+}
 
  function formatDate(datetoFormat)
  {
@@ -280,6 +403,27 @@ setStatus = document.getElementById("swipe");
 			 }
     }
 
+  setStatus = document.getElementById('showfavs');
+	djfavs = getFavs();
+	setStatus.onclick = function() {
+        if(document.getElementById('showfavs').checked) {
+            localStorage.setItem('showfavs', "true");
+			if(djfavs.indexOf(formattedComicDate) == -1)
+			{
+				
+			}
+			else
+			{
+				currentselectedDate = new Date(djfavs[0]);	
+			}
+			
+	
+       } else {
+           localStorage.setItem('showfavs', "false");
+			
+        }
+	}
+
     getStatus = localStorage.getItem('stat');
     if (getStatus == "true") {
         document.getElementById("swipe").checked = true;
@@ -298,7 +442,7 @@ getStatus = localStorage.getItem('showfavs');
 		return JSON.parse(localStorage.getItem('djfavs')) || [];
 	  }
 		  
-   /* function Addfav() {
+   function Addfav() {
       formattedDate = currentselectedDate.getFullYear() + "-" + ("0" + (currentselectedDate.getMonth("") +1 )).slice(-2) + "-" + ("0" + (currentselectedDate.getDate(""))).slice(-2);
       formattedComicDate = formattedDate.split('-').join('/');
       djfavs = getFavs();
@@ -319,6 +463,6 @@ getStatus = localStorage.getItem('showfavs');
       document.getElementById("Next").disabled = !djfavs.length;
       document.getElementById("Current").disabled = !djfavs.length;
     
-      compareDates();
-      displayComic();
-      } */
+      //compareDates();
+      //displayComic();
+      } 
