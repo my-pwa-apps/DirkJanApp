@@ -285,6 +285,7 @@ function displayComic()
 	else{ 
 		endDate = new Date();
 	}
+  endDate = new Date(maxDate);
 	endDate = endDate.setHours(0, 0, 0, 0);
 	endDate = new Date(endDate);
 	if(currentselectedDate.getTime() >= endDate.getTime()) {
