@@ -112,7 +112,7 @@ function Addfav()
   
   displayComic();
  
-}*/
+}
 
 function onload() {
 	var favs = JSON.parse(localStorage.getItem('favs'));
