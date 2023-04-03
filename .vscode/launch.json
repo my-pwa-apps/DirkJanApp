@@ -4,6 +4,7 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+<<<<<<< HEAD
     {
         "name": "Launch Edge",
         "request": "launch",
@@ -11,6 +12,15 @@
         "url": "c://users//bartm//gitHUB repos//dirkjanapp//index.html",
         "webRoot": "${workspaceFolder}"
     },
+=======
+        {
+            "name": "Launch Edge",
+            "request": "launch",
+            "type": "msedge",
+            "url": "c://users//bartm//github repos//dirkjanapp//index.html",
+            "webRoot": "${workspaceFolder}"
+        },
+>>>>>>> 60e47ea754a52650b30d351876fed8936075fb6f
         
         {
             "type": "pwa-msedge",

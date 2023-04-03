@@ -12,7 +12,39 @@ function Share()
   } 
 }
 
-function onload()
+function Addfav()
+{
+	formattedComicDate = year+'/'+month+'/'+day;
+	var favs = JSON.parse(localStorage.getItem('favs'));
+	if(favs == null)
+	{
+		favs = [];
+	}
+	if(favs.indexOf(formattedComicDate) == -1)
+	{
+		favs.push(formattedComicDate);
+		$(".favicon").css({"color": "black"}).removeClass('fa-star-o').addClass('fa-star');
+		document.getElementById("showfavs").disabled = false;
+	}
+	else
+	{
+		favs.splice(favs.indexOf(formattedComicDate), 1);
+		$(".favicon").css({"color": "black"}).removeClass('fa-star').addClass('fa-star-o');
+		if(favs.length === 0)
+		{
+			document.getElementById("showfavs").checked = false;
+			document.getElementById("showfavs").disabled = true;
+			
+		}
+	}
+	favs.sort();
+	localStorage.setItem('favs', JSON.stringify(favs));
+	//compareDates();
+	//displayComic();
+}
+
+
+/*function onload()
 {
   nextclicked = false;
   previousclicked = false;
@@ -80,8 +112,39 @@ function onload()
   
   displayComic();
  
+}*/
+
+function onload() {
+	var favs = JSON.parse(localStorage.getItem('favs'));
+	if(favs == null)
+	{
+		favs = [];
+	}
+	if(document.getElementById("showfavs").checked) {
+		currentselectedDate = new Date(favs[0]);
+		if(favs.length === 0)
+		{
+			document.getElementById("showfavs").checked = false;
+			document.getElementById("showfavs").disabled = true;
+			currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
+		
+		}
+		
+	}
+	else{
+
+		if(favs.length === 0)
+		{
+			document.getElementById("showfavs").checked = false;
+			document.getElementById("showfavs").disabled = true;
+			currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
+	}
+		currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
+		document.getElementById("Next").disabled = true;
+		document.getElementById("Previous").disabled = true;
 }
 
+<<<<<<< HEAD
 function PreviousClick()
 {
   /*currentselectedDate.setDate(currentselectedDate.getDate()-1);
@@ -100,19 +163,81 @@ function PreviousClick()
 		currentselectedDate.setDate(currentselectedDate.getDate() - 1);
 	}
 
+=======
+maxDate = document.getElementById("DatePicker").valueAsDate = new Date();
+if (currentselectedDate.getDay() == 0) 
+  {
+    currentselectedDate.setDate(currentselectedDate.getDate()-1);
+  }
+switch (maxDate.getDay())
+{
+  case 0:
+    maxDate.setDate(maxDate.getDate()+6);
+    break;
+  case 1:
+    maxDate.setDate(maxDate.getDate()+5);
+    break;
+  case 2:
+    maxDate.setDate(maxDate.getDate()+4);
+    break;
+  case 3:
+    maxDate.setDate(maxDate.getDate()+3);
+    break;
+  case 4:
+     maxDate.setDate(maxDate.getDate()+2);
+     break;
+  case 5:
+    maxDate.setDate(maxDate.getDate()+1);
+    break;
+  case 6:
+    maxDate.setDate(maxDate.getDate()+7);
+    break;
+  }
+
+formatDate(maxDate);
+
+formattedmaxDate = year+'-'+month+'-'+day;
+document.getElementById("DatePicker").setAttribute("max", formattedmaxDate); 
+
+	compareDates();
+	displayComic();
+
+}
+
+
+function PreviousClick()
+{
+  if(document.getElementById("showfavs").checked) {
+		var favs = JSON.parse(localStorage.getItem('favs'));
+		if(favs.indexOf(formattedComicDate) > 0){
+			currentselectedDate = new Date(favs[favs.indexOf(formattedComicDate) - 1]);}}
+	else{
+		currentselectedDate.setDate(currentselectedDate.getDate() - 1);
+	}
+
+
+
+>>>>>>> 60e47ea754a52650b30d351876fed8936075fb6f
   compareDates();
 
   displayComic();
 
 } 
 
+<<<<<<< HEAD
 function NextClick()
 {
   /*currentselectedDate.setDate(currentselectedDate.getDate()+1);
+=======
+
+function NextClick()
+{
+>>>>>>> 60e47ea754a52650b30d351876fed8936075fb6f
   if (currentselectedDate.getDay() == 0) 
   {
     currentselectedDate.setDate(currentselectedDate.getDate()+1);
   }
+<<<<<<< HEAD
   */
   nextclicked = true;
   let djfavs;
@@ -126,6 +251,17 @@ function NextClick()
 	  currentselectedDate.setDate(currentselectedDate.getDate() + 1);
 	}
 
+=======
+
+  if(document.getElementById("showfavs").checked) {
+		var favs = JSON.parse(localStorage.getItem('favs'));
+		if(favs.indexOf(formattedComicDate) < favs.length - 1){
+			currentselectedDate = new Date(favs[favs.indexOf(formattedComicDate) + 1]);}}
+	else{
+			currentselectedDate.setDate(currentselectedDate.getDate() + 1);
+	}
+  
+>>>>>>> 60e47ea754a52650b30d351876fed8936075fb6f
   compareDates();
 
   displayComic();
@@ -134,6 +270,7 @@ function NextClick()
 
 function FirstClick()
 {
+<<<<<<< HEAD
   //currentselectedDate = new Date(Date.UTC(2015,4,4,12));
   
   var djfavs = getFavs();
@@ -141,6 +278,13 @@ function FirstClick()
 	currentselectedDate = new Date(djfavs[0]);
 	} else {
 	currentselectedDate = new Date(Date.UTC(2015, 4, 4, 12));
+=======
+    
+  if(document.getElementById("showfavs").checked) {
+		currentselectedDate = new Date(JSON.parse(localStorage.getItem('favs'))[0]);}
+	else{
+    currentselectedDate = new Date(Date.UTC(2015,4,4,12));
+>>>>>>> 60e47ea754a52650b30d351876fed8936075fb6f
 	}
 
   compareDates();
@@ -151,27 +295,34 @@ function FirstClick()
 
 function CurrentClick()
 {
-  currentselectedDate = new Date();
-  if (currentselectedDate.getDay() == 0) 
-    {
-      currentselectedDate.setDate(currentselectedDate.getDate()-1);
-    }
-  
+  if(document.getElementById("showfavs").checked) {
+	}
+	else
+	{
+	currentselectedDate = new Date();
+	}
   compareDates();
 
   displayComic();
  
 }
 
+<<<<<<< HEAD
 function RandomClick()
 {
  /* start = new Date(Date.UTC(2015,05,04,12));
   end = new Date(maxDate);
   currentselectedDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+=======
+
+function RandomClick()
+{
+>>>>>>> 60e47ea754a52650b30d351876fed8936075fb6f
   if (currentselectedDate.getDay() == 0) 
   {
     currentselectedDate.setDate(currentselectedDate.getDate()-1);
   }
+<<<<<<< HEAD
   */
 
   const djfavs = getFavs();
@@ -185,6 +336,17 @@ function RandomClick()
 		currentselectedDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
 	}
 
+=======
+  
+  if(document.getElementById("showfavs").checked) {
+		currentselectedDate = new Date(JSON.parse(localStorage.getItem('favs'))[Math.floor(Math.random() * JSON.parse(localStorage.getItem('favs')).length)]);}
+	else{
+		start = new Date(Date.UTC(2015,05,04,12));
+    end = new Date(maxDate);
+		currentselectedDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+	}
+  
+>>>>>>> 60e47ea754a52650b30d351876fed8936075fb6f
   compareDates();
 
   displayComic();
@@ -213,6 +375,7 @@ function displayComic()
   formattedDate = year+"-"+month+"-"+day;
   formattedComicDate = year+month+day;
   document.getElementById('DatePicker').value = formattedDate;
+<<<<<<< HEAD
   siteUrl =  "https://corsproxy.garfieldapp.workers.dev/cors-proxy?https://dirkjan.nl/cartoon/"+formattedComicDate;
   
   djfavs = getFavs();
@@ -222,9 +385,28 @@ function displayComic()
     .addClass(djfavs.includes(formattedComicDate) ? 'fa-star' : 'fa-star-o');
 
   fetchUrl().then(textData =>
+=======
+  siteUrl = "https://api.codetabs.com/v1/proxy?quest=https://dirkjan.nl/cartoon/"+formattedComicDate;
+  
+  var favs = JSON.parse(localStorage.getItem('favs'));
+	if(favs == null)
+	{
+		favs = [];
+	}
+	if(favs.indexOf(formattedComicDate) == -1)
+	{
+		$(".favicon").css({"color": "black"}).removeClass('fa-star').addClass('fa-star-o');
+
+	}	
+	else
+	{
+		$(".favicon").css({"color": "black"}).removeClass('fa-star-o').addClass('fa-star');
+	}
+
+  fetchUrl().then(siteBody =>
+>>>>>>> 60e47ea754a52650b30d351876fed8936075fb6f
  {
 
-    siteBody = textData;
     notFound = siteBody.includes("error404");
     picturePosition = siteBody.indexOf("https://dirkjan.nl/wp-content/uploads/");
     if (notFound == false)
@@ -255,7 +437,19 @@ function displayComic()
 
 /*function compareDates()
 {
-  startDate = new Date(Date.UTC(2015,4,4,12));
+  
+  var favs = JSON.parse(localStorage.getItem('favs'));
+	if(document.getElementById("showfavs").checked) {
+		if(favs.includes(document.getElementById("DatePicker").value)) 
+    {
+      startDate = new Date(document.getElementById("DatePicker").value);
+    }
+		else{	
+		startDate = new Date(favs[0])}}
+	else{	
+		startDate = new Date(Date.UTC(2015,4,4,12));
+	}
+  
   startDate = startDate.setHours(0,0,0,0);
   currentselectedDate = currentselectedDate.setHours(0,0,0,0);
   startDate = new Date(startDate);
@@ -280,7 +474,18 @@ function displayComic()
     document.getElementById("First").disabled = false;
   }
   
-  endDate = new Date(maxDate);
+  if (currentselectedDate.getTime() == new Date().setHours(0,0,0,0))
+  {document.getElementById("Current").disabled = true;}
+  else {document.getElementById("Current").disabled = false;}
+
+
+  if(document.getElementById("showfavs").checked) {
+		endDate = new Date(favs[favs.length - 1]);
+	}
+	else{ 
+		endDate = new Date(maxDate);
+	}
+
   endate = endDate.setHours(0,0,0,0);
   endDate = new Date(endDate);
   if (currentselectedDate.getTime() >= endDate.getTime())
@@ -299,6 +504,17 @@ function displayComic()
   {
     document.getElementById("Next").disabled = false;
   } 
+
+  if(document.getElementById("showfavs").checked) {
+		document.getElementById("Current").disabled = true;
+		if(favs.length == 1) {
+			document.getElementById("Random").disabled = true;
+			document.getElementById("Previous").disabled = true;
+			document.getElementById("First").disabled = true;
+		
+		}}
+	else {
+		document.getElementById("Random").disabled = false;}
 
  }
 
@@ -366,9 +582,18 @@ const fetchUrl = async () =>
 {
   const websiteData = await fetch(siteUrl, {
     method: "GET",
+<<<<<<< HEAD
     });
   const textData = await websiteData.text();
  return textData;
+=======
+    headers: {
+      "x-cors-grida-api-key": "77a0175b-4435-49b0-ad18-52d2dea5a548"
+    }
+  });
+   const siteBody = await websiteData.text();
+ return siteBody;
+>>>>>>> 60e47ea754a52650b30d351876fed8936075fb6f
 };
 
 function Rotate() {
@@ -403,6 +628,7 @@ document.addEventListener('swiped-up', function(e) {
 		CurrentClick()}
 })
 
+<<<<<<< HEAD
 setStatus = document.getElementById("swipe");
   setStatus.onclick = function() {    
         if(document.getElementById("swipe").checked) {
@@ -418,12 +644,36 @@ setStatus = document.getElementById("swipe");
         if(document.getElementById('showfavs').checked) {
             localStorage.setItem('showfavs', "true");
 			if(djfavs.indexOf(formattedComicDate) == -1)
+=======
+setStatus = document.getElementById('swipe');
+    setStatus.onclick = function() {
+        if(document.getElementById('swipe').checked) {
+            localStorage.setItem('stat', "true");
+        } else {
+            localStorage.setItem('stat', "false");
+			//currentselectedDate = new Date();
+			compareDates();
+			displayComic();
+        }
+    }
+
+	setStatus = document.getElementById('showfavs');
+	var favs = JSON.parse(localStorage.getItem('favs'));
+    setStatus.onclick = function() {
+        if(document.getElementById('showfavs').checked) {
+            localStorage.setItem('showfavs', "true");
+			if(favs.indexOf(formattedComicDate) == -1)
+>>>>>>> 60e47ea754a52650b30d351876fed8936075fb6f
 			{
 				
 			}
 			else
 			{
+<<<<<<< HEAD
 				currentselectedDate = new Date(djfavs[0]);	
+=======
+				currentselectedDate = new Date(favs[0]);	
+>>>>>>> 60e47ea754a52650b30d351876fed8936075fb6f
 			}
 			
 	
@@ -431,9 +681,20 @@ setStatus = document.getElementById("swipe");
            localStorage.setItem('showfavs', "false");
 			
         }
+<<<<<<< HEAD
 	}
 
     getStatus = localStorage.getItem('stat');
+=======
+
+		compareDates();
+		//displayComic();
+
+	}
+
+
+getStatus = localStorage.getItem('stat');
+>>>>>>> 60e47ea754a52650b30d351876fed8936075fb6f
     if (getStatus == "true") {
         document.getElementById("swipe").checked = true;
     } else {
@@ -443,6 +704,7 @@ setStatus = document.getElementById("swipe");
 getStatus = localStorage.getItem('showfavs');
     if (getStatus == "true") {
         document.getElementById("showfavs").checked = true;
+<<<<<<< HEAD
     } else {
         document.getElementById("showfavs").checked = false;
     }
@@ -475,3 +737,10 @@ getStatus = localStorage.getItem('showfavs');
       //compareDates();
       //displayComic();
       } 
+=======
+      }
+    else {
+        document.getElementById("showfavs").checked = false;
+    }
+
+>>>>>>> 60e47ea754a52650b30d351876fed8936075fb6f
