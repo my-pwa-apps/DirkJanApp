@@ -14,8 +14,8 @@ function Share()
 
 function onload()
 {
-  
-  
+  nextclicked = false;
+  previousclicked = false;
   var djfavs = getFavs();
 	djfavs = djfavs || [];
 	previousUrl = null;
@@ -90,7 +90,7 @@ function PreviousClick()
     currentselectedDate.setDate(currentselectedDate.getDate()-1);
   }
   */
-  
+  previousclicked = true;
   const djfavs = getFavs();
 	const favIndex = djfavs.indexOf(formattedComicDate);
 
@@ -114,7 +114,7 @@ function NextClick()
     currentselectedDate.setDate(currentselectedDate.getDate()+1);
   }
   */
-
+  nextclicked = true;
   let djfavs;
 	if (document.getElementById("showfavs").checked) {
 	  djfavs = getFavs();
@@ -237,8 +237,17 @@ function displayComic()
     }
     else
     {
-      PreviousClick();
+      if(previousclicked)
+      {
+        PreviousClick();
+        previousclicked = false;
       //document.getElementById("comic").src = "dirkjanvrij.png";
+      }
+      if(nextclicked)
+      {
+        NextClick();
+        nextclicked = false;
+      }
     }
   });
   
