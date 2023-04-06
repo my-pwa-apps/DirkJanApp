@@ -6,7 +6,7 @@ function Share()
 {
   if (navigator.share) {
     navigator.share({
-      title: 'https://dirkjanapp.ml',
+      title: 'https://dirkjanapp.pages.dev/',
       url: pictureUrl
     });
   } 
