@@ -165,8 +165,8 @@ function displayComic()
     }
     else
     {
-      PreviousClick();
-      //document.getElementById("comic").src = "dirkjanvrij.png";
+      //PreviousClick();
+      document.getElementById("comic").src = "dirkjanvrij.png";
     }
   });
   
