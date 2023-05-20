@@ -154,10 +154,11 @@ function displayComic()
 
     siteBody = textData;
     notFound = siteBody.includes("error404");
-    picturePosition = siteBody.indexOf("https://dirkjan.nl/wp-content/uploads/");
+    picturePosition = siteBody.indexOf('<article class="cartoon">');
+    picturePosition = picturePosition+41;
     if (notFound == false)
     {
-      pictureUrl = siteBody.substring(picturePosition, picturePosition+84);
+      pictureUrl = siteBody.substring(picturePosition, picturePosition+88);
       endPosition = pictureUrl.lastIndexOf('"');
       pictureUrl = siteBody.substring(picturePosition, picturePosition+endPosition);
       document.getElementById("comic").src = pictureUrl;
