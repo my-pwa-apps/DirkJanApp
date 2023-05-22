@@ -56,8 +56,8 @@ input[type=checkbox]:checked:after
     
 }
 .button {
-    margin: 5px 5px 5px 5px;
-    padding: 10px 10px 10px 10px;
+    margin: 5px ;
+    padding: 10px ;
     text-align: center;
     
     transition: 0.5s;
@@ -96,8 +96,8 @@ input[type=checkbox]:checked:after
 
 input 
 {
-	margin: 5px 5px 5px 5px;
-	padding: 10px 10px 10px 10px;
+	margin: 5px ;
+	padding: 10px ;
 	-webkit-appearance: none;
 	-moz-appearance: none;
 	max-width: 100%;
