@@ -1,3 +1,6 @@
+
+// Description: Main javascript file for DirkjanApp
+
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./serviceworker.js");
 }
@@ -15,9 +18,9 @@ function Share()
 function onload()
 {
     
-  currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
-  maxDate = document.getElementById("DatePicker").valueAsDate = new Date();
- 
+  maxDate = currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
+  //maxDate = currentselectedDate;
+
   if (currentselectedDate.getDay() == 0) 
   {
     currentselectedDate.setDate(currentselectedDate.getDate()-1);
@@ -112,7 +115,7 @@ function CurrentClick()
 
 function RandomClick()
 {
-  start = new Date(Date.UTC(2015,05,04,12));
+  start = new Date(Date.UTC(2015,0o5,0o4,12));
   end = new Date(maxDate);
   currentselectedDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
   if (currentselectedDate.getDay() == 0) 
