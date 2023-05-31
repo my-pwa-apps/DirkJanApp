@@ -18,8 +18,8 @@ function Share()
 function onload()
 {
     
-  maxDate = currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
-  //maxDate = currentselectedDate;
+ currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
+ maxDate = new Date();
 
   if (currentselectedDate.getDay() == 0) 
   {
@@ -51,10 +51,15 @@ function onload()
       break;
     }
 
+  /*formatDate(maxDate);
+  
+  formattedmaxDate = year+'-'+month+'-'+day;
+  document.getElementById("DatePicker").setAttribute("max", formattedmaxDate); */
+
   formatDate(maxDate);
   
   formattedmaxDate = year+'-'+month+'-'+day;
-  document.getElementById("DatePicker").setAttribute("max", formattedmaxDate); 
+  document.getElementById("DatePicker").setAttribute("max", formattedmaxDate);
   
   compareDates();
   
