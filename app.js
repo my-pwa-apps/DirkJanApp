@@ -20,6 +20,7 @@ function onload()
     
  currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
  maxDate = new Date();
+ nextclicked = false
 
   if (currentselectedDate.getDay() == 0) 
   {
@@ -82,6 +83,7 @@ function PreviousClick()
 
 function NextClick()
 {
+  nextclicked = true;
   currentselectedDate.setDate(currentselectedDate.getDate()+1);
   if (currentselectedDate.getDay() == 0) 
   {
@@ -174,8 +176,16 @@ function displayComic()
     }
     else
     {
-      //PreviousClick();
-      document.getElementById("comic").src = "dirkjanvrij.png";
+      if (nextclicked == true)
+      {
+        NextClick();
+        nextclicked = false;
+      }
+      else
+      {
+      PreviousClick();
+      }
+      //document.getElementById("comic").src = "dirkjanvrij.png";
     }
   });
   
