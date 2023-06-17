@@ -71,13 +71,16 @@ function onload()
 function PreviousClick()
 {
   currentselectedDate.setDate(currentselectedDate.getDate()-1);
-  if (currentselectedDate.getDay() == 0) 
+  /*if (currentselectedDate.getDay() == 0) 
   {
     currentselectedDate.setDate(currentselectedDate.getDate()-1);
-  }
+  }*/
+  
+  nextclicked = false;
   compareDates();
 
   displayComic();
+  
 
 } 
 
@@ -176,10 +179,9 @@ function displayComic()
     }
     else
     {
-      if (nextclicked == true)
+      if (nextclicked)
       {
         NextClick();
-        nextclicked = false;
       }
       else
       {
