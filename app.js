@@ -19,6 +19,36 @@ function onload()
 {
     
  currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
+ 
+ /*var favs = JSON.parse(localStorage.getItem('favs'));
+	if(favs == null)
+	{
+		favs = [];
+	}
+	if(document.getElementById("showfavs").checked) {
+		currentselectedDate = new Date(favs[0]);
+		if(favs.length === 0)
+		{
+			document.getElementById("showfavs").checked = false;
+			document.getElementById("showfavs").disabled = true;
+			currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
+		
+		}
+		
+	}
+	else{
+
+		if(favs.length === 0)
+		{
+			document.getElementById("showfavs").checked = false;
+			document.getElementById("showfavs").disabled = true;
+			currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
+	}
+		currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
+		document.getElementById("Next").disabled = true;
+		document.getElementById("Current").disabled = true;
+	}*/
+ 
  maxDate = new Date();
  nextclicked = false
 
@@ -51,11 +81,6 @@ function onload()
       maxDate.setDate(maxDate.getDate()+7);
       break;
     }
-
-  /*formatDate(maxDate);
-  
-  formattedmaxDate = year+'-'+month+'-'+day;
-  document.getElementById("DatePicker").setAttribute("max", formattedmaxDate); */
 
   formatDate(maxDate);
   
@@ -162,6 +187,21 @@ function displayComic()
   document.getElementById('DatePicker').value = formattedDate;
   siteUrl =  "https://corsproxy.garfieldapp.workers.dev/cors-proxy?https://dirkjan.nl/cartoon/"+formattedComicDate;
   
+  /*var favs = JSON.parse(localStorage.getItem('favs'));
+	if(favs == null)
+	{
+		favs = [];
+	}
+	if(favs.indexOf(formattedComicDate) == -1)
+	{
+		$(".favicon").css({"color": "red"}).removeClass('fa-heart').addClass('fa-heart-o');
+
+	}	
+	else
+	{
+		$(".favicon").css({"color": "red"}).removeClass('fa-heart-o').addClass('fa-heart');
+	}*/
+
   fetchUrl().then(textData =>
  {
 
@@ -196,6 +236,8 @@ function displayComic()
 function compareDates()
 {
   startDate = new Date(Date.UTC(2015,4,4,12));
+  
+  
   startDate = startDate.setHours(0,0,0,0);
   currentselectedDate = currentselectedDate.setHours(0,0,0,0);
   startDate = new Date(startDate);
@@ -315,31 +357,40 @@ getStatus = localStorage.getItem('showfavs');
         document.getElementById("showfavs").checked = false;
     }
 
-	function getFavs() {
+	/*function getFavs() {
 		return JSON.parse(localStorage.getItem('djfavs')) || [];
 	  }
 		  
-   /* function Addfav() {
-      formattedDate = currentselectedDate.getFullYear() + "-" + ("0" + (currentselectedDate.getMonth("") +1 )).slice(-2) + "-" + ("0" + (currentselectedDate.getDate(""))).slice(-2);
-      formattedComicDate = formattedDate.split('-').join('/');
-      djfavs = getFavs();
-      
-      if (djfavs.includes(formattedComicDate)) {
-        djfavs = djfavs.filter(date => date !== formattedComicDate);
-        $(".favicon").css({ color: "black" }).removeClass("fa-star").addClass("fa-star-o");
-        document.getElementById("showfavs").disabled = djfavs.length === 0;
-      } else {
-        djfavs = [...djfavs, formattedComicDate];
-        $(".favicon").css({ color: "black" }).removeClass("fa-star-o").addClass("fa-star");
+    function Addfav()
+    {
+      formattedComicDate = year + "/" + month + "/" + day;
+      var favs = JSON.parse(localStorage.getItem('favs'));
+      if(favs == null)
+      {
+        favs = [];
+      }
+      if(favs.indexOf(formattedComicDate) == -1)
+      {
+        favs.push(formattedComicDate);
+        $(".favicon").css({"color": "red"}).removeClass('fa-heart-o').addClass('fa-heart');
         document.getElementById("showfavs").disabled = false;
       }
-      
-      djfavs.sort();
-      localStorage.setItem("djfavs", JSON.stringify(djfavs));
-    
-      document.getElementById("Next").disabled = !djfavs.length;
-      document.getElementById("Current").disabled = !djfavs.length;
-    
+      else
+      {
+        favs.splice(favs.indexOf(formattedComicDate), 1);
+        $(".favicon").css({"color": "red"}).removeClass('fa-heart').addClass('fa-heart-o');
+        if(favs.length === 0)
+        {
+          document.getElementById("showfavs").checked = false;
+          document.getElementById("showfavs").disabled = true;
+          
+        }
+      }
+      favs.sort();
+      localStorage.setItem('favs', JSON.stringify(favs));
       compareDates();
       displayComic();
-      } */
+    }*/
+   
+    
+   
