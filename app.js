@@ -365,9 +365,10 @@ function DisplayComic()
 	endDate = new Date(maxDate);
   endate = endDate.setHours(0,0,0,0);
   endDate = new Date(endDate);
+
 	if(currentselectedDate.getTime() >= endDate.getTime()) {
 		document.getElementById("Next").disabled = true;
-		document.getElementById("Current").disabled = true;
+		//document.getElementById("Current").disabled = true;
 		formatDate(endDate);
 		endDate = year + '-' + month + '-' + day;
 		currentselectedDate = new Date(Date.UTC(year, month-1, day,12));
