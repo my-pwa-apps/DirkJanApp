@@ -497,7 +497,7 @@ getStatus = localStorage.getItem('lastdate');
 	
 function Addfav()
 {
-  formattedComicDate = year + "/" + month + "/" + day;
+  formattedComicDate = year + month + day;
   var favs = JSON.parse(localStorage.getItem('favs'));
   if(favs == null)
   {
@@ -507,7 +507,7 @@ function Addfav()
   {
     favs.push(formattedComicDate);
     $(".favicon").css({"color": "red"}).removeClass('fa-heart-o').addClass('fa-heart');
-    //document.getElementById("showfavs").disabled = false;
+    document.getElementById("showfavs").disabled = false;
   }
   else
   {
@@ -515,8 +515,8 @@ function Addfav()
     $(".favicon").css({"color": "red"}).removeClass('fa-heart').addClass('fa-heart-o');
     if(favs.length === 0)
     {
-      //document.getElementById("showfavs").checked = false;
-      //document.getElementById("showfavs").disabled = true;
+      document.getElementById("showfavs").checked = false;
+      document.getElementById("showfavs").disabled = true;
     }
   }
   favs.sort();
