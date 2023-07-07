@@ -476,7 +476,7 @@ setStatus.onclick = function()
   if(document.getElementById('showfavs').checked)
 	{
 		localStorage.setItem('showfavs', "true");
-		if(favs.indexOf(formattedComicDate) == -1)
+		if(favs.indexOf(formattedDate) !== -1)
 		{
 		}
 		else
