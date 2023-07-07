@@ -334,13 +334,15 @@ function DisplayComic()
 	if(document.getElementById("showfavs").checked)
 	{
 		document.getElementById("DatePicker").disabled = true;
-		if(favs.includes(document.getElementById("DatePicker").value))
+		/*if(favs.includes(document.getElementById("DatePicker").value))
     {
-      startDate = new Date(favs[0]);
+      
     }
-		else{	
-		startDate = new Date(favs[0])}}
-	else{	
+		else{	*/
+    //currentselectedDate = new Date(document.getElementById("DatePicker").value);
+    startDate = new Date(favs[0])}
+	else
+  {	
 		document.getElementById("DatePicker").disabled = false;
 		startDate = new Date(comicstartDate);
 	}
