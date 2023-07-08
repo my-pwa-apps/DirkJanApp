@@ -111,12 +111,6 @@ function onload()
 
 function PreviousClick()
 {
-  //currentselectedDate.setDate(currentselectedDate.getDate()-1);
-  /*if (currentselectedDate.getDay() == 0) 
-  {
-    currentselectedDate.setDate(currentselectedDate.getDate()-1);
-  }*/
-
   if(document.getElementById("showfavs").checked) {
 		var favs = JSON.parse(localStorage.getItem('favs'));
 		if(favs.indexOf(formattedDate) > 0){
@@ -136,12 +130,6 @@ function PreviousClick()
 function NextClick()
 {
   nextclicked = true;
-  /*currentselectedDate.setDate(currentselectedDate.getDate()+1);
-  if (currentselectedDate.getDay() == 0) 
-  {
-    currentselectedDate.setDate(currentselectedDate.getDate()+1);
-  }*/
-
   if(document.getElementById("showfavs").checked) {
 		var favs = JSON.parse(localStorage.getItem('favs'));
 		if(favs.indexOf(formattedDate) < favs.length - 1){
@@ -158,7 +146,6 @@ function NextClick()
 
 function FirstClick()
 {
-  //currentselectedDate = new Date(Date.UTC(2015,4,4,12));
   if(document.getElementById("showfavs").checked) {
 		currentselectedDate = new Date(JSON.parse(localStorage.getItem('favs'))[0]);}
 	else{
@@ -186,14 +173,6 @@ function CurrentClick()
 
 function RandomClick()
 {
-  /*start = new Date(Date.UTC(2015,0o5,0o4,12));
-  end = new Date(maxDate);
-  currentselectedDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
-  if (currentselectedDate.getDay() == 0) 
-  {
-    currentselectedDate.setDate(currentselectedDate.getDate()-1);
-  }*/
-
   if(document.getElementById("showfavs").checked) {
 		currentselectedDate = new Date(JSON.parse(localStorage.getItem('favs'))[Math.floor(Math.random() * JSON.parse(localStorage.getItem('favs')).length)]);}
 	else{
@@ -232,20 +211,6 @@ function DisplayComic()
   document.getElementById('DatePicker').value = formattedDate;
   siteUrl =  "https://corsproxy.garfieldapp.workers.dev/cors-proxy?https://dirkjan.nl/cartoon/"+formattedComicDate;
   
-  var favs = JSON.parse(localStorage.getItem('favs'));
-	if(favs == null)
-	{
-		favs = [];
-	}
-	if(favs.indexOf(formattedDate) == -1)
-	{
-		$(".favicon").css({"color": "red"}).removeClass('fa-heart').addClass('fa-heart-o');
-
-	}	
-	else
-	{
-		$(".favicon").css({"color": "red"}).removeClass('fa-heart-o').addClass('fa-heart');
-	}
   localStorage.setItem('lastcomic', currentselectedDate);
   fetchUrl().then(textData =>
  {
@@ -260,6 +225,20 @@ function DisplayComic()
       endPosition = pictureUrl.lastIndexOf('"');
       pictureUrl = siteBody.substring(picturePosition, picturePosition+endPosition);
       document.getElementById("comic").src = pictureUrl;
+      var favs = JSON.parse(localStorage.getItem('favs'));
+	  if(favs == null)
+	  {
+		  favs = [];
+	  }
+	  if(favs.indexOf(formattedDate) == -1)
+	  {
+		  $(".favicon").css({"color": "red"}).removeClass('fa-heart').addClass('fa-heart-o');
+
+	  }	
+	  else
+	  {
+		  $(".favicon").css({"color": "red"}).removeClass('fa-heart-o').addClass('fa-heart');
+	  }
       
     }
     else
@@ -272,75 +251,19 @@ function DisplayComic()
       {
       PreviousClick();
       }
-      //document.getElementById("comic").src = "dirkjanvrij.png";
     }
   });
   
 }
 
-/* function compareDates()
-{
-  startDate = new Date(Date.UTC(2015,4,4,12));
-  
-  
-  startDate = startDate.setHours(0,0,0,0);
-  currentselectedDate = currentselectedDate.setHours(0,0,0,0);
-  startDate = new Date(startDate);
-  currentselectedDate = new Date(currentselectedDate);
- 
-  if (currentselectedDate.getTime() <= startDate.getTime() )
-  
-  {
-    document.getElementById("Previous").disabled = true;
-    document.getElementById("First").disabled = true;
 
-    formatDate(startDate);
-
-    startDate = year+'-'+month+'-'+day;
-
-    document.getElementById('DatePicker').value = startDate;
-    currentselectedDate = new Date(Date.UTC(year,month-1,day,12));
-  }
-  else
-  {
-    document.getElementById("Previous").disabled = false;
-    document.getElementById("First").disabled = false;
-  }
-  
-  endDate = new Date(maxDate);
-  endate = endDate.setHours(0,0,0,0);
-  endDate = new Date(endDate);
-  if (currentselectedDate.getTime() >= endDate.getTime())
-  
-  {
-    document.getElementById("Next").disabled = true;
-    
-    formatDate(endDate);
-
-    endDate = year+'-'+month+'-'+day;
-
-    document.getElementById('DatePicker').value = endDate;
-    currentselectedDate = new Date(Date.UTC(year, month-1, day, 12));
-  }
-  else
-  {
-    document.getElementById("Next").disabled = false;
-  } 
-
- }*/
 
  function CompareDates() {
 	var favs = JSON.parse(localStorage.getItem('favs'));
 	if(document.getElementById("showfavs").checked)
 	{
 		document.getElementById("DatePicker").disabled = true;
-		/*if(favs.includes(document.getElementById("DatePicker").value))
-    {
-      
-    }
-		else{	*/
-    //currentselectedDate = new Date(document.getElementById("DatePicker").value);
-    startDate = new Date(favs[0])}
+		startDate = new Date(favs[0])}
 	else
   {	
 		document.getElementById("DatePicker").disabled = false;
@@ -366,14 +289,11 @@ function DisplayComic()
 	else{ 
 		endDate = new Date(maxDate);
 	}
-	//endDate = endDate.setHours(0, 0, 0, 0);
-	//endDate = new Date(maxDate);
-  endate = endDate.setHours(0,0,0,0);
+	endate = endDate.setHours(0,0,0,0);
   endDate = new Date(endDate);
 
 	if(currentselectedDate.getTime() >= endDate.getTime()) {
 		document.getElementById("Next").disabled = true;
-		//document.getElementById("Current").disabled = true;
 		formatDate(endDate);
 		endDate = year + '-' + month + '-' + day;
 		currentselectedDate = new Date(Date.UTC(year, month-1, day,12));
@@ -527,7 +447,6 @@ getStatus = localStorage.getItem('lastdate');
 	
 function Addfav()
 {
-  //formattedComicDate = year + month + day;
   var favs = JSON.parse(localStorage.getItem('favs'));
   if(favs == null)
   {
