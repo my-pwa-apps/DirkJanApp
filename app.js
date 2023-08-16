@@ -52,8 +52,7 @@ function onload()
 			currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
 	}
 		currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
-		document.getElementById("Next").disabled = true;
-		document.getElementById("Current").disabled = true;
+		
 	}
  
  maxDate = new Date();
@@ -225,21 +224,6 @@ function DisplayComic()
       endPosition = pictureUrl.lastIndexOf('"');
       pictureUrl = siteBody.substring(picturePosition, picturePosition+endPosition);
       document.getElementById("comic").src = pictureUrl;
-      var favs = JSON.parse(localStorage.getItem('favs'));
-	  if(favs == null)
-	  {
-		  favs = [];
-	  }
-	  if(favs.indexOf(formattedDate) == -1)
-	  {
-		  $(".favicon").css({"color": "red"}).removeClass('fa-heart').addClass('fa-heart-o');
-
-	  }	
-	  else
-	  {
-		  $(".favicon").css({"color": "red"}).removeClass('fa-heart-o').addClass('fa-heart');
-	  }
-      
     }
     else
     {
@@ -253,6 +237,20 @@ function DisplayComic()
       }
     }
   });
+    var favs = JSON.parse(localStorage.getItem('favs'));
+	  if(favs == null)
+	  {
+		  favs = [];
+	  }
+  if(favs.indexOf(formattedComicDate) == -1)
+		{
+			$(".favicon").css({"color": "red"}).removeClass('fa-heart').addClass('fa-heart-o');
+
+		}	
+		else
+		{
+			$(".favicon").css({"color": "red"}).removeClass('fa-heart-o').addClass('fa-heart');
+		}  
   
 }
 
@@ -292,7 +290,7 @@ function DisplayComic()
 	endate = endDate.setHours(0,0,0,0);
   endDate = new Date(endDate);
 
-	if(currentselectedDate.getTime() >= endDate.getTime()) {
+  if(currentselectedDate.getTime() >= endDate.getTime()) {
 		document.getElementById("Next").disabled = true;
 		formatDate(endDate);
 		endDate = year + '-' + month + '-' + day;
@@ -301,6 +299,12 @@ function DisplayComic()
 		document.getElementById("Next").disabled = false;
 		document.getElementById("Current").disabled = false;
 	}
+
+  if(currentselectedDate.getDate() == new Date().getDate()) 
+  {
+    document.getElementById("Current").disabled = true;
+  }
+  
 	if(document.getElementById("showfavs").checked) {
 		document.getElementById("Current").disabled = true;
 		if(favs.length == 1) {
