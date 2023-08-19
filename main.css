@@ -113,6 +113,7 @@ input
 	padding: 10px ;
 	-webkit-appearance: none;
 	-moz-appearance: none;
+    appearance: none;
 	max-width: 100%;
 	font-size: 0.75pc;
 	box-sizing: border-box;
