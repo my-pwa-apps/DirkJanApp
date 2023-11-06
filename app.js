@@ -22,8 +22,6 @@ async function Share()
 	}
 }
 
-function onload()
-{
  comicstartDate = "2015/05/04";   
  currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
  
@@ -105,8 +103,6 @@ function onload()
   CompareDates();
   
   DisplayComic();
- 
-}
 
 function PreviousClick()
 {
