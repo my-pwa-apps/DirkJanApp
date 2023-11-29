@@ -8,7 +8,7 @@ if ("serviceWorker" in navigator) {
 async function Share() 
 {
 	if(navigator.share) {
-		comicurl = "https://corsproxy.garfieldapp.workers.dev/cors-proxy?"+pictureUrl;
+		comicurl = "https://corsproxy.io?"+pictureUrl;
 		const response = await fetch(comicurl);
 		const blob = await response.blob();
 		const file = new File([blob], "dirkjan.png", {type: "image/png",
@@ -207,9 +207,9 @@ function DisplayComic()
   formattedComicDate = year+month+day;
   document.getElementById('DatePicker').value = formattedDate;
   //siteUrl =  "https://corsproxy.garfieldapp.workers.dev/cors-proxy?https://dirkjan.nl/cartoon/"+formattedComicDate;
-  siteUrl =  "https://corsproxy.io?https://dirkjan.nl/cartoon/"+formattedComicDate;
+  siteUrl = "https://corsproxy.io/?https://dirkjan.nl/cartoon/"+formattedComicDate;
   localStorage.setItem('lastcomic', currentselectedDate);
-  fetchUrl().then(textData =>
+  fetchUrl(siteUrl).then(textData =>
  {
 
     siteBody = textData;
