@@ -209,7 +209,7 @@ function DisplayComic()
   //siteUrl =  "https://corsproxy.garfieldapp.workers.dev/cors-proxy?https://dirkjan.nl/cartoon/"+formattedComicDate;
   siteUrl = "https://corsproxy.io/?https://dirkjan.nl/cartoon/"+formattedComicDate;
   localStorage.setItem('lastcomic', currentselectedDate);
-  fetchUrl(siteUrl).then(textData =>
+  fetchUrl().then(textData =>
  {
 
     siteBody = textData;
