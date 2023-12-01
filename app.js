@@ -206,8 +206,8 @@ function DisplayComic()
   formattedDate = year+"-"+month+"-"+day;
   formattedComicDate = year+month+day;
   document.getElementById('DatePicker').value = formattedDate;
-  //siteUrl =  "https://corsproxy.garfieldapp.workers.dev/cors-proxy?https://dirkjan.nl/cartoon/"+formattedComicDate;
-  siteUrl = "https://corsproxy.io/?https://dirkjan.nl/cartoon/"+formattedComicDate;
+  siteUrl =  "https://corsproxy.garfieldapp.workers.dev/?https://dirkjan.nl/cartoon/"+formattedComicDate;
+  //siteUrl = "https://corsproxy.io/?https://dirkjan.nl/cartoon/"+formattedComicDate;
   localStorage.setItem('lastcomic', currentselectedDate);
   fetchUrl().then(textData =>
  {
@@ -251,6 +251,7 @@ function DisplayComic()
 		}  
   
 }
+
 
 
 
