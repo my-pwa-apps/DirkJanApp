@@ -55,7 +55,7 @@ function onLoad()
 	}
  
  maxDate = new Date();
- nextclicked = false
+ nextclicked = true;
 
   if (currentselectedDate.getDay() == 0) 
   {
