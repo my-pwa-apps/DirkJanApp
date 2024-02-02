@@ -310,7 +310,7 @@ function DisplayComic()
 		document.getElementById("Current").disabled = false;
 	}
 
-  if((currentselectedDate.getDate() == new Date().getDate()) )
+  if((currentselectedDate.getDate() == new Date().getDate()) && showfavs.checked == false)
   {
     document.getElementById("Current").disabled = true;
   }
