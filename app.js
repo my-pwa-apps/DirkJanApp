@@ -310,10 +310,6 @@ function DisplayComic()
 		document.getElementById("Current").disabled = false;
 	}
 
-  if (showfavs.checked && (currentselectedDate.getDate() == new Date (favs[favs.length - 1 ]).getDate()))
-  {
-    document.getElementById("Current").disabled = true;
-  }
   if((currentselectedDate.getDate() == new Date().getDate()) )
   {
     document.getElementById("Current").disabled = true;
@@ -322,6 +318,12 @@ function DisplayComic()
   {
     document.getElementById("Current").disabled = false;
   }
+
+  if (showfavs.checked && (currentselectedDate.getDate() == new Date (favs[favs.length - 1 ]).getDate()))
+  {
+    document.getElementById("Current").disabled = true;
+  }
+
 	if(document.getElementById("showfavs").checked) {
 		//document.getElementById("Current").disabled = true;
 		if(favs.length == 1) {
