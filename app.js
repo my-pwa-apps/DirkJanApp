@@ -252,7 +252,7 @@ function DisplayComic()
 	  {
 		  favs = [];
 	  }
-  if(favs.indexOf(formattedComicDate) == -1)
+  if(favs.indexOf(formattedDate) == -1)
 		{
 			$(".favicon").css({"color": "red"}).removeClass('fa-heart').addClass('fa-heart-o');
 
