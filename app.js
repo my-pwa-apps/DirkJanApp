@@ -493,6 +493,7 @@ function Addfav()
     {
       document.getElementById("showfavs").checked = false;
       document.getElementById("showfavs").disabled = true;
+      document.getElementById("Current").innerHTML = 'Vandaag'
     }
   }
   favs.sort();
