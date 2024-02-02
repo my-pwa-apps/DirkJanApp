@@ -314,7 +314,10 @@ function DisplayComic()
   {
     document.getElementById("Current").disabled = true;
   }
-  
+  else
+  {
+    document.getElementById("Current").disabled = false;
+  }
 	if(document.getElementById("showfavs").checked) {
 		//document.getElementById("Current").disabled = true;
 		if(favs.length == 1) {
