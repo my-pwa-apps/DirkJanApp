@@ -144,7 +144,8 @@ function NextClick()
 function FirstClick()
 {
   if(document.getElementById("showfavs").checked) {
-		currentselectedDate = new Date(JSON.parse(localStorage.getItem('favs'))[0]);}
+		var favs = JSON.parse(localStorage.getItem('favs'));
+    currentselectedDate = new Date(JSON.parse(localStorage.getItem('favs'))[0]);}
 	else{
 	currentselectedDate = new Date(Date.UTC(1978, 5, 19,12));
 	}
@@ -156,11 +157,17 @@ function FirstClick()
 
 function CurrentClick()
 {
+  if(document.getElementById("showfavs").checked) {
+		var favs = JSON.parse(localStorage.getItem('favs'));
+    favslength = favs.length - 1;
+    currentselectedDate = new Date(JSON.parse(localStorage.getItem('favs'))[favslength]);}
+	else{
   currentselectedDate = new Date();
   if (currentselectedDate.getDay() == 0) 
     {
       currentselectedDate.setDate(currentselectedDate.getDate()-1);
     }
+  }
   
   CompareDates();
 
@@ -209,10 +216,15 @@ function DisplayComic()
   siteUrl =  "https://corsproxy.garfieldapp.workers.dev/cors-proxy?https://dirkjan.nl/cartoon/"+formattedComicDate;
 
   localStorage.setItem('lastcomic', currentselectedDate);
-  fetchUrl().then(textData =>
- {
+  fetch(siteUrl)
+    .then(function(response)
+	{
+      return response.text();
+    })
+    .then(function(text)
+	{
 
-    siteBody = textData;
+    siteBody = text;
     notFound = siteBody.includes("error404");
     picturePosition = siteBody.indexOf('<article class="cartoon">');
     picturePosition = picturePosition+41;
@@ -304,7 +316,7 @@ function DisplayComic()
   }
   
 	if(document.getElementById("showfavs").checked) {
-		document.getElementById("Current").disabled = true;
+		//document.getElementById("Current").disabled = true;
 		if(favs.length == 1) {
 			document.getElementById("Random").disabled = true;
 			document.getElementById("Previous").disabled = true;
@@ -398,6 +410,7 @@ setStatus.onclick = function()
   if(document.getElementById('showfavs').checked)
 	{
 		localStorage.setItem('showfavs', "true");
+    document.getElementById('Current').innerHTML = 'Laatste'
 		if(favs.indexOf(formattedDate) !== -1)
 		{
 		}
@@ -409,6 +422,7 @@ setStatus.onclick = function()
 	else
 	{
 		localStorage.setItem('showfavs', "false");
+    document.getElementById('Current').innerHTML = 'Vandaag'
 	}
 
 	CompareDates();
@@ -430,7 +444,7 @@ getStatus = localStorage.getItem('showfavs');
   if (getStatus == "true")
   {
     document.getElementById("showfavs").checked = true;
-    document.getElementById('Current').innerHTML = 'Last'
+    document.getElementById('Current').innerHTML = 'Laatste'
   }
   else
   {
