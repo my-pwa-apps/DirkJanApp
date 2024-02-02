@@ -310,7 +310,11 @@ function DisplayComic()
 		document.getElementById("Current").disabled = false;
 	}
 
-  if((currentselectedDate.getDate() == new Date().getDate()) || favs.checked && (currentselectedDate.getDate() == new Date (favs[favs.length - 1 ]).getDate()))
+  if (favs.checked && (currentselectedDate.getDate() == new Date (favs[favs.length - 1 ]).getDate()))
+  {
+    document.getElementById("Current").disabled = true;
+  }
+  if((currentselectedDate.getDate() == new Date().getDate()) )
   {
     document.getElementById("Current").disabled = true;
   }
@@ -339,7 +343,7 @@ function DisplayComic()
   day = ("0"+day).slice(-2);
  }
 
-const fetchUrl = async () =>
+/*const fetchUrl = async () =>
 {
   const websiteData = await fetch(siteUrl, {
     method: "GET",
@@ -358,7 +362,7 @@ function Rotate() {
     element.className = 'normal';
   }
 }
-
+*/
 document.addEventListener('swiped-down', function(e) {
 	if(document.getElementById("swipe").checked) {
 		RandomClick()}
