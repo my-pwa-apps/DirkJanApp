@@ -430,10 +430,12 @@ getStatus = localStorage.getItem('showfavs');
   if (getStatus == "true")
   {
     document.getElementById("showfavs").checked = true;
+    document.getElementById('Current').innerHTML = 'Last'
   }
   else
   {
     document.getElementById("showfavs").checked = false;
+    document.getElementById('Current').innerHTML = 'Vandaag'
   }
 
 getStatus = localStorage.getItem('lastdate');
