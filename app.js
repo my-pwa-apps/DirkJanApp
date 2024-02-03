@@ -28,13 +28,7 @@ function onLoad()
  
  var favs = JSON.parse(localStorage.getItem('favs'));
 
- if (showfavs.checked = false)
-  {
-    document.getElementById("Current").innerHTML = 'Vandaag';
-  }
- 
-
-	if(favs == null)
+ if(favs == null)
 	{
 		favs = [];
 	}
@@ -44,6 +38,7 @@ function onLoad()
 		{
 			document.getElementById("showfavs").checked = false;
 			document.getElementById("showfavs").disabled = true;
+      document.getElementById("Current").innerHTML = "Vandaag";
 			currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
 		
 		}
