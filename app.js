@@ -353,7 +353,7 @@ function DisplayComic()
   const textData = await websiteData.text();
  return textData;
 };
-
+*/
 function Rotate() {
   var element = document.getElementById('comic');
 
@@ -364,7 +364,7 @@ function Rotate() {
     element.className = 'normal';
   }
 }
-*/
+
 document.addEventListener('swiped-down', function(e) {
 	if(document.getElementById("swipe").checked) {
 		RandomClick()}
