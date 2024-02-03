@@ -1,6 +1,4 @@
 
-// Description: Main javascript file for DirkjanApp
-
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./serviceworker.js");
 }
@@ -14,7 +12,6 @@ async function Share()
 		const file = new File([blob], "dirkjan.png", {type: "image/png",
         lastModified: new Date().getTime()});
 		navigator.share({
-			//title: 'https://dirkjanapp.pages.dev',
 			url: 'https://dirkjanapp.pages.dev',
 			text: 'Shared from https://dirkjanapp.pages.dev',
 			files: [file]
@@ -347,15 +344,6 @@ function DisplayComic()
   day = ("0"+day).slice(-2);
  }
 
-/*const fetchUrl = async () =>
-{
-  const websiteData = await fetch(siteUrl, {
-    method: "GET",
-    });
-  const textData = await websiteData.text();
- return textData;
-};
-*/
 function Rotate() {
   var element = document.getElementById('comic');
 
