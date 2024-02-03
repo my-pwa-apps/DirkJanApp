@@ -27,6 +27,13 @@ function onLoad()
  currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
  
  var favs = JSON.parse(localStorage.getItem('favs'));
+
+ if (showfavs.checked = false)
+  {
+    document.getElementById("Current").innerHTML = 'Vandaag';
+  }
+ 
+
 	if(favs == null)
 	{
 		favs = [];
