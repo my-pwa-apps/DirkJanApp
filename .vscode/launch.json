@@ -9,7 +9,7 @@
         "name": "Launch Edge",
         "request": "launch",
         "type": "msedge",
-        "url": "c://users//bartm//repos//dirkjanapp//index.html",
+        "url": "C://Users//bartm//OneDrive - Microsoft//Documents//Git Repos//dirkjanapp//index.html",
         "webRoot": "${workspaceFolder}"
     },
         
