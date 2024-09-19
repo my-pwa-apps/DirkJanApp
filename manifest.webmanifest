@@ -3,6 +3,7 @@
     "short_name": "DirkJanApp",
     "start_url": "./index.html",
     "display": "standalone",
+    "display_override":"window-controls-overlay",
     "orientation": "portrait-primary",
     "background_color": "#000000",
     "theme_color": "#a9a9a9",
