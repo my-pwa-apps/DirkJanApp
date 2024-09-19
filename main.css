@@ -137,14 +137,13 @@ input
 .rotate
 {
     -ms-transform: rotate(90deg);
-    -webkit-transform: rotate(90deg);
-    transform: rotate(90deg);
-    margin-left: -24vw;
-    margin-top: -5vw;
-    width: 150%;
-    max-height: 100%;
-    position: absolute;
-    z-index: 100;
+	-webkit-transform: rotate(90deg);
+	transform: rotate(90deg);
+	margin-left: -22vw;
+	margin-top: -5vw;
+	width: 140%;
+	position:absolute;
+	z-index: 100;
 }
   
 .normal
