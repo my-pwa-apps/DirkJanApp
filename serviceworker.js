@@ -1,5 +1,5 @@
 
-const OFFLINE_VERSION = 2;
+const OFFLINE_VERSION = 3;
 const CACHE = "offline";
 
 importScripts('https://storage.googleapis.com/workbox-cdn/releases/5.1.2/workbox-sw.js');
