@@ -519,4 +519,22 @@ var x = document.getElementById("settingsDIV");
 	}
 }
     
+let deferredPrompt;
+
+window.addEventListener('beforeinstallprompt', (event) => {
+  event.preventDefault();
+  deferredPrompt = event;
+  // Optionally, log the event or perform other actions
+  console.log('beforeinstallprompt event fired');
+  // Show the install prompt
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then((choiceResult) => {
+    if (choiceResult.outcome === 'accepted') {
+      console.log('User accepted the install prompt');
+    } else {
+      console.log('User dismissed the install prompt');
+    }
+    deferredPrompt = null;
+  });
+});
    
