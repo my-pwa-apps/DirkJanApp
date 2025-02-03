@@ -1,67 +1,71 @@
+// Name and version for our cache
+const CACHE_NAME = 'pwa-cache-v1';
+// Offline fallback page (make sure you have this file available)
+const OFFLINE_URL = '/offline.html';
 
-const OFFLINE_VERSION = 3;
-const CACHE = "offline";
+// During install, pre-cache the offline fallback page.
+self.addEventListener('install', event => {
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then(cache => cache.addAll([OFFLINE_URL]))
+      .then(() => self.skipWaiting())
+  );
+});
 
-importScripts('https://storage.googleapis.com/workbox-cdn/releases/5.1.2/workbox-sw.js');
+// Activate event – cleanup old caches if necessary.
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(cacheNames =>
+      Promise.all(
+        cacheNames.map(cache => {
+          if (cache !== CACHE_NAME) {
+            return caches.delete(cache);
+          }
+        })
+      )
+    ).then(() => self.clients.claim())
+  );
+});
 
-self.addEventListener("message", (event) => {
-  if (event.data && event.data.type === "SKIP_WAITING") {
-    self.skipWaiting();
+// Fetch event – serve from cache, and dynamically cache new requests.
+self.addEventListener('fetch', event => {
+  // Only handle GET requests
+  if (event.request.method !== 'GET') {
+    return;
   }
-});
 
-workbox.routing.registerRoute(
-  new RegExp('.*'),
-  new workbox.strategies.StaleWhileRevalidate({
-    cacheName: CACHE
-  })
-);
-
-beforeinstallprompt = null;
-self.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault();
-  beforeinstallprompt = e;
-  return false;
-});
-
-self.addEventListener('install', (event) => {
-  event.waitUntil((async () => {
-    const cache = await caches.open(CACHE_NAME);
-    await cache.add(new Request(OFFLINE_URL, {cache: 'reload'}));
-  })());
-});
-
-self.addEventListener('activate', (event) => {
-  event.waitUntil((async () => {
-   
-    if ('navigationPreload' in self.registration) {
-      await self.registration.navigationPreload.enable();
-    }
-  })());
-
-  self.clients.claim();
-});
-
-self.addEventListener('fetch', (event) => {
- 
-  if (event.request.mode === 'navigate') {
-    event.respondWith((async () => {
-      try {
-        const preloadResponse = await event.preloadResponse;
-        if (preloadResponse) {
-          return preloadResponse;
-        }
-
-        const networkResponse = await fetch(event.request);
-        return networkResponse;
-      } catch (error) {
-       
-        console.log('Fetch failed; returning offline page instead.', error);
-
-        const cache = await caches.open(CACHE_NAME);
-        const cachedResponse = await cache.match(OFFLINE_URL);
+  event.respondWith(
+    caches.match(event.request).then(cachedResponse => {
+      // Return cached response if available
+      if (cachedResponse) {
         return cachedResponse;
       }
-    })());
-  }
+
+      // Else fetch from network
+      return fetch(event.request)
+        .then(networkResponse => {
+          // Only cache successful responses (status 200)
+          if (!networkResponse || networkResponse.status !== 200 || networkResponse.type === 'opaque') {
+            return networkResponse;
+          }
+
+          // Clone the response to cache it
+          const clonedResponse = networkResponse.clone();
+          caches.open(CACHE_NAME).then(cache => {
+            cache.put(event.request, clonedResponse);
+          });
+
+          return networkResponse;
+        })
+        .catch(error => {
+          // If network fetch fails and the request is for an HTML page,
+          // return the offline fallback page.
+          if (event.request.headers.get('accept')?.includes('text/html')) {
+            return caches.match(OFFLINE_URL);
+          }
+          // Otherwise, just propagate the error.
+          throw error;
+        });
+    })
+  );
 });
