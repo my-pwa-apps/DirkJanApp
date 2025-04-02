@@ -627,11 +627,22 @@ function HideSettings()
 {
   var x = document.getElementById("settingsDIV");
   
-  // Save the full computed styles of body before any changes
-  const bodyComputedStyle = window.getComputedStyle(document.body);
-  const backgroundImage = bodyComputedStyle.backgroundImage;
-  const backgroundColor = bodyComputedStyle.backgroundColor;
-  const backgroundGradient = bodyComputedStyle.background;
+  // Prevent background changes by freezing the style
+  const html = document.documentElement;
+  const oldBackgroundImage = getComputedStyle(html).backgroundImage;
+  
+  // Add a style element that ensures the background stays fixed
+  const styleEl = document.createElement('style');
+  styleEl.id = 'fixed-background-style';
+  styleEl.textContent = `
+    html, body {
+      background-image: ${oldBackgroundImage} !important;
+      transition: none !important;
+    }
+  `;
+  
+  // Add the style element to freeze the background
+  document.head.appendChild(styleEl);
   
   // Toggle settings display
   if (x.style.display === "none") {
@@ -642,16 +653,13 @@ function HideSettings()
     localStorage.setItem('settings', "false");
   }
   
-  // Force the background to be exactly what it was before
-  // This is more comprehensive than just using style properties
-  document.body.style.background = backgroundGradient;
-  document.body.style.backgroundImage = backgroundImage;
-  document.body.style.backgroundColor = backgroundColor;
-  
-  // Slight delay to ensure background is properly restored
+  // Keep the style for a short time, then remove it
   setTimeout(() => {
-    document.body.style.background = backgroundGradient;
-  }, 10);
+    const fixedStyle = document.getElementById('fixed-background-style');
+    if (fixedStyle) {
+      fixedStyle.remove();
+    }
+  }, 300);
 }
     
 let deferredPrompt;
