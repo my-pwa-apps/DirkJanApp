@@ -9,6 +9,45 @@ const CORS_PROXIES = [
   'https://corsproxy.io/?'
 ];
 
+// Apply styling to date picker
+function applyDatePickerStyling() {
+  // Get the computed style of the nav buttons to match
+  const navButton = document.querySelector('nav button');
+  if (navButton) {
+    const navStyle = window.getComputedStyle(navButton);
+    const datePicker = document.getElementById('DatePicker');
+    
+    if (datePicker) {
+      // Apply the same font
+      datePicker.style.fontFamily = navStyle.fontFamily;
+      datePicker.style.fontSize = navStyle.fontSize;
+      datePicker.style.fontWeight = navStyle.fontWeight;
+      
+      // Apply gradient background
+      datePicker.style.background = navStyle.background;
+      datePicker.style.border = navStyle.border;
+      datePicker.style.borderRadius = navStyle.borderRadius;
+      datePicker.style.padding = navStyle.padding;
+      datePicker.style.color = navStyle.color;
+      
+      // Add custom CSS for mobile centering
+      const style = document.createElement('style');
+      style.textContent = `
+        @media (max-width: 768px) {
+          #DatePicker {
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            text-align: center;
+            width: 80%;
+          }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }
+}
+
 // Fetch with fallback function
 async function fetchWithFallback(url) {
   let lastError;
@@ -148,6 +187,9 @@ function onLoad()
   CompareDates();
   
   DisplayComic();
+  
+  // Apply styling to the date picker to match nav buttons
+  applyDatePickerStyling();
 }
 
 function PreviousClick()
