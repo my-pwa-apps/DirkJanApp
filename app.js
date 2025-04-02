@@ -633,6 +633,9 @@ var x = document.getElementById("settingsDIV");
 	  x.style.display = "none";
 	  localStorage.setItem('settings', "false");
 	}
+	
+	// Reapply date picker styling after settings visibility change
+	setTimeout(() => applyDatePickerStyling(), 10);
 }
     
 let deferredPrompt;
