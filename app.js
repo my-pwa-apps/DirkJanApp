@@ -9,6 +9,28 @@ const CORS_PROXIES = [
   'https://corsproxy.io/?'
 ];
 
+// Simple direct styling for date picker
+function applyDatePickerStyling() {
+  const datePicker = document.getElementById('DatePicker');
+  if (!datePicker) return;
+  
+  // Apply styles directly to the element
+  datePicker.style.background = 'linear-gradient(to bottom, #484e55, #3a3f44 60%, #313539)';
+  datePicker.style.color = 'white';
+  datePicker.style.border = '1px solid rgba(0, 0, 0, 0.6)';
+  datePicker.style.borderRadius = '4px';
+  datePicker.style.padding = '6px 12px';
+  datePicker.style.fontFamily = 'inherit'; // Use the same font as the rest of the app
+  
+  // Try to match any nav button's styling
+  const navButton = document.querySelector('nav button');
+  if (navButton) {
+    const navStyle = window.getComputedStyle(navButton);
+    datePicker.style.fontFamily = navStyle.fontFamily;
+    datePicker.style.fontSize = navStyle.fontSize;
+  }
+}
+
 // Fetch with fallback function
 async function fetchWithFallback(url) {
   let lastError;
@@ -149,6 +171,11 @@ function onLoad()
   
   DisplayComic();
   
+  // Apply the styling to the date picker
+  applyDatePickerStyling();
+  
+  // Apply styling again after a short delay (helps with some browsers)
+  setTimeout(applyDatePickerStyling, 100);
 }
 
 function PreviousClick()
