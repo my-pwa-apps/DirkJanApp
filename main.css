@@ -1,9 +1,20 @@
 body
 {
-    background: linear-gradient(black, darkgrey) no-repeat;
+    /* Fix the gradient by making it fixed and ensuring full height coverage */
+    background: linear-gradient(black, darkgrey) fixed no-repeat;
+    background-size: 100% 100vh;
+    min-height: 100vh;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background-color: darkgrey;
     color: black;
+    margin: 0; /* Prevent margin from causing scroll issues */
+    padding: 0;
+}
+
+html {
+    /* Ensure html also covers full height */
+    height: 100%;
+    min-height: 100vh;
 }
 
 main

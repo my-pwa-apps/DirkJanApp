@@ -627,39 +627,43 @@ function HideSettings()
 {
   var x = document.getElementById("settingsDIV");
   
-  // Prevent background changes by freezing the style
-  const html = document.documentElement;
-  const oldBackgroundImage = getComputedStyle(html).backgroundImage;
+  // Save current scroll position
+  const scrollPos = window.scrollY;
   
-  // Add a style element that ensures the background stays fixed
-  const styleEl = document.createElement('style');
-  styleEl.id = 'fixed-background-style';
-  styleEl.textContent = `
-    html, body {
-      background-image: ${oldBackgroundImage} !important;
-      transition: none !important;
-    }
-  `;
-  
-  // Add the style element to freeze the background
-  document.head.appendChild(styleEl);
-  
-  // Toggle settings display
+  // Toggle settings display with minimal reflow
   if (x.style.display === "none") {
-    x.style.display = "block";
-    localStorage.setItem('settings', "true");
-  } else {
-    x.style.display = "none";
-    localStorage.setItem('settings', "false");
-  }
-  
-  // Keep the style for a short time, then remove it
-  setTimeout(() => {
-    const fixedStyle = document.getElementById('fixed-background-style');
-    if (fixedStyle) {
-      fixedStyle.remove();
+    // Add a style element that preserves the background
+    if (!document.getElementById('settings-style-fix')) {
+      const fixStyle = document.createElement('style');
+      fixStyle.id = 'settings-style-fix';
+      fixStyle.textContent = `
+        html {
+          background-attachment: fixed !important;
+          min-height: 100vh !important;
+        }
+        body {
+          background-attachment: fixed !important;
+          min-height: 100vh !important;
+        }
+      `;
+      document.head.appendChild(fixStyle);
     }
-  }, 300);
+    
+    // Use RAF for smoother visual update
+    requestAnimationFrame(() => {
+      x.style.display = "block";
+      localStorage.setItem('settings', "true");
+      // Maintain scroll position
+      window.scrollTo(0, scrollPos);
+    });
+  } else {
+    requestAnimationFrame(() => {
+      x.style.display = "none";
+      localStorage.setItem('settings', "false");
+      // Maintain scroll position
+      window.scrollTo(0, scrollPos);
+    });
+  }
 }
     
 let deferredPrompt;
