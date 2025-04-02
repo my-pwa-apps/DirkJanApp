@@ -14,74 +14,60 @@ function applyDatePickerStyling() {
   const datePicker = document.getElementById('DatePicker');
   if (!datePicker) return;
   
-  // Create a CSS class instead of inline styles (more effective for form controls)
-  const styleElement = document.createElement('style');
-  document.head.appendChild(styleElement);
-  
-  // Get exact button style if possible
+  // Get a reference button
   const navButton = document.querySelector('nav button');
-  let buttonBackground = 'linear-gradient(to bottom, #484e55, #3a3f44 60%, #313539)';
-  let buttonBorder = '1px solid rgba(0, 0, 0, 0.6)';
-  let buttonBorderRadius = '4px';
-  let buttonFont = 'inherit';
-  let buttonFontSize = '14px';
+  if (!navButton) return;
   
-  if (navButton) {
-    const navStyle = window.getComputedStyle(navButton);
-    // Extract exact styles from the button
-    buttonBackground = navStyle.backgroundImage || buttonBackground;
-    buttonBorder = navStyle.border || buttonBorder;
-    buttonBorderRadius = navStyle.borderRadius || buttonBorderRadius;
-    buttonFont = navStyle.fontFamily || buttonFont;
-    buttonFontSize = navStyle.fontSize || buttonFontSize;
-  }
+  // Apply button styles directly to date input
+  const buttonStyles = window.getComputedStyle(navButton);
   
-  // Add the class with browser-specific overrides
-  styleElement.textContent = `
-    /* Reset browser defaults */
+  // Copy button dimensions and appearance
+  datePicker.style.width = 'auto';
+  datePicker.style.height = buttonStyles.height;
+  datePicker.style.padding = buttonStyles.padding;
+  datePicker.style.border = buttonStyles.border;
+  datePicker.style.borderRadius = buttonStyles.borderRadius;
+  datePicker.style.backgroundColor = buttonStyles.backgroundColor;
+  datePicker.style.backgroundImage = buttonStyles.backgroundImage;
+  datePicker.style.color = buttonStyles.color;
+  datePicker.style.fontFamily = buttonStyles.fontFamily;
+  datePicker.style.fontSize = buttonStyles.fontSize;
+  datePicker.style.fontWeight = buttonStyles.fontWeight;
+  datePicker.style.boxShadow = buttonStyles.boxShadow;
+  
+  // Override browser defaults for date input
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = `
     #DatePicker {
       -webkit-appearance: none !important;
       -moz-appearance: none !important;
       appearance: none !important;
-      background: ${buttonBackground} !important;
-      background-image: ${buttonBackground} !important;
-      color: white !important;
-      border: ${buttonBorder} !important;
-      border-radius: ${buttonBorderRadius} !important;
-      padding: 6px 12px !important;
-      font-family: ${buttonFont} !important;
-      font-size: ${buttonFontSize} !important;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.15), 0 1px 1px rgba(0,0,0,.075) !important;
     }
     
-    /* Style the calendar icon */
     #DatePicker::-webkit-calendar-picker-indicator {
       filter: invert(1);
-      opacity: 0.9;
+      opacity: 0.7;
+      cursor: pointer;
+      margin-left: 5px;
     }
     
-    /* Center on mobile */
+    /* Mobile styles */
     @media (max-width: 768px) {
       #DatePicker {
-        display: block !important;
-        margin: 0 auto !important;
-        width: 80% !important;
+        width: 80%;
+        margin: 0 auto;
+        display: block;
       }
     }
   `;
+  document.head.appendChild(styleSheet);
   
-  // Apply a couple of critical styles directly to the element as well
-  datePicker.style.cssText = `
-    background: ${buttonBackground} !important;
-    color: white !important;
-    -webkit-appearance: none !important;
-    -moz-appearance: none !important;
-    appearance: none !important;
-  `;
-  
-  // Force a repaint which can help with stubborn styling
-  datePicker.style.display = 'none';
-  setTimeout(() => datePicker.style.display = '', 5);
+  // Apply styling after a slight delay to ensure it takes effect
+  setTimeout(() => {
+    // Reapply critical styles that might be overridden by browser defaults
+    datePicker.style.backgroundImage = buttonStyles.backgroundImage;
+    datePicker.style.backgroundColor = buttonStyles.backgroundColor;
+  }, 50);
 }
 
 // Fetch with fallback function
