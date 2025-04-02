@@ -627,10 +627,13 @@ function HideSettings()
 {
   var x = document.getElementById("settingsDIV");
   
-  // Store the current background styles before changing display
-  const bodyBackgroundImage = document.body.style.backgroundImage;
-  const bodyBackgroundColor = document.body.style.backgroundColor;
+  // Save the full computed styles of body before any changes
+  const bodyComputedStyle = window.getComputedStyle(document.body);
+  const backgroundImage = bodyComputedStyle.backgroundImage;
+  const backgroundColor = bodyComputedStyle.backgroundColor;
+  const backgroundGradient = bodyComputedStyle.background;
   
+  // Toggle settings display
   if (x.style.display === "none") {
     x.style.display = "block";
     localStorage.setItem('settings', "true");
@@ -639,9 +642,16 @@ function HideSettings()
     localStorage.setItem('settings', "false");
   }
   
-  // Restore the background after the toggle
-  document.body.style.backgroundImage = bodyBackgroundImage;
-  document.body.style.backgroundColor = bodyBackgroundColor;
+  // Force the background to be exactly what it was before
+  // This is more comprehensive than just using style properties
+  document.body.style.background = backgroundGradient;
+  document.body.style.backgroundImage = backgroundImage;
+  document.body.style.backgroundColor = backgroundColor;
+  
+  // Slight delay to ensure background is properly restored
+  setTimeout(() => {
+    document.body.style.background = backgroundGradient;
+  }, 10);
 }
     
 let deferredPrompt;
