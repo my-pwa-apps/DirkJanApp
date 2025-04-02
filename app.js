@@ -11,58 +11,65 @@ const CORS_PROXIES = [
 
 // Apply styling to date picker
 function applyDatePickerStyling() {
-  // Get the computed style of the nav buttons to match
-  const navButton = document.querySelector('nav button');
-  if (navButton) {
-    const navStyle = window.getComputedStyle(navButton);
-    const datePicker = document.getElementById('DatePicker');
-    
-    if (datePicker) {
-      // Add custom CSS with stronger selectors to override browser defaults
-      const style = document.createElement('style');
-      
-      // Extract the background gradient if it exists
-      let backgroundGradient = navStyle.background;
-      if (!backgroundGradient.includes('gradient')) {
-        // Fallback to a default gradient if none found
-        backgroundGradient = 'linear-gradient(45deg, #1a1a1a, #4a4a4a)';
-      }
-      
-      style.textContent = `
-        input[type="date"]#DatePicker {
-          -webkit-appearance: none;
-          -moz-appearance: none;
-          appearance: none;
-          background: ${backgroundGradient} !important;
-          font-family: ${navStyle.fontFamily};
-          font-size: ${navStyle.fontSize};
-          font-weight: ${navStyle.fontWeight};
-          border: ${navStyle.border};
-          border-radius: ${navStyle.borderRadius};
-          padding: ${navStyle.padding};
-          color: ${navStyle.color};
-          box-shadow: none;
-        }
-        
-        /* Override browser-specific calendar icon */
-        input[type="date"]#DatePicker::-webkit-calendar-picker-indicator {
-          filter: invert(1);
-          cursor: pointer;
-        }
-        
-        @media (max-width: 768px) {
-          #DatePicker {
-            display: block;
-            margin-left: auto;
-            margin-right: auto;
-            text-align: center;
-            width: 80%;
-          }
-        }
-      `;
-      document.head.appendChild(style);
+  const datePicker = document.getElementById('DatePicker');
+  if (!datePicker) return;
+  
+  // Apply hardcoded gradient and styles directly to ensure they work
+  const hardcodedGradient = 'linear-gradient(to bottom, #484e55, #3a3f44 60%, #313539)';
+  
+  // Apply inline styles (highest precedence)
+  datePicker.setAttribute('style', `
+    background: ${hardcodedGradient} !important;
+    background-image: ${hardcodedGradient} !important;
+    color: white !important;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
+    border: 1px solid rgba(0, 0, 0, 0.6) !important;
+    border-radius: 4px !important;
+    padding: 6px 12px !important;
+    box-shadow: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
+  `);
+  
+  // Add global CSS rules to ensure they apply across different browsers
+  const style = document.createElement('style');
+  style.textContent = `
+    /* Force our styles on the date picker */
+    input[type="date"]#DatePicker {
+      background: ${hardcodedGradient} !important;
+      background-image: ${hardcodedGradient} !important;
+      color: white !important;
+      -webkit-appearance: none !important;
+      -moz-appearance: none !important;
+      appearance: none !important;
     }
-  }
+    
+    /* Style the calendar picker icon */
+    input[type="date"]#DatePicker::-webkit-calendar-picker-indicator {
+      filter: invert(1);
+      opacity: 0.8;
+      cursor: pointer;
+    }
+    
+    /* Mobile centering */
+    @media (max-width: 768px) {
+      #DatePicker {
+        display: block !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+        text-align: center !important;
+        width: 80% !important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+  
+  // Add event listener to ensure styles apply after DOM fully loads
+  window.addEventListener('load', function() {
+    // Re-apply the inline styles after page load for extra certainty
+    datePicker.setAttribute('style', datePicker.getAttribute('style'));
+  });
 }
 
 // Fetch with fallback function
