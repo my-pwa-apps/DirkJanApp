@@ -9,69 +9,6 @@ const CORS_PROXIES = [
   'https://corsproxy.io/?'
 ];
 
-// Apply styling to date picker
-function applyDatePickerStyling() {
-  const datePicker = document.getElementById('DatePicker');
-  if (!datePicker) return;
-  
-  // Apply hardcoded gradient and styles directly to ensure they work
-  const hardcodedGradient = 'linear-gradient(to bottom, #484e55, #3a3f44 60%, #313539)';
-  
-  // Apply inline styles (highest precedence)
-  datePicker.setAttribute('style', `
-    background: ${hardcodedGradient} !important;
-    background-image: ${hardcodedGradient} !important;
-    color: white !important;
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
-    border: 1px solid rgba(0, 0, 0, 0.6) !important;
-    border-radius: 4px !important;
-    padding: 6px 12px !important;
-    box-shadow: none !important;
-    -webkit-appearance: none !important;
-    -moz-appearance: none !important;
-    appearance: none !important;
-  `);
-  
-  // Add global CSS rules to ensure they apply across different browsers
-  const style = document.createElement('style');
-  style.textContent = `
-    /* Force our styles on the date picker */
-    input[type="date"]#DatePicker {
-      background: ${hardcodedGradient} !important;
-      background-image: ${hardcodedGradient} !important;
-      color: white !important;
-      -webkit-appearance: none !important;
-      -moz-appearance: none !important;
-      appearance: none !important;
-    }
-    
-    /* Style the calendar picker icon */
-    input[type="date"]#DatePicker::-webkit-calendar-picker-indicator {
-      filter: invert(1);
-      opacity: 0.8;
-      cursor: pointer;
-    }
-    
-    /* Mobile centering */
-    @media (max-width: 768px) {
-      #DatePicker {
-        display: block !important;
-        margin-left: auto !important;
-        margin-right: auto !important;
-        text-align: center !important;
-        width: 80% !important;
-      }
-    }
-  `;
-  document.head.appendChild(style);
-  
-  // Add event listener to ensure styles apply after DOM fully loads
-  window.addEventListener('load', function() {
-    // Re-apply the inline styles after page load for extra certainty
-    datePicker.setAttribute('style', datePicker.getAttribute('style'));
-  });
-}
-
 // Fetch with fallback function
 async function fetchWithFallback(url) {
   let lastError;
@@ -212,8 +149,6 @@ function onLoad()
   
   DisplayComic();
   
-  // Apply styling to the date picker to match nav buttons
-  applyDatePickerStyling();
 }
 
 function PreviousClick()
@@ -221,7 +156,7 @@ function PreviousClick()
   if(document.getElementById("showfavs").checked) {
 		var favs = JSON.parse(localStorage.getItem('favs'));
 		if(favs.indexOf(formattedDate) > 0){
-			currentselectedDate = new Date(favs[favs.indexOf(formattedDate) - 1]);}}
+			currentselectedDate = new Date(favs[favs.indexOf(formattedDate) - 1]);} }
 	else{
 		currentselectedDate.setDate(currentselectedDate.getDate() - 1);
 	}
@@ -240,7 +175,7 @@ function NextClick()
   if(document.getElementById("showfavs").checked) {
 		var favs = JSON.parse(localStorage.getItem('favs'));
 		if(favs.indexOf(formattedDate) < favs.length - 1){
-			currentselectedDate = new Date(favs[favs.indexOf(formattedDate) + 1]);}}
+			currentselectedDate = new Date(favs[favs.indexOf(formattedDate) + 1]);} }
 	else{
 		currentselectedDate.setDate(currentselectedDate.getDate() + 1);
 	}
@@ -288,7 +223,7 @@ function CurrentClick()
 function RandomClick()
 {
   if(document.getElementById("showfavs").checked) {
-		currentselectedDate = new Date(JSON.parse(localStorage.getItem('favs'))[Math.floor(Math.random() * JSON.parse(localStorage.getItem('favs')).length)]);}
+		currentselectedDate = new Date(JSON.parse(localStorage.getItem('favs'))[Math.floor(Math.random() * JSON.parse(localStorage.getItem('favs')).length)]); }
 	else{
 		start = new Date(comicstartDate);
 		end = new Date();
@@ -379,7 +314,6 @@ function DisplayComic()
 		//	$(".favicon").css({"color": "red"}).removeClass('fa-heart-o').addClass('fa-heart');
       document.getElementById("favheart").src = "./heart.svg";
 		}  
-  
 }
 
 
@@ -449,7 +383,7 @@ function DisplayComic()
 			document.getElementById("Previous").disabled = true;
 			document.getElementById("First").disabled = true;
 		
-		}}
+		} }
 	else {
 		document.getElementById("Random").disabled = false;}
 }
@@ -476,23 +410,23 @@ function Rotate() {
 
 document.addEventListener('swiped-down', function(e) {
 	if(document.getElementById("swipe").checked) {
-		RandomClick()}
+		RandomClick() }
 })
 
 document.addEventListener('swiped-right', function(e) {
 	if(document.getElementById("swipe").checked) {
-		PreviousClick()}
+		PreviousClick() }
 })
 
 
 document.addEventListener('swiped-left', function(e) {
 	if(document.getElementById("swipe").checked) {
-		NextClick()}
+		NextClick() }
 })
 
 document.addEventListener('swiped-up', function(e) {
 	if(document.getElementById("swipe").checked) {
-		CurrentClick()}
+		CurrentClick() }
 })
 
 setStatus = document.getElementById("swipe");
