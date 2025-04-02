@@ -74,10 +74,15 @@ input[type=checkbox]:checked:after
 	left: 6px;
 }
 
+.logo
+{
+    padding: 15px 10px;
+    margin-bottom: 5px;
+}
+
 .logo img
 {
     width: 100%;
-    
 }
 .button {
     margin: 5px ;
@@ -214,6 +219,20 @@ input[type="date"]#DatePicker:disabled {
     opacity: 0.5;
     color: black;
     box-shadow: none;
+}
+
+/* Settings menu styling */
+#settingsDIV {
+    padding: 10px 15px 15px 25px; /* Top Right Bottom Left - extra padding on left */
+    margin: 5px 0;
+}
+
+/* Settings icon container */
+.settings-icons-container {
+    position: relative;
+    display: flex;
+    justify-content: flex-end;
+    padding-right: 15px;
 }
 
 
