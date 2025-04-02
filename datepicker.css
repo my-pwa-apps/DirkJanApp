@@ -1,0 +1,33 @@
+/* Date picker styling to match navigation buttons */
+input[type="date"]#DatePicker {
+  background-image: linear-gradient(to bottom, #484e55, #3a3f44 60%, #313539);
+  color: white;
+  border: 1px solid rgba(0, 0, 0, 0.6);
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.15), 0 1px 1px rgba(0,0,0,.075);
+  
+  /* Remove browser default styling */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+/* Style the calendar picker icon */
+input[type="date"]#DatePicker::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  opacity: 0.8;
+  cursor: pointer;
+}
+
+/* Mobile centering */
+@media (max-width: 768px) {
+  #DatePicker {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+    width: 80%;
+  }
+}
