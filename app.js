@@ -625,17 +625,23 @@ function Addfav()
    
 function HideSettings()
 {
-var x = document.getElementById("settingsDIV");
-	if (x.style.display === "none") {
-	  x.style.display = "block";
-	  localStorage.setItem('settings', "true");
-	} else {
-	  x.style.display = "none";
-	  localStorage.setItem('settings', "false");
-	}
-	
-	// Reapply date picker styling after settings visibility change
-	setTimeout(() => applyDatePickerStyling(), 10);
+  var x = document.getElementById("settingsDIV");
+  
+  // Store the current background styles before changing display
+  const bodyBackgroundImage = document.body.style.backgroundImage;
+  const bodyBackgroundColor = document.body.style.backgroundColor;
+  
+  if (x.style.display === "none") {
+    x.style.display = "block";
+    localStorage.setItem('settings', "true");
+  } else {
+    x.style.display = "none";
+    localStorage.setItem('settings', "false");
+  }
+  
+  // Restore the background after the toggle
+  document.body.style.backgroundImage = bodyBackgroundImage;
+  document.body.style.backgroundColor = bodyBackgroundColor;
 }
     
 let deferredPrompt;
