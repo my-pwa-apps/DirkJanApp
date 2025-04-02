@@ -5,12 +5,15 @@ if ("serviceWorker" in navigator) {
 // Define CORS proxies
 const CORS_PROXIES = [
   'https://corsproxy.garfieldapp.workers.dev/cors-proxy?',
-  'https://api.allorigins.win/raw?url='
+  'https://api.allorigins.win/raw?url=',
+  'https://corsproxy.io/?'
 ];
 
 // Fetch with fallback function
 async function fetchWithFallback(url) {
   let lastError;
+  
+  // Try each proxy with regular CORS mode
   for (const proxy of CORS_PROXIES) {
     try {
       const proxyUrl = `${proxy}${encodeURIComponent(url)}`;
@@ -24,7 +27,20 @@ async function fetchWithFallback(url) {
       continue;
     }
   }
-  throw lastError || new Error('All proxies failed');
+  
+  // If all proxies failed with regular mode, try with no-cors as last resort
+  try {
+    console.log("Trying direct fetch with no-cors mode as last resort");
+    const response = await fetch(url, { mode: 'no-cors' });
+    // Note: with no-cors, we cannot read the response content in JavaScript
+    // but the browser can still use the response for things like displaying images
+    return response;
+  } catch (error) {
+    console.error("Even no-cors mode failed:", error);
+    lastError = error;
+  }
+  
+  throw lastError || new Error('All fetch attempts failed');
 }
 
 async function Share() 
@@ -519,14 +535,14 @@ function Addfav()
   if(favs.indexOf(formattedDate) == -1)
   {
     favs.push(formattedDate);
-    //$(".favicon").css({"color": "red"}).removeClass('fa-heart-o').addClass('fa-heart');
+    //$(".favicon").css({"color": "red"}).removeClass('fa-heart').addClass('fa-heart');
     document.getElementById("favheart").src = "./heart.svg";
     document.getElementById("showfavs").disabled = false;
   }
   else
   {
     favs.splice(favs.indexOf(formattedDate), 1);
-    //$(".favicon").css({"color": "red"}).removeClass('fa-heart').addClass('fa-heart-o');
+    //$(".favicon").css({"color": "red"}).removeClass('fa-heart-o').addClass('fa-heart');
     document.getElementById("favheart").src = "./heartborder.svg";
     if(favs.length === 0)
     {
