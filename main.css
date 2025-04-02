@@ -223,7 +223,7 @@ input[type="date"]#DatePicker:disabled {
 
 /* Settings menu styling */
 #settingsDIV {
-    padding: 10px 15px 15px 25px; /* Top Right Bottom Left - extra padding on left */
+    padding: 8px 12px 12px 15px; /* Decreased padding values - Top Right Bottom Left */
     margin: 5px 0;
 }
 
