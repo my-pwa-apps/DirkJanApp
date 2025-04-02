@@ -18,21 +18,38 @@ function applyDatePickerStyling() {
     const datePicker = document.getElementById('DatePicker');
     
     if (datePicker) {
-      // Apply the same font
-      datePicker.style.fontFamily = navStyle.fontFamily;
-      datePicker.style.fontSize = navStyle.fontSize;
-      datePicker.style.fontWeight = navStyle.fontWeight;
-      
-      // Apply gradient background
-      datePicker.style.background = navStyle.background;
-      datePicker.style.border = navStyle.border;
-      datePicker.style.borderRadius = navStyle.borderRadius;
-      datePicker.style.padding = navStyle.padding;
-      datePicker.style.color = navStyle.color;
-      
-      // Add custom CSS for mobile centering
+      // Add custom CSS with stronger selectors to override browser defaults
       const style = document.createElement('style');
+      
+      // Extract the background gradient if it exists
+      let backgroundGradient = navStyle.background;
+      if (!backgroundGradient.includes('gradient')) {
+        // Fallback to a default gradient if none found
+        backgroundGradient = 'linear-gradient(45deg, #1a1a1a, #4a4a4a)';
+      }
+      
       style.textContent = `
+        input[type="date"]#DatePicker {
+          -webkit-appearance: none;
+          -moz-appearance: none;
+          appearance: none;
+          background: ${backgroundGradient} !important;
+          font-family: ${navStyle.fontFamily};
+          font-size: ${navStyle.fontSize};
+          font-weight: ${navStyle.fontWeight};
+          border: ${navStyle.border};
+          border-radius: ${navStyle.borderRadius};
+          padding: ${navStyle.padding};
+          color: ${navStyle.color};
+          box-shadow: none;
+        }
+        
+        /* Override browser-specific calendar icon */
+        input[type="date"]#DatePicker::-webkit-calendar-picker-indicator {
+          filter: invert(1);
+          cursor: pointer;
+        }
+        
         @media (max-width: 768px) {
           #DatePicker {
             display: block;
