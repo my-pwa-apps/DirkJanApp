@@ -1,21 +1,49 @@
-
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./serviceworker.js");
+}
+
+// Define CORS proxies
+const CORS_PROXIES = [
+  'https://corsproxy.garfieldapp.workers.dev/cors-proxy?',
+  'https://api.allorigins.win/raw?url='
+];
+
+// Fetch with fallback function
+async function fetchWithFallback(url) {
+  let lastError;
+  for (const proxy of CORS_PROXIES) {
+    try {
+      const proxyUrl = `${proxy}${encodeURIComponent(url)}`;
+      const response = await fetch(proxyUrl);
+      if (response.ok) {
+        return response;
+      }
+    } catch (error) {
+      lastError = error;
+      console.warn(`Failed to fetch using proxy ${proxy}:`, error);
+      continue;
+    }
+  }
+  throw lastError || new Error('All proxies failed');
 }
 
 async function Share() 
 {
 	if(navigator.share) {
-		comicurl = "https://corsproxy.garfieldapp.workers.dev/cors-proxy?"+pictureUrl;
-		const response = await fetch(comicurl);
-		const blob = await response.blob();
-		const file = new File([blob], "dirkjan.png", {type: "image/png",
-        lastModified: new Date().getTime()});
-		navigator.share({
-			url: 'https://dirkjanapp.pages.dev',
-			text: 'Shared from https://dirkjanapp.pages.dev',
-			files: [file]
-		});
+		try {
+			const response = await fetchWithFallback(pictureUrl);
+			const blob = await response.blob();
+			const file = new File([blob], "dirkjan.png", {type: "image/png",
+			lastModified: new Date().getTime()});
+			navigator.share({
+				url: 'https://dirkjanapp.pages.dev',
+				text: 'Shared from https://dirkjanapp.pages.dev',
+				files: [file]
+			});
+		} catch (error) {
+			console.error('Error sharing comic:', error);
+			alert('Sorry, could not share the comic. Please try again later.');
+		}
 	}
 }
 
@@ -213,40 +241,46 @@ function DisplayComic()
   formattedDate = year+"-"+month+"-"+day;
   formattedComicDate = year+month+day;
   document.getElementById('DatePicker').value = formattedDate;
-  siteUrl =  "https://corsproxy.garfieldapp.workers.dev/cors-proxy?https://dirkjan.nl/cartoon/"+formattedComicDate;
+  const url = `https://dirkjan.nl/cartoon/${formattedComicDate}`;
 
   localStorage.setItem('lastcomic', currentselectedDate);
-  fetch(siteUrl)
+  
+  fetchWithFallback(url)
     .then(function(response)
 	{
       return response.text();
     })
     .then(function(text)
 	{
-
-    siteBody = text;
-    notFound = siteBody.includes("error404");
-    picturePosition = siteBody.indexOf('<article class="cartoon">');
-    picturePosition = picturePosition+41;
-    if (notFound == false)
-    {
-      pictureUrl = siteBody.substring(picturePosition, picturePosition+88);
-      endPosition = pictureUrl.lastIndexOf('"');
-      pictureUrl = siteBody.substring(picturePosition, picturePosition+endPosition);
-      document.getElementById("comic").src = pictureUrl;
-    }
-    else
-    {
-      if (nextclicked)
+      siteBody = text;
+      notFound = siteBody.includes("error404");
+      picturePosition = siteBody.indexOf('<article class="cartoon">');
+      picturePosition = picturePosition+41;
+      if (notFound == false)
       {
-        NextClick();
+        pictureUrl = siteBody.substring(picturePosition, picturePosition+88);
+        endPosition = pictureUrl.lastIndexOf('"');
+        pictureUrl = siteBody.substring(picturePosition, picturePosition+endPosition);
+        document.getElementById("comic").src = pictureUrl;
       }
       else
       {
-      PreviousClick();
+        if (nextclicked)
+        {
+          NextClick();
+        }
+        else
+        {
+          PreviousClick();
+        }
       }
-    }
-  });
+    })
+    .catch(function(error) {
+      console.error('Error fetching comic:', error);
+      document.getElementById("comic").src = ""; // Clear the image
+      document.getElementById("comic").alt = "Failed to load comic. Please try again later.";
+    });
+    
     var favs = JSON.parse(localStorage.getItem('favs'));
 	  if(favs == null)
 	  {
