@@ -9,67 +9,6 @@ const CORS_PROXIES = [
   'https://corsproxy.io/?'
 ];
 
-// Simple direct styling for date picker
-function applyDatePickerStyling() {
-  const datePicker = document.getElementById('DatePicker');
-  if (!datePicker) return;
-  
-  // Get a reference button
-  const navButton = document.querySelector('nav button');
-  if (!navButton) return;
-  
-  // Apply button styles directly to date input
-  const buttonStyles = window.getComputedStyle(navButton);
-  
-  // Copy button dimensions and appearance
-  datePicker.style.width = 'auto';
-  datePicker.style.height = buttonStyles.height;
-  datePicker.style.padding = buttonStyles.padding;
-  datePicker.style.border = buttonStyles.border;
-  datePicker.style.borderRadius = buttonStyles.borderRadius;
-  datePicker.style.backgroundColor = buttonStyles.backgroundColor;
-  datePicker.style.backgroundImage = buttonStyles.backgroundImage;
-  datePicker.style.color = buttonStyles.color;
-  datePicker.style.fontFamily = buttonStyles.fontFamily;
-  datePicker.style.fontSize = buttonStyles.fontSize;
-  datePicker.style.fontWeight = buttonStyles.fontWeight;
-  datePicker.style.boxShadow = buttonStyles.boxShadow;
-  
-  // Override browser defaults for date input
-  const styleSheet = document.createElement('style');
-  styleSheet.textContent = `
-    #DatePicker {
-      -webkit-appearance: none !important;
-      -moz-appearance: none !important;
-      appearance: none !important;
-    }
-    
-    #DatePicker::-webkit-calendar-picker-indicator {
-      filter: invert(1);
-      opacity: 0.7;
-      cursor: pointer;
-      margin-left: 5px;
-    }
-    
-    /* Mobile styles */
-    @media (max-width: 768px) {
-      #DatePicker {
-        width: 80%;
-        margin: 0 auto;
-        display: block;
-      }
-    }
-  `;
-  document.head.appendChild(styleSheet);
-  
-  // Apply styling after a slight delay to ensure it takes effect
-  setTimeout(() => {
-    // Reapply critical styles that might be overridden by browser defaults
-    datePicker.style.backgroundImage = buttonStyles.backgroundImage;
-    datePicker.style.backgroundColor = buttonStyles.backgroundColor;
-  }, 50);
-}
-
 // Fetch with fallback function
 async function fetchWithFallback(url) {
   let lastError;
@@ -143,20 +82,16 @@ function onLoad()
 			document.getElementById("showfavs").disabled = true;
       document.getElementById("Current").innerHTML = "Vandaag";
 			currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
-		
 		}
-		
 	}
 	else{
-
 		if(favs.length === 0)
 		{
 			document.getElementById("showfavs").checked = false;
 			document.getElementById("showfavs").disabled = true;
 			currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
-	}
+	    }
 		currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
-		
 	}
  
  maxDate = new Date();
@@ -203,18 +138,10 @@ function onLoad()
 		{
 			currentselectedDate = new Date(localStorage.getItem('lastcomic'));
 		}
-		
 	}
 
   CompareDates();
-  
   DisplayComic();
-  
-  // Apply the styling to the date picker
-  applyDatePickerStyling();
-  
-  // Apply styling again after a short delay (helps with some browsers)
-  setTimeout(applyDatePickerStyling, 100);
 }
 
 function PreviousClick()
