@@ -61,8 +61,7 @@ function enhanceIconsForModernTheme(isModernTheme) {
             container.style.display = 'flex';
             container.style.justifyContent = 'center';
         }
-    } else {
-        // Reset to original
+    } else {        // Reset to original
         icons.forEach(icon => {
             if (icon) {
                 // Remove our modern enhancements
@@ -74,20 +73,23 @@ function enhanceIconsForModernTheme(isModernTheme) {
                     icon.style.fontSize = '25px';
                     icon.style.right = '125px';
                     icon.style.position = 'absolute';
+                    icon.style.filter = 'brightness(0.15)'; // Make sure icon is visible
                 } else if (icon.id === 'favheart') {
                     icon.style.fontSize = '25px';
                     icon.style.right = '70px';
                     icon.style.position = 'absolute';
+                    icon.style.filter = ''; // Heart icon already has appropriate fill color
                 } else if (icon.id === 'share') {
                     icon.style.fontSize = '25px';
                     icon.style.right = '20px';
                     icon.style.position = 'absolute';
+                    icon.style.filter = 'brightness(0.15)'; // Make sure icon is visible
                 }
                 
-                // Reset display style
+                // Set proper dimensions for the SVG icons
                 icon.style.display = '';
-                icon.style.width = '';
-                icon.style.height = '';
+                icon.style.width = '24px';
+                icon.style.height = '24px';
             }
         });
     }
@@ -134,7 +136,35 @@ function setupIconObserver(isModernTheme) {
     }
 }
 
+// Function to initialize settings icons in default theme
+function initializeDefaultIcons() {
+    const settingsIcon = document.getElementById('settings');
+    const favIcon = document.getElementById('favheart');
+    const shareIcon = document.getElementById('share');
+    
+    if (settingsIcon) {
+        settingsIcon.style.filter = 'brightness(0.15)';
+        settingsIcon.style.width = '24px';
+        settingsIcon.style.height = '24px';
+    }
+    
+    if (shareIcon) {
+        shareIcon.style.filter = 'brightness(0.15)';
+        shareIcon.style.width = '24px';
+        shareIcon.style.height = '24px';
+    }
+    
+    if (favIcon) {
+        // No filter for heart icon as it already has appropriate color
+        favIcon.style.width = '24px';
+        favIcon.style.height = '24px';
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize default icons right away
+    initializeDefaultIcons();
+    
     // Check if there's a saved theme preference in localStorage
     const savedTheme = localStorage.getItem('dirkjan-theme');
     
@@ -199,8 +229,7 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         console.error("Theme toggle not found in the DOM!");
     }
-    
-    // Initialize comic centering based on current theme
+      // Initialize comic centering based on current theme
     const currentTheme = document.documentElement.getAttribute('data-theme');
     if (currentTheme === 'modern') {
         fixComicCentering(true);
@@ -209,5 +238,6 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         fixComicCentering(false);
         enhanceIconsForModernTheme(false);
+        initializeDefaultIcons(); // Make sure default icons are visible
     }
 });

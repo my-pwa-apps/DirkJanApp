@@ -246,6 +246,32 @@ input[type="date"]#DatePicker:disabled {
     padding-right: 15px;
 }
 
+/* Settings icon styling for default theme */
+.settings-icons-container img {
+    width: 24px;
+    height: 24px;
+    filter: brightness(0.15); /* Make icons visible with dark color */
+    transition: transform 0.2s ease;
+    cursor: pointer;
+    /* Keep position absolute as set in HTML */
+}
+
+/* Special handling for heart icon which already has a fill color */
+.settings-icons-container img#favheart {
+    filter: none; /* The heart SVG already has proper fill color */
+}
+
+.settings-icons-container img:hover {
+    transform: scale(1.15);
+    filter: brightness(0); /* Darker on hover */
+}
+
+/* Heart icon special hover */
+.settings-icons-container img#favheart:hover {
+    transform: scale(1.15);
+    filter: none; /* Keep original color */
+}
+
 /* Media queries for the floating buttons */
 @media (max-width: 768px) {
     .buttongrid {
