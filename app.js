@@ -641,6 +641,9 @@ function maximizeRotatedImage(imgElement) {
     scale = viewportHeight / rotatedHeight;
   }
   
+  // Make the image slightly smaller (90% of the calculated size)
+  scale = scale * 0.9;
+  
   // Apply dimension with calculated scale
   imgElement.style.width = `${naturalWidth * scale}px`;
   imgElement.style.height = `${naturalHeight * scale}px`;
