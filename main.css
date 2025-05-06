@@ -1,7 +1,7 @@
 body
 {
     /* Fix the gradient by making it fixed and ensuring full height coverage */
-    background: linear-gradient(black, darkgrey) fixed no-repeat;
+    background: linear-gradient(to bottom, #000000, #d0d0d0) fixed no-repeat;
     background-size: 100% 100vh;
     min-height: 100vh;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -149,20 +149,20 @@ input
     gap: 3px;
 }
 
-.rotate
-{
+.rotate {
     -ms-transform: rotate(90deg);
-	-webkit-transform: rotate(90deg);
-	transform: rotate(90deg);
-	margin-left: -22vw;
-	margin-top: 10vw;
-	width: 140%;
-	position:absolute;
-	z-index: 100;
+    -webkit-transform: rotate(90deg);
+    transform: rotate(90deg);
+    max-height: 95vh; /* Use most of the viewport height */
+    max-width: 95vw; /* Use most of the viewport width */
+    width: auto;
+    height: auto;
+    object-fit: contain; /* Maintain aspect ratio while fitting container */
+    box-shadow: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
+    border-radius: 4px;
 }
   
-.normal
-{
+.normal {
     -ms-transform: rotate(0deg);
     -webkit-transform: rotate(0deg);
     transform: rotate(0deg);

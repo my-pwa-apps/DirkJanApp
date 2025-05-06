@@ -75,7 +75,9 @@ async function Share()
 
 function onLoad()
 {
- comicstartDate = "2015/05/04";   
+  // Remove the style element that was added for the lighter background
+  
+  comicstartDate = "2015/05/04";   
  currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
  
  var favs = JSON.parse(localStorage.getItem('favs'));
@@ -447,13 +449,19 @@ function Rotate() {
     clonedComic.id = 'rotated-comic';
     clonedComic.className = "rotate";
     clonedComic.style.display = 'block'; // Ensure it's visible
-    clonedComic.style.maxWidth = '90vh';
-    clonedComic.style.maxHeight = '90vw';
-    clonedComic.style.boxShadow = '0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23)';
-    clonedComic.style.borderRadius = '4px';
-    clonedComic.style.cursor = 'pointer'; // Change cursor to indicate it's clickable
     
-    // Add tooltip/hint for users
+    // Optimize size based on screen orientation
+    if (window.innerWidth > window.innerHeight) {
+      // Landscape orientation
+      clonedComic.style.maxWidth = '95vh'; // Height becomes width after rotation
+      clonedComic.style.maxHeight = '95vw'; // Width becomes height after rotation
+    } else {
+      // Portrait orientation
+      clonedComic.style.maxWidth = '95vw';
+      clonedComic.style.maxHeight = '95vh';
+    }
+    
+    clonedComic.style.cursor = 'pointer'; // Change cursor to indicate it's clickable
     clonedComic.title = "Click to exit fullscreen view";
     
     // Save reference to overlay in a data attribute on the body
