@@ -67,6 +67,11 @@ html[data-theme="modern"] .logo:hover img {
 }
 
 /* Comic display - modern styling */
+/* Add a wrapper for comic centering */
+html[data-theme="modern"] body {
+  text-align: center; /* Center all content by default */
+}
+
 html[data-theme="modern"] #comic {
   max-width: 100%;
   height: auto;
@@ -74,14 +79,19 @@ html[data-theme="modern"] #comic {
   box-shadow: var(--shadow-medium);
   transition: var(--transition);
   cursor: zoom-in;
-  margin: var(--spacing-lg) 0;
+  margin: var(--spacing-lg) auto;
+  display: block;
 }
 
 html[data-theme="modern"] #comic.normal {
   width: auto;
-  max-width: 100%;
+  max-width: 95%;
   transform: rotate(0deg);
-  margin: var(--spacing-lg) 0;
+  margin: var(--spacing-lg) auto;
+  position: static;
+  left: auto;
+  right: auto;
+  display: block;
 }
 
 html[data-theme="modern"] #comic.rotate {
