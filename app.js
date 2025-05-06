@@ -155,17 +155,21 @@ function onLoad()
   CompareDates();
   DisplayComic();
   
-  // Update the CSS in the onLoad function to ensure consistent button styling
+  // Update the CSS for button spacing - remove the duplicate .buttongrid definition
   const styleFixForMobile = document.createElement('style');
   styleFixForMobile.textContent = `
     /* Global button styling for all screen sizes */
     .buttongrid {
       display: grid !important;
       grid-template-columns: repeat(3, 1fr) !important;
-      grid-gap: 6px !important; /* Increased from 3px to 6px for more spacing */
+      grid-gap: 6px !important;
+      gap: 6px !important;  /* Modern browsers */
+      row-gap: 6px !important; 
+      column-gap: 6px !important;
       width: 100% !important;
       padding: 0 2px !important;
       margin: 0 !important;
+      grid-template-rows: auto auto !important; /* Fix row height */
     }
     
     /* Reset button styles to ensure consistency */
@@ -236,11 +240,23 @@ function onLoad()
       }
       
       .buttongrid {
-        grid-gap: 4px !important; /* Increased from 2px to 4px for mobile */
+        grid-gap: 4px !important;
+        gap: 4px !important;
+        row-gap: 4px !important;
+        column-gap: 4px !important;
       }
     }
   `;
   document.head.appendChild(styleFixForMobile);
+  
+  // Important: Add this line to clear any potentially conflicting CSS
+  document.querySelectorAll('style:not(:last-child)').forEach(oldStyle => {
+    if (oldStyle.textContent.includes('.buttongrid') && 
+        oldStyle !== styleFixForMobile && 
+        !oldStyle.id.includes('settings-style-fix')) {
+      oldStyle.remove();
+    }
+  });
 }
 
 function PreviousClick()
