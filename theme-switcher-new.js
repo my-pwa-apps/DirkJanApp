@@ -22,6 +22,39 @@ function fixComicCentering(isModernTheme) {
     }
 }
 
+// Function to enhance icons for modern theme
+function enhanceIconsForModernTheme(isModernTheme) {
+    // Get all icons in the settings container
+    const settingsIcon = document.getElementById('settings');
+    const favIcon = document.getElementById('favheart');
+    const shareIcon = document.getElementById('share');
+    
+    const icons = [settingsIcon, favIcon, shareIcon];
+    
+    if (isModernTheme) {
+        // Add title attributes for tooltips
+        if (settingsIcon) settingsIcon.title = "Instellingen";
+        if (favIcon) favIcon.title = "Favoriet";
+        if (shareIcon) shareIcon.title = "Delen";
+        
+        // Remove inline styles that might interfere with our CSS
+        icons.forEach(icon => {
+            if (icon) {
+                icon.style.position = 'static';
+                icon.style.right = '';
+                icon.style.fontSize = '';
+            }
+        });
+    } else {
+        // Reset to original
+        icons.forEach(icon => {
+            if (icon) {
+                icon.removeAttribute('title');
+            }
+        });
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     // Check if there's a saved theme preference in localStorage
     const savedTheme = localStorage.getItem('dirkjan-theme');
@@ -57,22 +90,23 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log("Theme toggle found, adding event listener");
         
         themeToggle.addEventListener('change', function(e) {
-            console.log("Theme toggle changed:", e.target.checked ? "modern" : "default");
-              if (e.target.checked) {
+            console.log("Theme toggle changed:", e.target.checked ? "modern" : "default");            if (e.target.checked) {
                 // Switch to modern theme
                 document.documentElement.setAttribute('data-theme', 'modern');
                 localStorage.setItem('dirkjan-theme', 'modern');
                 
-                // Fix comic centering for modern theme
+                // Apply modern enhancements
                 fixComicCentering(true);
+                enhanceIconsForModernTheme(true);
                 console.log("Modern theme applied!");
             } else {
                 // Switch to default theme
                 document.documentElement.setAttribute('data-theme', 'default');
                 localStorage.setItem('dirkjan-theme', 'default');
                 
-                // Reset comic to original styling
+                // Reset to original styling
                 fixComicCentering(false);
+                enhanceIconsForModernTheme(false);
                 console.log("Default theme applied!");
             }
         });    } else {
@@ -83,7 +117,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const currentTheme = document.documentElement.getAttribute('data-theme');
     if (currentTheme === 'modern') {
         fixComicCentering(true);
+        enhanceIconsForModernTheme(true);
     } else {
         fixComicCentering(false);
+        enhanceIconsForModernTheme(false);
     }
 });

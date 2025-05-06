@@ -75,7 +75,7 @@ html[data-theme="modern"] body {
 html[data-theme="modern"] #comic {
   max-width: 100%;
   height: auto;
-  border-radius: var(--border-radius);
+  border-radius: 0; /* Remove rounded corners to prevent cutting off comic content */
   box-shadow: var(--shadow-medium);
   transition: var(--transition);
   cursor: zoom-in;
@@ -102,7 +102,7 @@ html[data-theme="modern"] #comic.rotate {
   height: auto;
   object-fit: contain;
   box-shadow: var(--shadow-large);
-  border-radius: var(--border-radius);
+  border-radius: 0; /* Remove rounded corners to prevent cutting off comic content */
   position: relative;
   left: 0;
   right: 0;
@@ -202,29 +202,38 @@ html[data-theme="modern"] #DatePicker::-webkit-calendar-picker-indicator {
 /* Settings area - modern styling */
 html[data-theme="modern"] .settings-icons-container {
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
   align-items: center;
-  gap: var(--spacing-md);
   padding: var(--spacing-md) 0;
   position: relative;
+  margin: var(--spacing-md) auto;
+  width: 100%;
+  max-width: 300px;
 }
 
 html[data-theme="modern"] .settings-icons-container img {
-  width: 28px;
-  height: 28px;
-  padding: var(--spacing-sm);
-  border-radius: 50%;
-  background-color: var(--card-bg-color);
+  width: 24px;
+  height: 24px;
+  padding: var(--spacing-md);
+  border-radius: 12px;
+  background-color: var(--primary-color);
   box-shadow: var(--shadow-small);
   transition: var(--transition);
   cursor: pointer;
   position: static !important;
+  filter: brightness(0) invert(1); /* Make icons white */
+  margin: 0 10px;
 }
 
 html[data-theme="modern"] .settings-icons-container img:hover {
-  background-color: var(--primary-color);
-  filter: brightness(0) invert(1);
+  background-color: var(--accent-color);
   transform: scale(1.1);
+  box-shadow: var(--shadow-medium);
+}
+
+html[data-theme="modern"] .settings-icons-container img:active {
+  transform: scale(0.95);
+  box-shadow: var(--shadow-small);
 }
 
 /* Settings panel - modern styling */
