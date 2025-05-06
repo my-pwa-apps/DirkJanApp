@@ -515,6 +515,12 @@ function Rotate() {
     // We're in fullscreen mode, exit it immediately
     document.body.removeChild(existingOverlay);
     
+    // Remove rotated image if it exists
+    const rotatedComic = document.getElementById('rotated-comic');
+    if (rotatedComic) {
+      document.body.removeChild(rotatedComic);
+    }
+    
     // Restore all elements with data-was-hidden attribute
     const hiddenElements = document.querySelectorAll('[data-was-hidden]');
     hiddenElements.forEach(el => {
@@ -529,88 +535,52 @@ function Rotate() {
   }
   
   if (element.className === "normal") {
-    // First clone the comic before hiding anything
-    const clonedComic = element.cloneNode(true);
-    
-    // Create fullscreen overlay with transparent background
+    // Create an overlay without any layout constraints
     const overlay = document.createElement('div');
     overlay.id = 'comic-overlay';
     overlay.style.position = 'fixed';
     overlay.style.top = '0';
     overlay.style.left = '0';
-    overlay.style.width = '100%';
-    overlay.style.height = '100%';
-    overlay.style.backgroundColor = 'transparent';
+    overlay.style.width = '100vw';
+    overlay.style.height = '100vh';
+    overlay.style.backgroundColor = 'rgba(0,0,0,0.3)';
     overlay.style.zIndex = '10000';
-    overlay.style.display = 'flex';
-    overlay.style.alignItems = 'center';
-    overlay.style.justifyContent = 'center';
-    overlay.style.overflow = 'hidden'; // Prevent any potential scrolling
     
-    // Style the cloned comic for maximum visibility
+    // Clone the comic image
+    const clonedComic = element.cloneNode(true);
     clonedComic.id = 'rotated-comic';
     clonedComic.className = "rotate";
-    clonedComic.style.display = 'block';
     
-    // Force image to load completely before calculating dimensions
-    clonedComic.onload = function() {
-      maximizeImageSize(clonedComic);
-    };
-    
-    // Also try to maximize immediately in case image is already loaded
-    maximizeImageSize(clonedComic);
-    
-    // Save reference to overlay in a data attribute on the body
-    document.body.dataset.overlayId = 'comic-overlay';
-    
-    // First append the overlay to the body
+    // Immediately add to body (not to overlay)
     document.body.appendChild(overlay);
+    document.body.appendChild(clonedComic);
     
-    // Then append the cloned comic to the overlay
-    overlay.appendChild(clonedComic);
-    
-    // Store display states and hide elements - more aggressive approach
-    // Get ALL UI elements that need to be hidden, not just direct children of body
-    const buttonsToHide = document.querySelectorAll('.button, #DatePicker, .buttongrid, button, input, select, nav, footer, header, #settingsDIV, #favheart, .navigation');
-    
-    // First specifically hide all buttons and controls
-    buttonsToHide.forEach(button => {
-      if (button && button !== overlay && !overlay.contains(button)) {
-        button.dataset.originalDisplay = window.getComputedStyle(button).display;
-        button.dataset.wasHidden = "true";
-        button.style.setProperty('display', 'none', 'important');
-      }
-    });
-    
-    // Then hide all other direct children of body except the overlay
-    const allElements = document.body.children;
-    for (let i = 0; i < allElements.length; i++) {
-      const el = allElements[i];
-      if (el !== overlay && !el.dataset.wasHidden) {
-        el.dataset.originalDisplay = window.getComputedStyle(el).display;
-        el.dataset.wasHidden = "true";
-        el.style.setProperty('display', 'none', 'important');
-      }
+    // Apply sizing when image is loaded
+    if (clonedComic.complete) {
+      maximizeRotatedImage(clonedComic);
+    } else {
+      clonedComic.onload = function() {
+        maximizeRotatedImage(clonedComic);
+      };
     }
+    
+    // Hide all other elements
+    const elementsToHide = document.querySelectorAll('body > *:not(#comic-overlay):not(#rotated-comic)');
+    elementsToHide.forEach(el => {
+      el.dataset.originalDisplay = window.getComputedStyle(el).display;
+      el.dataset.wasHidden = "true";
+      el.style.setProperty('display', 'none', 'important');
+    });
     
     // Handler function to exit fullscreen
     const exitFullscreen = function() {
-      // First check if overlay still exists
       const overlay = document.getElementById('comic-overlay');
-      if (!overlay) return;
+      if (overlay) document.body.removeChild(overlay);
       
-      // Remove the overlay completely first
-      if (overlay.parentNode) {
-        overlay.parentNode.removeChild(overlay);
-      }
-      
-      // Clear any additional rotated comic instances
       const rotatedComic = document.getElementById('rotated-comic');
-      if (rotatedComic && rotatedComic.parentNode) {
-        rotatedComic.parentNode.removeChild(rotatedComic);
-      }
+      if (rotatedComic) document.body.removeChild(rotatedComic);
       
-      // Restore visibility of ALL elements that were hidden
+      // Restore visibility of hidden elements
       const hiddenElements = document.querySelectorAll('[data-was-hidden]');
       hiddenElements.forEach(el => {
         el.style.display = el.dataset.originalDisplay || '';
@@ -618,25 +588,19 @@ function Rotate() {
         delete el.dataset.originalDisplay;
       });
       
-      // Force UI refresh
-      window.setTimeout(() => {
-        // Ensure original comic is back to normal
-        if (element) element.className = "normal";
-      }, 0);
+      // Ensure original comic is back to normal
+      if (element) element.className = "normal";
     };
     
     // Add click handlers
     clonedComic.addEventListener('click', exitFullscreen);
     overlay.addEventListener('click', exitFullscreen);
     
-    // Add resize listener to adjust image when orientation changes
-    const resizeHandler = () => maximizeImageSize(clonedComic);
+    // Add resize listener
+    const resizeHandler = () => maximizeRotatedImage(clonedComic);
     window.addEventListener('resize', resizeHandler);
     
-    // Store resize handler reference on the overlay to remove it later
-    overlay.dataset.resizeHandler = true;
-    
-    // Override exitFullscreen to also remove event listener
+    // Override exitFullscreen to remove event listener
     const originalExit = exitFullscreen;
     exitFullscreen = function() {
       window.removeEventListener('resize', resizeHandler);
@@ -646,55 +610,51 @@ function Rotate() {
   else if (element.className === "rotate") {
     element.className = 'normal';
   }
+}
+
+// Helper function to maximize image size for rotated images
+function maximizeRotatedImage(imgElement) {
+  // Get viewport dimensions
+  const viewportHeight = window.innerHeight;
+  const viewportWidth = window.innerWidth;
   
-  // Helper function to maximize image size
-  function maximizeImageSize(imgElement) {
-    const viewportHeight = window.innerHeight;
-    const viewportWidth = window.innerWidth;
-
-    // Get natural dimensions of the image
-    const naturalWidth = imgElement.naturalWidth;
-    const naturalHeight = imgElement.naturalHeight;
-
-    // Calculate aspect ratio
-    const aspectRatio = naturalWidth / naturalHeight;
-
-    // Check if the image is rotated (90 or 270 degrees)
-    const isRotated = imgElement.className === "rotate";
-
-    // Adjust dimensions based on rotation
-    if (isRotated) {
-        if (viewportHeight / aspectRatio <= viewportWidth) {
-            // Use full height and adjust width
-            imgElement.style.height = `${viewportWidth}px`;
-            imgElement.style.width = `${viewportWidth * aspectRatio}px`;
-        } else {
-            // Use full width and adjust height
-            imgElement.style.width = `${viewportHeight}px`;
-            imgElement.style.height = `${viewportHeight / aspectRatio}px`;
-        }
-    } else {
-        // Fit the image within the viewport while maintaining aspect ratio
-        if (viewportWidth / aspectRatio <= viewportHeight) {
-            // Use full width and adjust height
-            imgElement.style.width = `${viewportWidth}px`;
-            imgElement.style.height = `${viewportWidth / aspectRatio}px`;
-        } else {
-            // Use full height and adjust width
-            imgElement.style.height = `${viewportHeight}px`;
-            imgElement.style.width = `${viewportHeight * aspectRatio}px`;
-        }
-    }
-
-    // Ensure proper rotation behavior
-    imgElement.style.transformOrigin = "center center";
-    imgElement.style.objectFit = "contain";
-    imgElement.style.position = "relative";
-
-    // Add visual enhancements
-    imgElement.style.boxShadow = "0 5px 15px rgba(0,0,0,0.3)";
-    imgElement.style.transition = "all 0.3s ease"; // Smooth transition for any adjustments
+  // Get natural dimensions of the image
+  const naturalWidth = imgElement.naturalWidth;
+  const naturalHeight = imgElement.naturalHeight;
+  
+  // If natural dimensions are not available, do nothing
+  if (!naturalWidth || !naturalHeight) {
+    return;
   }
+  
+  // For a rotated image, the visual width is the original height, and vice versa
+  const rotatedWidth = naturalHeight;
+  const rotatedHeight = naturalWidth;
+  
+  // Calculate the scale factor needed to fit the image within the viewport
+  let scale;
+  if (rotatedWidth / rotatedHeight > viewportWidth / viewportHeight) {
+    // Image is wider than viewport (relative to aspect ratios)
+    scale = viewportWidth / rotatedWidth;
+  } else {
+    // Image is taller than viewport (relative to aspect ratios)
+    scale = viewportHeight / rotatedHeight;
+  }
+  
+  // Apply dimension with calculated scale
+  imgElement.style.width = `${naturalWidth * scale}px`;
+  imgElement.style.height = `${naturalHeight * scale}px`;
+  
+  // Position element in the center of the viewport
+  imgElement.style.position = 'fixed';
+  imgElement.style.top = '50%';
+  imgElement.style.left = '50%';
+  imgElement.style.transform = 'translate(-50%, -50%) rotate(90deg)';
+  imgElement.style.transformOrigin = 'center center';
+  imgElement.style.maxWidth = 'none';
+  imgElement.style.maxHeight = 'none';
+  imgElement.style.zIndex = '10001'; // Higher than the overlay
+  imgElement.style.boxShadow = '0 5px 15px rgba(0,0,0,0.3)';
 }
 
 document.addEventListener('swiped-down', function(e) {
