@@ -1,93 +1,93 @@
-/* Modern UI design for DirkJan App */
+/* Modern UI design for DirkJan App - Distinctly Modern Version */
 :root {
-  /* Color palette - matching original app colors */
-  --primary-color: #F09819;
-  --primary-hover: #e08000;
-  --secondary-color: #444444;
-  --background-color: #f5f5f7;
+  /* Modern color palette - distinctly different from original */
+  --primary-color: #2962ff;
+  --primary-hover: #1565c0;
+  --accent-color: #ff5722;
+  --background-color: #f9f9fb;
   --card-bg-color: #ffffff;
   --text-color: #333333;
-  --text-light: #757575;
-  --border-radius: 12px;
-  --shadow-small: 0 2px 5px rgba(0, 0, 0, 0.1);
-  --shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.08);
-  --shadow-large: 0 8px 24px rgba(0, 0, 0, 0.12);
-  --transition: all 0.3s ease;
+  --text-secondary: #666666;
+  --border-radius: 16px;
+  --shadow-small: 0 2px 8px rgba(0, 0, 0, 0.08);
+  --shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.12);
+  --shadow-large: 0 8px 28px rgba(0, 0, 0, 0.15);
+  --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  --spacing-xs: 4px;
   --spacing-sm: 8px;
   --spacing-md: 16px;
   --spacing-lg: 24px;
+  --spacing-xl: 32px;
 }
 
-/* Base styles */
-body {
-  font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: linear-gradient(to bottom, #000000, #d0d0d0) fixed no-repeat;
-  background-size: 100% 100vh;
+/* Base styles - only apply when modern theme is active */
+html[data-theme="modern"] body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  background: var(--background-color);
   color: var(--text-color);
   margin: 0;
   padding: 0;
   transition: var(--transition);
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
   line-height: 1.5;
 }
 
-/* Container styles */
-.container {
+/* Container styles - only for modern theme */
+html[data-theme="modern"] .container {
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 var(--spacing-md);
+  padding: var(--spacing-md);
   box-sizing: border-box;
 }
 
-/* Header */
-.header {
-  padding: var(--spacing-md) 0;
-}
-
-.logo {
-  padding: var(--spacing-md) 0;
-  text-align: center;
-}
-
-.logo-img {
-  max-width: 220px;
-  height: auto;
-}
-
-/* Comic display */
-.comic-container {
-  position: relative;
-  width: 100%;
+/* Header - modern styling */
+html[data-theme="modern"] .header {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin: var(--spacing-md) 0;
+  padding: var(--spacing-lg) 0;
+  margin-bottom: var(--spacing-lg);
 }
 
-img#comic {
+html[data-theme="modern"] .logo {
+  padding: 0;
+  text-align: center;
+}
+
+html[data-theme="modern"] .logo img {
+  max-width: 220px;
+  height: auto;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.15));
+  transition: var(--transition);
+}
+
+html[data-theme="modern"] .logo:hover img {
+  transform: scale(1.02);
+}
+
+/* Comic display - modern styling */
+html[data-theme="modern"] #comic {
   max-width: 100%;
   height: auto;
   border-radius: var(--border-radius);
   box-shadow: var(--shadow-medium);
   transition: var(--transition);
   cursor: zoom-in;
+  margin: var(--spacing-lg) 0;
 }
 
-img#comic.normal {
+html[data-theme="modern"] #comic.normal {
   width: auto;
   max-width: 100%;
   transform: rotate(0deg);
-  margin: 0;
-  position: relative;
+  margin: var(--spacing-lg) 0;
 }
 
-img#comic.rotate {
+html[data-theme="modern"] #comic.rotate {
   transform: rotate(90deg);
-  max-height: 95vh;
-  max-width: 95vw;
+  max-height: 90vh;
+  max-width: 90vw;
   width: auto;
   height: auto;
   object-fit: contain;
@@ -95,118 +95,132 @@ img#comic.rotate {
   border-radius: var(--border-radius);
 }
 
-/* Button grid */
-.button-grid {
+/* Button grid - modern styling */
+html[data-theme="modern"] .buttongrid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: var(--spacing-md);
-  margin: var(--spacing-md) 0;
+  margin: var(--spacing-lg) 0;
 }
 
-.btn, 
-#DatePicker {
-  background-image: linear-gradient(45deg, yellow 0%, #F09819 51%, yellow 100%);
-  background-size: 200% auto;
-  color: black;
-  border: none;
+/* Modern buttons */
+html[data-theme="modern"] .button {
+  background-color: var(--card-bg-color);
+  color: var(--primary-color);
+  border: 2px solid var(--primary-color);
   border-radius: var(--border-radius);
   padding: 12px var(--spacing-md);
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
   transition: var(--transition);
-  box-shadow: 0px 0px 10px -7px #f09819;
+  box-shadow: var(--shadow-small);
   text-align: center;
   outline: none;
 }
 
-.btn:hover:not(:disabled),
-#DatePicker:hover:not(:disabled) {
-  background-position: right center;
-  color: black;
-  text-decoration: none;
+html[data-theme="modern"] .button:hover {
+  background-color: var(--primary-color);
+  color: white;
+  box-shadow: var(--shadow-medium);
+  transform: translateY(-2px);
 }
 
-.btn:active:not(:disabled),
-#DatePicker:active:not(:disabled) {
+html[data-theme="modern"] .button:active {
   transform: translateY(1px);
   box-shadow: var(--shadow-small);
 }
 
-.btn:disabled,
-#DatePicker:disabled {
+html[data-theme="modern"] .button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+  border-color: #ccc;
+  color: #888;
+  background-color: #f5f5f5;
 }
 
-.btn-primary {
+/* Current button special styling */
+html[data-theme="modern"] #Current {
   background-color: var(--primary-color);
-  color: black;
-  background-image: linear-gradient(45deg, yellow 0%, #F09819 51%, yellow 100%);
-  background-size: 200% auto;
+  color: white;
 }
 
-.btn-primary:hover:not(:disabled) {
-  background-position: right center;
+html[data-theme="modern"] #Current:hover {
+  background-color: var(--primary-hover);
+  border-color: var(--primary-hover);
 }
 
-/* Date Picker */
-#DatePicker {
+/* Date Picker - modern styling */
+html[data-theme="modern"] #DatePicker {
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
-  text-align: center;
+  background-color: var(--card-bg-color);
+  color: var(--text-color);
+  border: 2px solid var(--primary-color);
+  border-radius: var(--border-radius);
+  padding: 12px var(--spacing-md);
   font-family: inherit;
-  font-weight: 500;
+  font-weight: 600;
   font-size: 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: var(--transition);
+  box-shadow: var(--shadow-small);
+  position: relative;
 }
 
-#DatePicker::-webkit-calendar-picker-indicator {
+html[data-theme="modern"] #DatePicker:hover {
+  box-shadow: var(--shadow-medium);
+  transform: translateY(-2px);
+}
+
+html[data-theme="modern"] #DatePicker::-webkit-calendar-picker-indicator {
+  color: var(--primary-color);
   opacity: 0.8;
   cursor: pointer;
   position: absolute;
-  right: 10px;
+  right: 12px;
   top: 50%;
   transform: translateY(-50%);
 }
 
-/* Settings bar */
-.settings-bar {
+/* Settings area - modern styling */
+html[data-theme="modern"] .settings-icons-container {
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  margin: var(--spacing-md) 0;
   gap: var(--spacing-md);
+  padding: var(--spacing-md) 0;
+  position: relative;
 }
 
-.icon-button {
-  background: transparent;
-  border: none;
-  cursor: pointer;
+html[data-theme="modern"] .settings-icons-container img {
+  width: 28px;
+  height: 28px;
   padding: var(--spacing-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   border-radius: 50%;
+  background-color: var(--card-bg-color);
+  box-shadow: var(--shadow-small);
   transition: var(--transition);
+  cursor: pointer;
+  position: static !important;
 }
 
-.icon-button:hover {
-  background-color: rgba(0, 0, 0, 0.05);
+html[data-theme="modern"] .settings-icons-container img:hover {
+  background-color: var(--primary-color);
+  filter: brightness(0) invert(1);
+  transform: scale(1.1);
 }
 
-.icon-button img {
-  width: 24px;
-  height: 24px;
-}
-
-/* Settings panel */
-.settings-panel {
+/* Settings panel - modern styling */
+html[data-theme="modern"] #settingsDIV {
   background-color: var(--card-bg-color);
   border-radius: var(--border-radius);
-  padding: var(--spacing-md);
+  padding: var(--spacing-lg);
   margin: var(--spacing-md) 0;
   box-shadow: var(--shadow-medium);
+  border-left: 4px solid var(--primary-color);
 }
 
 .settings-option {
@@ -219,94 +233,81 @@ img#comic.rotate {
   margin-bottom: 0;
 }
 
-/* Custom checkboxes */
-.toggle {
+/* Custom checkboxes - modern styling */
+html[data-theme="modern"] input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--primary-color);
+  border-radius: 6px;
+  background-color: var(--card-bg-color);
+  cursor: pointer;
   position: relative;
-  display: inline-block;
-  width: 52px;
-  height: 26px;
+  vertical-align: middle;
+  transition: var(--transition);
   margin-right: var(--spacing-md);
 }
 
-.toggle input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.slider {
-  position: absolute;
-  cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: #ccc;
-  transition: var(--transition);
-  border-radius: 26px;
-}
-
-.slider:before {
-  position: absolute;
-  content: "";
-  height: 20px;
-  width: 20px;
-  left: 3px;
-  bottom: 3px;
-  background-color: white;
-  transition: var(--transition);
-  border-radius: 50%;
-}
-
-input:checked + .slider {
+html[data-theme="modern"] input[type="checkbox"]:checked {
   background-color: var(--primary-color);
 }
 
-input:checked + .slider:before {
-  transform: translateX(26px);
+html[data-theme="modern"] input[type="checkbox"]:checked:after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  top: 4px;
+  width: 6px;
+  height: 12px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
 }
 
-/* Responsive design */
+html[data-theme="modern"] label.labels {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-color);
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+/* Responsive design - modern theme */
 @media (max-width: 768px) {
-  .button-grid {
+  html[data-theme="modern"] .buttongrid {
     gap: 8px;
   }
   
-  .btn, 
-  #DatePicker {
+  html[data-theme="modern"] .button, 
+  html[data-theme="modern"] #DatePicker {
     padding: 10px 8px;
     font-size: 14px;
   }
-  
-  .settings-bar {
-    padding-right: var(--spacing-sm);
-  }
 }
 
-/* Dark mode support */
+/* Dark mode support - modern theme */
 @media (prefers-color-scheme: dark) {
-  :root {
+  html[data-theme="modern"] {
+    --background-color: #121212;
     --card-bg-color: #1e1e1e;
     --text-color: #e0e0e0;
-    --text-light: #a0a0a0;
-    --shadow-small: 0 2px 5px rgba(0, 0, 0, 0.3);
-    --shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.4);
-    --shadow-large: 0 8px 24px rgba(0, 0, 0, 0.5);
+    --text-secondary: #a0a0a0;
+    --shadow-small: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.4);
+    --shadow-large: 0 8px 28px rgba(0, 0, 0, 0.5);
   }
   
-  /* Keep buttons consistent in dark mode to match original style */
-  .btn, 
-  #DatePicker {
-    /* Buttons maintain the same appearance in dark mode */
-    background-image: linear-gradient(45deg, yellow 0%, #F09819 51%, yellow 100%);
-    color: black;
+  html[data-theme="modern"] .settings-icons-container img {
+    filter: brightness(0) invert(0.9);
   }
   
-  .settings-panel {
-    background-color: #2a2a2a;
+  html[data-theme="modern"] .settings-icons-container img:hover {
+    filter: brightness(0) invert(1);
   }
   
-  #DatePicker::-webkit-calendar-picker-indicator {
-    filter: brightness(0.1);
+  html[data-theme="modern"] #DatePicker::-webkit-calendar-picker-indicator {
+    filter: invert(0.8);
   }
 }

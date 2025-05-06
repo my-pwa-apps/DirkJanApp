@@ -77,42 +77,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Function to apply modern styling
 function applyModernStyling() {
-    // Update button classes
-    document.querySelectorAll('.button').forEach(button => {
-        button.classList.add('btn');
-    });
+    // We don't need to modify the DOM structure anymore
+    // The modern.css file applies styling using the data-theme attribute
+    console.log("Modern theme applied via CSS");
     
-    // Add container wrapper if it doesn't exist
-    const body = document.body;
-    const themeSwitcher = document.querySelector('.theme-switcher');
-    
-    if (!document.querySelector('.container')) {
-        // Create container div
-        const container = document.createElement('div');
-        container.className = 'container';
-        
-        // Clone all elements except the theme switcher
-        const children = Array.from(body.children);
-        for (let child of children) {
-            if (child !== themeSwitcher && child.tagName !== 'SCRIPT') {
-                container.appendChild(child.cloneNode(true));
-            }
-        }
-        
-        // Remove the original elements (except theme switcher and scripts)
-        for (let child of children) {
-            if (child !== themeSwitcher && child.tagName !== 'SCRIPT') {
-                child.remove();
-            }
-        }
-        
-        // Append the container after the theme switcher
-        if (themeSwitcher.nextSibling) {
-            body.insertBefore(container, themeSwitcher.nextSibling);
-        } else {
-            body.appendChild(container);
-        }
-    }
+    // Optional: Add a class to the body for additional styling hooks
+    document.body.classList.add('modern-theme');
+}
     
     // Update grid class
     const buttonGrid = document.querySelector('.buttongrid');
