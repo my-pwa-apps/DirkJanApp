@@ -1,0 +1,83 @@
+/* Theme Switcher Styles */
+.theme-switcher {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 9999 !important; /* Highest z-index to ensure visibility */
+  display: flex !important; /* Force display */
+  align-items: center;
+  background-color: rgba(255, 255, 255, 0.95);
+  padding: 10px 15px;
+  border-radius: 20px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  border: 2px solid #F09819;
+}
+
+.theme-switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 30px;
+  margin-left: 8px;
+}
+
+.theme-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.theme-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 30px;
+}
+
+.theme-slider:before {
+  position: absolute;
+  content: "";
+  height: 22px;
+  width: 22px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.3);
+}
+
+input:checked + .theme-slider {
+  background-color: #F09819;
+  box-shadow: 0 0 5px #F09819;
+}
+
+input:checked + .theme-slider:before {
+  transform: translateX(30px);
+}
+
+.theme-label {
+  font-size: 14px;
+  margin-right: 8px;
+  color: #333;
+  font-weight: bold;
+}
+
+/* Theme stylesheet management */
+.theme-default, .theme-modern {
+  display: none !important;
+}
+
+/* Show active stylesheet based on theme choice */
+html[data-theme="default"] .theme-default {
+  display: block !important;
+}
+
+html[data-theme="modern"] .theme-modern {
+  display: block !important;
+}

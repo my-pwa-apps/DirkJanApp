@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Theme Switcher Test</title>
+    <style>
+        /* Basic styling for the test page */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+        }
+        .instructions {
+            background-color: #e8f4ff;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        
+        /* Theme Switcher Styles */
+        .theme-switcher {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            background-color: rgba(255, 255, 255, 0.95);
+            padding: 10px 15px;
+            border-radius: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            border: 2px solid #F09819;
+        }
+        .theme-label {
+            font-size: 14px;
+            margin-right: 8px;
+            color: #333;
+            font-weight: bold;
+        }
+        .theme-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 30px;
+            margin-left: 8px;
+        }
+        .theme-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .theme-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 30px;
+        }
+        .theme-slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .theme-slider {
+            background-color: #F09819;
+        }
+        input:checked + .theme-slider:before {
+            transform: translateX(30px);
+        }
+    </style>
+</head>
+<body>
+    <!-- Theme Switcher -->
+    <div class="theme-switcher">
+        <span class="theme-label">Modern UI</span>
+        <label class="theme-switch">
+            <input type="checkbox" id="theme-toggle">
+            <span class="theme-slider"></span>
+        </label>
+    </div>
+    
+    <div class="test-container">
+        <h1>Theme Switcher Test Page</h1>
+        
+        <div class="instructions">
+            <p><strong>Instructions:</strong></p>
+            <p>This is a standalone test page to verify that the theme switcher displays correctly.</p>
+            <p>You should see the theme switcher in the top-right corner of this page.</p>
+        </div>
+        
+        <p>If you can see the theme switcher on this page but not in your main application:</p>
+        <ul>
+            <li>There might be CSS conflicts in your main application</li>
+            <li>Another element might be overlapping or hiding the theme switcher</li>
+            <li>There could be JavaScript errors preventing proper initialization</li>
+        </ul>
+        
+        <p>To troubleshoot further:</p>
+        <ol>
+            <li>Open the browser's developer tools (F12)</li>
+            <li>Check the console for any JavaScript errors</li>
+            <li>Inspect the theme-switcher element to see if it's being rendered correctly</li>
+            <li>Look for CSS rules that might be affecting its visibility</li>
+        </ol>
+    </div>
+
+    <script>
+        // Simple toggle functionality for testing
+        document.addEventListener('DOMContentLoaded', function() {
+            const themeToggle = document.getElementById('theme-toggle');
+            
+            themeToggle.addEventListener('change', function() {
+                console.log('Theme toggled:', this.checked ? 'Modern' : 'Default');
+                document.body.style.backgroundColor = this.checked ? '#121212' : '#f0f0f0';
+                document.querySelector('.test-container').style.backgroundColor = this.checked ? '#1e1e1e' : 'white';
+                document.querySelector('.test-container').style.color = this.checked ? '#e0e0e0' : '#333';
+            });
+            
+            console.log('Theme switcher test page loaded');
+        });
+    </script>
+</body>
+</html>
