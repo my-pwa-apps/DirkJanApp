@@ -659,15 +659,31 @@ function Rotate() {
     // Calculate aspect ratio
     const aspectRatio = naturalWidth / naturalHeight;
 
-    // Fit the image within the viewport while maintaining aspect ratio
-    if (viewportWidth / aspectRatio <= viewportHeight) {
-        // Use full width and adjust height
-        imgElement.style.width = `${viewportWidth}px`;
-        imgElement.style.height = `${viewportWidth / aspectRatio}px`;
+    // Check if the image is rotated (90 or 270 degrees)
+    const isRotated = imgElement.className === "rotate";
+
+    // Adjust dimensions based on rotation
+    if (isRotated) {
+        if (viewportHeight / aspectRatio <= viewportWidth) {
+            // Use full height and adjust width
+            imgElement.style.height = `${viewportWidth}px`;
+            imgElement.style.width = `${viewportWidth * aspectRatio}px`;
+        } else {
+            // Use full width and adjust height
+            imgElement.style.width = `${viewportHeight}px`;
+            imgElement.style.height = `${viewportHeight / aspectRatio}px`;
+        }
     } else {
-        // Use full height and adjust width
-        imgElement.style.height = `${viewportHeight}px`;
-        imgElement.style.width = `${viewportHeight * aspectRatio}px`;
+        // Fit the image within the viewport while maintaining aspect ratio
+        if (viewportWidth / aspectRatio <= viewportHeight) {
+            // Use full width and adjust height
+            imgElement.style.width = `${viewportWidth}px`;
+            imgElement.style.height = `${viewportWidth / aspectRatio}px`;
+        } else {
+            // Use full height and adjust width
+            imgElement.style.height = `${viewportHeight}px`;
+            imgElement.style.width = `${viewportHeight * aspectRatio}px`;
+        }
     }
 
     // Ensure proper rotation behavior
