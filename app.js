@@ -524,40 +524,25 @@ function Rotate() {
     overlay.style.left = '0';
     overlay.style.width = '100%';
     overlay.style.height = '100%';
-    overlay.style.backgroundColor = 'transparent'; // Keep transparent for gradient background
-    overlay.style.zIndex = '10000'; // Very high z-index
+    overlay.style.backgroundColor = 'transparent';
+    overlay.style.zIndex = '10000';
     overlay.style.display = 'flex';
     overlay.style.alignItems = 'center';
     overlay.style.justifyContent = 'center';
+    overlay.style.overflow = 'hidden'; // Prevent any potential scrolling
     
-    // Style the cloned comic and make sure it's visible
+    // Style the cloned comic for maximum visibility
     clonedComic.id = 'rotated-comic';
     clonedComic.className = "rotate";
-    clonedComic.style.display = 'block'; // Ensure it's visible
+    clonedComic.style.display = 'block';
     
-    // Get device pixel ratio to adjust for high-DPI displays
-    const pixelRatio = window.devicePixelRatio || 1;
-    const isMobile = window.innerWidth < 768; // Check if it's likely a mobile device
+    // Force image to load completely before calculating dimensions
+    clonedComic.onload = function() {
+      maximizeImageSize(clonedComic);
+    };
     
-    // Optimize size based on screen orientation, maximizing available space
-    if (window.innerWidth > window.innerHeight) {
-      // Landscape orientation
-      clonedComic.style.maxWidth = 'none'; // Remove max-width constraint
-      // Use more space on mobile devices
-      clonedComic.style.height = isMobile ? '98vh' : '95vh'; 
-      clonedComic.style.width = 'auto'; // Let width adjust proportionally
-    } else {
-      // Portrait orientation - use even more space on mobile
-      clonedComic.style.maxHeight = isMobile ? '98vh' : '95vh';
-      clonedComic.style.width = 'auto'; // Let width adjust proportionally
-      clonedComic.style.maxWidth = isMobile ? '98vw' : '95vw'; 
-    }
-    
-    // Enhance presentation on mobile
-    if (isMobile) {
-      clonedComic.style.transformOrigin = 'center center';
-      clonedComic.style.objectFit = 'contain';
-    }
+    // Also try to maximize immediately in case image is already loaded
+    maximizeImageSize(clonedComic);
     
     // Save reference to overlay in a data attribute on the body
     document.body.dataset.overlayId = 'comic-overlay';
@@ -627,9 +612,69 @@ function Rotate() {
     // Add click handlers
     clonedComic.addEventListener('click', exitFullscreen);
     overlay.addEventListener('click', exitFullscreen);
+    
+    // Add resize listener to adjust image when orientation changes
+    const resizeHandler = () => maximizeImageSize(clonedComic);
+    window.addEventListener('resize', resizeHandler);
+    
+    // Store resize handler reference on the overlay to remove it later
+    overlay.dataset.resizeHandler = true;
+    
+    // Override exitFullscreen to also remove event listener
+    const originalExit = exitFullscreen;
+    exitFullscreen = function() {
+      window.removeEventListener('resize', resizeHandler);
+      originalExit();
+    };
   }
   else if (element.className === "rotate") {
     element.className = 'normal';
+  }
+  
+  // Helper function to maximize image size
+  function maximizeImageSize(imgElement) {
+    const isMobile = window.innerWidth < 768;
+    const isPortrait = window.innerHeight > window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const viewportWidth = window.innerWidth;
+    
+    // Reset any previously set styles that might interfere
+    imgElement.style.maxHeight = null;
+    imgElement.style.maxWidth = null;
+    imgElement.style.height = null;
+    imgElement.style.width = null;
+    
+    // Give a tiny moment for browser to process the reset
+    setTimeout(() => {
+      // For mobile phones, use even more aggressive sizing
+      if (isMobile) {
+        if (isPortrait) {
+          // Portrait mode - rotated comic should use maximum height
+          imgElement.style.height = '98vh';
+          imgElement.style.width = 'auto';
+          imgElement.style.maxWidth = '100vw';
+        } else {
+          // Landscape mode - different approach needed
+          imgElement.style.width = '98vw';
+          imgElement.style.height = 'auto';
+          imgElement.style.maxHeight = '100vh';
+        }
+        
+        // Ensure transform origin is centered for better rotation
+        imgElement.style.transformOrigin = 'center center';
+        
+        // Use object-fit for better image handling
+        imgElement.style.objectFit = 'contain';
+      } else {
+        // Desktop - slightly more conservative approach
+        imgElement.style.height = '95vh';
+        imgElement.style.width = 'auto';
+        imgElement.style.maxWidth = '95vw';
+      }
+      
+      // Add some visual enhancement
+      imgElement.style.boxShadow = '0 5px 15px rgba(0,0,0,0.3)';
+    }, 0);
   }
 }
 
