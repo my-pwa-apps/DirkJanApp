@@ -30,14 +30,13 @@ function enhanceIconsForModernTheme(isModernTheme) {
     const shareIcon = document.getElementById('share');
     
     const icons = [settingsIcon, favIcon, shareIcon];
-    
-    if (isModernTheme) {
+      if (isModernTheme) {
         // Add title attributes for tooltips
         if (settingsIcon) settingsIcon.title = "Instellingen";
         if (favIcon) favIcon.title = "Favoriet";
         if (shareIcon) shareIcon.title = "Delen";
         
-        // Remove inline styles that might interfere with our CSS
+        // Apply modern styling to each icon
         icons.forEach(icon => {
             if (icon) {
                 // Override any inline styles completely
@@ -45,10 +44,19 @@ function enhanceIconsForModernTheme(isModernTheme) {
                 icon.style.right = '';
                 icon.style.fontSize = '';
                 
-                // Ensure SVG displays correctly
+                // Ensure SVG displays correctly with modern styling
                 icon.style.display = 'block';
                 icon.style.width = '28px';
                 icon.style.height = '28px';
+                icon.style.padding = 'var(--spacing-sm)';  // From CSS variables
+                icon.style.borderRadius = '8px';
+                icon.style.backgroundColor = 'var(--primary-color)';
+                icon.style.boxShadow = 'var(--shadow-small)';
+                icon.style.margin = '0 10px';
+                icon.style.objectFit = 'contain';
+                
+                // Apply white color to all icons in modern mode
+                icon.style.filter = 'brightness(0) invert(1)';
                 
                 // Add data attribute to mark as enhanced
                 icon.setAttribute('data-modern-enhanced', 'true');
@@ -73,23 +81,31 @@ function enhanceIconsForModernTheme(isModernTheme) {
                     icon.style.fontSize = '25px';
                     icon.style.right = '125px';
                     icon.style.position = 'absolute';
-                    icon.style.filter = 'brightness(0.15)'; // Make sure icon is visible
+                    icon.style.filter = 'brightness(0)'; // Black for settings icon
+                    icon.style.background = 'transparent';
                 } else if (icon.id === 'favheart') {
                     icon.style.fontSize = '25px';
                     icon.style.right = '70px';
                     icon.style.position = 'absolute';
-                    icon.style.filter = ''; // Heart icon already has appropriate fill color
+                    icon.style.filter = 'none'; // Heart icon already has red fill color
+                    icon.style.background = 'transparent';
                 } else if (icon.id === 'share') {
                     icon.style.fontSize = '25px';
                     icon.style.right = '20px';
                     icon.style.position = 'absolute';
-                    icon.style.filter = 'brightness(0.15)'; // Make sure icon is visible
+                    icon.style.filter = 'brightness(0)'; // Black for share icon
+                    icon.style.background = 'transparent';
                 }
                 
                 // Set proper dimensions for the SVG icons
-                icon.style.display = '';
-                icon.style.width = '24px';
-                icon.style.height = '24px';
+                icon.style.display = 'inline';
+                icon.style.width = '30px';
+                icon.style.height = '30px';
+                icon.style.padding = '0';
+                icon.style.margin = '0';
+                icon.style.boxShadow = 'none';
+                icon.style.borderRadius = '0';
+                icon.style.objectFit = 'contain';
             }
         });
     }
@@ -143,21 +159,26 @@ function initializeDefaultIcons() {
     const shareIcon = document.getElementById('share');
     
     if (settingsIcon) {
-        settingsIcon.style.filter = 'brightness(0.15)';
-        settingsIcon.style.width = '24px';
-        settingsIcon.style.height = '24px';
+        settingsIcon.style.filter = 'brightness(0)'; // Pure black for tune.svg
+        settingsIcon.style.width = '30px';
+        settingsIcon.style.height = '30px';
+        // Ensure the SVG is properly sized and visible
+        settingsIcon.style.objectFit = 'contain';
     }
     
     if (shareIcon) {
-        shareIcon.style.filter = 'brightness(0.15)';
-        shareIcon.style.width = '24px';
-        shareIcon.style.height = '24px';
+        shareIcon.style.filter = 'brightness(0)'; // Pure black for share.svg
+        shareIcon.style.width = '30px';
+        shareIcon.style.height = '30px';
+        shareIcon.style.objectFit = 'contain';
     }
     
     if (favIcon) {
-        // No filter for heart icon as it already has appropriate color
-        favIcon.style.width = '24px';
-        favIcon.style.height = '24px';
+        // No filter for heart icon as it already has appropriate color (#EA3323)
+        favIcon.style.filter = 'none';
+        favIcon.style.width = '30px';
+        favIcon.style.height = '30px';
+        favIcon.style.objectFit = 'contain';
     }
 }
 

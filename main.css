@@ -248,28 +248,49 @@ input[type="date"]#DatePicker:disabled {
 
 /* Settings icon styling for default theme */
 .settings-icons-container img {
-    width: 24px;
-    height: 24px;
-    filter: brightness(0.15); /* Make icons visible with dark color */
-    transition: transform 0.2s ease;
+    width: 30px; /* Slightly larger for better visibility */
+    height: 30px;
+    transition: transform 0.2s ease, filter 0.2s ease;
     cursor: pointer;
     /* Keep position absolute as set in HTML */
 }
 
-/* Special handling for heart icon which already has a fill color */
-.settings-icons-container img#favheart {
-    filter: none; /* The heart SVG already has proper fill color */
+/* Individual icon styles to match their SVG files */
+.settings-icons-container img#settings {
+    filter: brightness(0); /* The tune.svg has black fill */
 }
 
+/* Special handling for heart icon which already has a fill color */
+.settings-icons-container img#favheart {
+    filter: none; /* The heart SVG already has proper fill color #EA3323 */
+}
+
+/* Share icon styling */
+.settings-icons-container img#share {
+    filter: brightness(0); /* The share.svg has black fill */
+}
+
+/* Hover effects for all icons */
 .settings-icons-container img:hover {
-    transform: scale(1.15);
-    filter: brightness(0); /* Darker on hover */
+    transform: scale(1.2);
+}
+
+/* Specific hover effects for each icon */
+.settings-icons-container img#settings:hover,
+.settings-icons-container img#share:hover {
+    filter: brightness(0.4); /* Lighter on hover for better feedback */
 }
 
 /* Heart icon special hover */
 .settings-icons-container img#favheart:hover {
-    transform: scale(1.15);
-    filter: none; /* Keep original color */
+    transform: scale(1.2);
+    filter: brightness(1.2); /* Slightly brighter red on hover */
+}
+
+/* Active state for all icons */
+.settings-icons-container img:active {
+    transform: scale(0.9);
+    transition: transform 0.1s ease;
 }
 
 /* Media queries for the floating buttons */

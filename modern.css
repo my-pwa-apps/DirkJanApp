@@ -222,9 +222,10 @@ html[data-theme="modern"] .settings-icons-container img {
   transition: var(--transition);
   cursor: pointer;
   position: static !important;
-  filter: brightness(0) invert(1); /* Make icons white */
+  filter: brightness(0) invert(1); /* Make all icons white in modern theme */
   margin: 0 10px;
-  object-fit: contain; /* Ensure icon is visible */
+  object-fit: contain; /* Ensure SVG is visible and properly sized */
+  display: block; /* Ensure consistent display */
 }
 
 html[data-theme="modern"] .settings-icons-container img:hover {
@@ -234,8 +235,9 @@ html[data-theme="modern"] .settings-icons-container img:hover {
 }
 
 html[data-theme="modern"] .settings-icons-container img:active {
-  transform: scale(0.95);
+  transform: scale(0.9);
   box-shadow: var(--shadow-small);
+  transition: transform 0.1s ease;
 }
 
 /* Settings panel - modern styling */
