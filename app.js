@@ -43,8 +43,16 @@ async function fetchWithFallback(url) {
   throw lastError || new Error('All fetch attempts failed');
 }
 
+let pictureUrl = ''; // Make pictureUrl global so it's accessible by Share()
+
 async function Share() 
 {
+	if(!pictureUrl) {
+		console.error('No image URL available to share');
+		alert('Sorry, no comic is available to share at this moment.');
+		return;
+	}
+
 	if(navigator.share) {
 		try {
 			const response = await fetchWithFallback(pictureUrl);
@@ -60,6 +68,8 @@ async function Share()
 			console.error('Error sharing comic:', error);
 			alert('Sorry, could not share the comic. Please try again later.');
 		}
+	} else {
+		alert('Your browser does not support the Web Share API');
 	}
 }
 
@@ -268,6 +278,7 @@ function DisplayComic()
       picturePosition = picturePosition+41;
       if (notFound == false)
       {
+        // Store pictureUrl in the global variable
         pictureUrl = siteBody.substring(picturePosition, picturePosition+88);
         endPosition = pictureUrl.lastIndexOf('"');
         pictureUrl = siteBody.substring(picturePosition, picturePosition+endPosition);
@@ -392,11 +403,116 @@ function DisplayComic()
 
 function Rotate() {
   var element = document.getElementById('comic');
-
-  if (element.className === "normal") {
-    element.className = "rotate";
+  
+  // Check if we're already in fullscreen mode
+  const existingOverlay = document.getElementById('comic-overlay');
+  if (existingOverlay) {
+    // We're in fullscreen mode, exit it immediately
+    document.body.removeChild(existingOverlay);
+    
+    // Restore all hidden elements
+    const allElements = document.body.children;
+    for (let i = 0; i < allElements.length; i++) {
+      if (allElements[i].dataset.wasHidden) {
+        allElements[i].style.display = allElements[i].dataset.originalDisplay || '';
+        delete allElements[i].dataset.wasHidden;
+        delete allElements[i].dataset.originalDisplay;
+      }
+    }
+    
+    // Make sure original comic is in normal state
+    element.className = "normal";
+    return;
   }
-  else if ( element.className === "rotate") {
+  
+  if (element.className === "normal") {
+    // First clone the comic before hiding anything
+    const clonedComic = element.cloneNode(true);
+    
+    // Create fullscreen overlay with transparent background
+    const overlay = document.createElement('div');
+    overlay.id = 'comic-overlay';
+    overlay.style.position = 'fixed';
+    overlay.style.top = '0';
+    overlay.style.left = '0';
+    overlay.style.width = '100%';
+    overlay.style.height = '100%';
+    overlay.style.backgroundColor = 'transparent'; // Keep transparent for gradient background
+    overlay.style.zIndex = '10000'; // Very high z-index
+    overlay.style.display = 'flex';
+    overlay.style.alignItems = 'center';
+    overlay.style.justifyContent = 'center';
+    
+    // Style the cloned comic and make sure it's visible
+    clonedComic.id = 'rotated-comic';
+    clonedComic.className = "rotate";
+    clonedComic.style.display = 'block'; // Ensure it's visible
+    clonedComic.style.maxWidth = '90vh';
+    clonedComic.style.maxHeight = '90vw';
+    clonedComic.style.boxShadow = '0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23)';
+    clonedComic.style.borderRadius = '4px';
+    clonedComic.style.cursor = 'pointer'; // Change cursor to indicate it's clickable
+    
+    // Add tooltip/hint for users
+    clonedComic.title = "Click to exit fullscreen view";
+    
+    // Save reference to overlay in a data attribute on the body
+    document.body.dataset.overlayId = 'comic-overlay';
+    
+    // First append the overlay to the body
+    document.body.appendChild(overlay);
+    
+    // Then append the cloned comic to the overlay
+    overlay.appendChild(clonedComic);
+    
+    // Store display states and hide elements
+    const allElements = document.body.children;
+    for (let i = 0; i < allElements.length; i++) {
+      const el = allElements[i];
+      if (el !== overlay) {
+        // Save current display state
+        el.dataset.originalDisplay = window.getComputedStyle(el).display;
+        el.dataset.wasHidden = "true";
+        el.style.display = 'none';
+      }
+    }
+    
+    // Handler function to exit fullscreen
+    const exitFullscreen = function() {
+      // First check if overlay still exists
+      const overlay = document.getElementById('comic-overlay');
+      if (!overlay) return;
+      
+      // Remove the overlay completely first
+      if (overlay.parentNode) {
+        overlay.parentNode.removeChild(overlay);
+      }
+      
+      // Clear any additional rotated comic instances
+      const rotatedComic = document.getElementById('rotated-comic');
+      if (rotatedComic && rotatedComic.parentNode) {
+        rotatedComic.parentNode.removeChild(rotatedComic);
+      }
+      
+      // Restore visibility of all elements that we hid
+      const allElements = document.body.children;
+      for (let i = 0; i < allElements.length; i++) {
+        if (allElements[i].dataset.wasHidden) {
+          allElements[i].style.display = allElements[i].dataset.originalDisplay || '';
+          delete allElements[i].dataset.wasHidden;
+          delete allElements[i].dataset.originalDisplay;
+        }
+      }
+      
+      // Ensure original comic is back to normal
+      element.className = "normal";
+    };
+    
+    // Add click handlers
+    clonedComic.addEventListener('click', exitFullscreen);
+    overlay.addEventListener('click', exitFullscreen);
+  }
+  else if (element.className === "rotate") {
     element.className = 'normal';
   }
 }
