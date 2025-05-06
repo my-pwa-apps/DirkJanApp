@@ -91,35 +91,39 @@ input[type=checkbox]:checked:after
     transition: 0.5s;
     background-size: 200% auto;
     color: black;
-    border-radius: 10px;
+    border-radius: 20px;
     display: block;
     font-weight: 700;
-    box-shadow: 0px 0px 10px -7px #f09819;
+    box-shadow: 0 8px 15px rgba(240, 152, 25, 0.3);
     background-image: linear-gradient(45deg, yellow 0%, #F09819  51%, yellow  100%);
     cursor: pointer;
     -webkit-user-select: none;
     user-select: none;
     touch-action: manipulation;
+    transform: translateY(0);
+    transition: all 0.3s ease;
   }
-  
-  .button:active {
-      transform: scale(0.95);
-      border-radius: 10px;
+    .button:active {
+      transform: scale(0.95) translateY(4px);
+      border-radius: 20px;
+      box-shadow: 0 2px 8px rgba(240, 152, 25, 0.2);
     }
   
   .button:hover {
     background-position: right center;
     color: black;
     text-decoration: none;
-    border-radius: 10px;
+    border-radius: 20px;
+    box-shadow: 0 15px 20px rgba(240, 152, 25, 0.4);
+    transform: translateY(-3px);
   }
-  
-  .button:disabled {
+    .button:disabled {
       background-color: #f39700;
       opacity: 0.5;
       color: black;
-      border-radius: 10px;
+      border-radius: 20px;
       box-shadow: none;
+      transform: none;
   }
 
 input 
@@ -146,7 +150,10 @@ input
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     font-weight: normal;
     text-align: center;
-    gap: 3px;
+    gap: 10px;
+    padding: 10px 5px;
+    max-width: 700px;
+    margin: 0 auto;
 }
 
 .rotate {
@@ -179,13 +186,13 @@ input[type="date"]#DatePicker {
     margin: 5px;
     padding: 10px;
     text-align: center;
-    transition: 0.5s;
+    transition: 0.3s;
     background-size: 200% auto;
     color: black;
-    border-radius: 10px;
+    border-radius: 20px;
     display: block;
     font-weight: 700;
-    box-shadow: 0px 0px 10px -7px #f09819;
+    box-shadow: 0 8px 15px rgba(240, 152, 25, 0.3);
     background-image: linear-gradient(45deg, yellow 0%, #F09819 51%, yellow 100%);
     cursor: pointer;
     -webkit-user-select: none;
@@ -193,6 +200,7 @@ input[type="date"]#DatePicker {
     touch-action: manipulation;
     border: none;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    transform: translateY(0);
 }
 
 /* Style the calendar picker icon */
@@ -205,12 +213,15 @@ input[type="date"]#DatePicker::-webkit-calendar-picker-indicator {
 
 /* Active state for date picker */
 input[type="date"]#DatePicker:active {
-    transform: scale(0.95);
+    transform: scale(0.95) translateY(4px);
+    box-shadow: 0 2px 8px rgba(240, 152, 25, 0.2);
 }
 
 /* Hover state for date picker */
 input[type="date"]#DatePicker:hover {
     background-position: right center;
+    box-shadow: 0 15px 20px rgba(240, 152, 25, 0.4);
+    transform: translateY(-3px);
 }
 
 /* Disabled state */
@@ -233,6 +244,40 @@ input[type="date"]#DatePicker:disabled {
     display: flex;
     justify-content: flex-end;
     padding-right: 15px;
+}
+
+/* Media queries for the floating buttons */
+@media (max-width: 768px) {
+    .buttongrid {
+        gap: 8px;
+        padding: 5px 2px;
+    }
+    
+    .button, input[type="date"]#DatePicker {
+        box-shadow: 0 5px 10px rgba(240, 152, 25, 0.25);
+    }
+    
+    .button:hover, input[type="date"]#DatePicker:hover {
+        transform: translateY(-2px); /* Smaller hover effect on mobile */
+        box-shadow: 0 8px 15px rgba(240, 152, 25, 0.3);
+    }
+}
+
+/* Large screens - even more pronounced floating effect */
+@media (min-width: 1200px) {
+    .buttongrid {
+        gap: 15px;
+    }
+    
+    .button, input[type="date"]#DatePicker {
+        padding: 12px;
+        box-shadow: 0 10px 20px rgba(240, 152, 25, 0.35);
+    }
+    
+    .button:hover, input[type="date"]#DatePicker:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 18px 25px rgba(240, 152, 25, 0.45);
+    }
 }
 
 
