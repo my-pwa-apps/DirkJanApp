@@ -66,12 +66,18 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         console.error("Theme toggle not found in the DOM!");
     }
-    
-    // Apply initial styling based on the theme
+      // Apply initial styling based on the theme
     if (savedTheme === 'modern') {
         applyModernStyling();
     } else {
         applyDefaultStyling();
+    }
+    
+    // Fix comic centering based on current theme
+    if (document.documentElement.getAttribute('data-theme') === 'modern') {
+        fixComicCentering(true);
+    } else {
+        fixComicCentering(false);
     }
 });
 

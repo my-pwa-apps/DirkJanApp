@@ -103,6 +103,10 @@ html[data-theme="modern"] #comic.rotate {
   object-fit: contain;
   box-shadow: var(--shadow-large);
   border-radius: var(--border-radius);
+  position: relative;
+  left: 0;
+  right: 0;
+  margin: var(--spacing-lg) auto;
 }
 
 /* Button grid - modern styling */
