@@ -450,15 +450,17 @@ function Rotate() {
     clonedComic.className = "rotate";
     clonedComic.style.display = 'block'; // Ensure it's visible
     
-    // Optimize size based on screen orientation
+    // Optimize size based on screen orientation, maximizing available vertical space
     if (window.innerWidth > window.innerHeight) {
       // Landscape orientation
-      clonedComic.style.maxWidth = '95vh'; // Height becomes width after rotation
-      clonedComic.style.maxHeight = '95vw'; // Width becomes height after rotation
+      clonedComic.style.maxWidth = 'none'; // Remove max-width constraint
+      clonedComic.style.height = '90vh'; // Use 90% of viewport height
+      clonedComic.style.width = 'auto'; // Let width adjust proportionally
     } else {
       // Portrait orientation
-      clonedComic.style.maxWidth = '95vw';
-      clonedComic.style.maxHeight = '95vh';
+      clonedComic.style.maxHeight = '90vh'; // Use 90% of viewport height
+      clonedComic.style.width = 'auto'; // Let width adjust proportionally
+      clonedComic.style.maxWidth = '95vw'; // But don't exceed viewport width
     }
     
     clonedComic.style.cursor = 'pointer'; // Change cursor to indicate it's clickable
