@@ -154,6 +154,93 @@ function onLoad()
 
   CompareDates();
   DisplayComic();
+  
+  // Update the CSS in the onLoad function to ensure consistent button styling
+  const styleFixForMobile = document.createElement('style');
+  styleFixForMobile.textContent = `
+    /* Global button styling for all screen sizes */
+    .buttongrid {
+      display: grid !important;
+      grid-template-columns: repeat(3, 1fr) !important;
+      grid-gap: 6px !important; /* Increased from 3px to 6px for more spacing */
+      width: 100% !important;
+      padding: 0 2px !important;
+      margin: 0 !important;
+    }
+    
+    /* Reset button styles to ensure consistency */
+    .button, #DatePicker {
+      height: 48px !important;
+      box-sizing: border-box !important;
+      margin: 0 !important;
+      padding: 8px !important;
+      font-size: 16px !important;
+      border-radius: 4px !important;
+      font-weight: 500 !important;
+      transition: all 0.2s ease !important;
+      background-color: #f0f0f0 !important;
+      border: 1px solid #ccc !important;
+      color: #333 !important;
+      text-align: center !important;
+      width: 100% !important;
+      display: block !important;
+      font-family: inherit !important;
+      outline: none !important;
+      cursor: pointer !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      white-space: nowrap !important;
+      -webkit-appearance: none !important;
+      appearance: none !important;
+    }
+    
+    .button:disabled, #DatePicker:disabled {
+      opacity: 0.6 !important;
+      cursor: not-allowed !important;
+    }
+    
+    .button:hover:not(:disabled), #DatePicker:hover:not(:disabled) {
+      background-color: #e8e8e8 !important;
+      border-color: #999 !important;
+    }
+    
+    .button:active:not(:disabled), #DatePicker:active:not(:disabled) {
+      background-color: #ddd !important;
+    }
+    
+    /* Adjust grid layout for consistency */
+    .buttongrid {
+      display: grid !important;
+      grid-template-columns: repeat(3, 1fr) !important;
+      grid-gap: 3px !important;
+      width: 100% !important;
+      padding: 0 1px !important;
+      margin: 0 !important;
+    }
+    
+    /* Adjust date picker calendar icon positioning */
+    #DatePicker::-webkit-calendar-picker-indicator {
+      position: absolute !important;
+      right: 5px !important;
+      top: 50% !important;
+      transform: translateY(-50%) !important;
+      width: 16px !important;
+      height: 16px !important;
+      opacity: 0.7 !important;
+    }
+    
+    @media screen and (max-width: 768px) {
+      .button, #DatePicker {
+        height: 52px !important;
+        font-size: 15px !important;
+      }
+      
+      .buttongrid {
+        grid-gap: 4px !important; /* Increased from 2px to 4px for mobile */
+      }
+    }
+  `;
+  document.head.appendChild(styleFixForMobile);
 }
 
 function PreviousClick()
@@ -412,15 +499,13 @@ function Rotate() {
     // We're in fullscreen mode, exit it immediately
     document.body.removeChild(existingOverlay);
     
-    // Restore all hidden elements
-    const allElements = document.body.children;
-    for (let i = 0; i < allElements.length; i++) {
-      if (allElements[i].dataset.wasHidden) {
-        allElements[i].style.display = allElements[i].dataset.originalDisplay || '';
-        delete allElements[i].dataset.wasHidden;
-        delete allElements[i].dataset.originalDisplay;
-      }
-    }
+    // Restore all elements with data-was-hidden attribute
+    const hiddenElements = document.querySelectorAll('[data-was-hidden]');
+    hiddenElements.forEach(el => {
+      el.style.display = el.dataset.originalDisplay || '';
+      delete el.dataset.wasHidden;
+      delete el.dataset.originalDisplay;
+    });
     
     // Make sure original comic is in normal state
     element.className = "normal";
@@ -450,21 +535,29 @@ function Rotate() {
     clonedComic.className = "rotate";
     clonedComic.style.display = 'block'; // Ensure it's visible
     
-    // Optimize size based on screen orientation, maximizing available vertical space
+    // Get device pixel ratio to adjust for high-DPI displays
+    const pixelRatio = window.devicePixelRatio || 1;
+    const isMobile = window.innerWidth < 768; // Check if it's likely a mobile device
+    
+    // Optimize size based on screen orientation, maximizing available space
     if (window.innerWidth > window.innerHeight) {
       // Landscape orientation
       clonedComic.style.maxWidth = 'none'; // Remove max-width constraint
-      clonedComic.style.height = '90vh'; // Use 90% of viewport height
+      // Use more space on mobile devices
+      clonedComic.style.height = isMobile ? '98vh' : '95vh'; 
       clonedComic.style.width = 'auto'; // Let width adjust proportionally
     } else {
-      // Portrait orientation
-      clonedComic.style.maxHeight = '90vh'; // Use 90% of viewport height
+      // Portrait orientation - use even more space on mobile
+      clonedComic.style.maxHeight = isMobile ? '98vh' : '95vh';
       clonedComic.style.width = 'auto'; // Let width adjust proportionally
-      clonedComic.style.maxWidth = '95vw'; // But don't exceed viewport width
+      clonedComic.style.maxWidth = isMobile ? '98vw' : '95vw'; 
     }
     
-    clonedComic.style.cursor = 'pointer'; // Change cursor to indicate it's clickable
-    clonedComic.title = "Click to exit fullscreen view";
+    // Enhance presentation on mobile
+    if (isMobile) {
+      clonedComic.style.transformOrigin = 'center center';
+      clonedComic.style.objectFit = 'contain';
+    }
     
     // Save reference to overlay in a data attribute on the body
     document.body.dataset.overlayId = 'comic-overlay';
@@ -475,15 +568,27 @@ function Rotate() {
     // Then append the cloned comic to the overlay
     overlay.appendChild(clonedComic);
     
-    // Store display states and hide elements
+    // Store display states and hide elements - more aggressive approach
+    // Get ALL UI elements that need to be hidden, not just direct children of body
+    const buttonsToHide = document.querySelectorAll('.button, #DatePicker, .buttongrid, button, input, select, nav, footer, header, #settingsDIV, #favheart, .navigation');
+    
+    // First specifically hide all buttons and controls
+    buttonsToHide.forEach(button => {
+      if (button && button !== overlay && !overlay.contains(button)) {
+        button.dataset.originalDisplay = window.getComputedStyle(button).display;
+        button.dataset.wasHidden = "true";
+        button.style.setProperty('display', 'none', 'important');
+      }
+    });
+    
+    // Then hide all other direct children of body except the overlay
     const allElements = document.body.children;
     for (let i = 0; i < allElements.length; i++) {
       const el = allElements[i];
-      if (el !== overlay) {
-        // Save current display state
+      if (el !== overlay && !el.dataset.wasHidden) {
         el.dataset.originalDisplay = window.getComputedStyle(el).display;
         el.dataset.wasHidden = "true";
-        el.style.display = 'none';
+        el.style.setProperty('display', 'none', 'important');
       }
     }
     
@@ -504,18 +609,19 @@ function Rotate() {
         rotatedComic.parentNode.removeChild(rotatedComic);
       }
       
-      // Restore visibility of all elements that we hid
-      const allElements = document.body.children;
-      for (let i = 0; i < allElements.length; i++) {
-        if (allElements[i].dataset.wasHidden) {
-          allElements[i].style.display = allElements[i].dataset.originalDisplay || '';
-          delete allElements[i].dataset.wasHidden;
-          delete allElements[i].dataset.originalDisplay;
-        }
-      }
+      // Restore visibility of ALL elements that were hidden
+      const hiddenElements = document.querySelectorAll('[data-was-hidden]');
+      hiddenElements.forEach(el => {
+        el.style.display = el.dataset.originalDisplay || '';
+        delete el.dataset.wasHidden;
+        delete el.dataset.originalDisplay;
+      });
       
-      // Ensure original comic is back to normal
-      element.className = "normal";
+      // Force UI refresh
+      window.setTimeout(() => {
+        // Ensure original comic is back to normal
+        if (element) element.className = "normal";
+      }, 0);
     };
     
     // Add click handlers
