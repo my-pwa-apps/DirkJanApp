@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="keywords" content="dirkjan, bert, bello, van, druten, kutschool, dirkjan.nl, comic, comics, strip, strips, cartoon, cartoons, mark, retera, webapp, mobile, responsive, pwa, progressive, web, app, ios, android, windows, platform, multi, platforms, online, unofficial, independent">
+    <meta name="description" content="DirkJan Strip, Vandaag, Volgende, Vorige, Random, Eerste, Specifieke datum, Swipe">
+    <meta name="msapplication-TileColor" content="#2962ff">
+    <meta name="theme-color" content="#2962ff">
+    <title>Daily DirkJan Comics</title>
+    <link rel="stylesheet" href="./modern.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="canonical" href="https://dirkjanapp.pages.dev">
+    <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.webp">
+    <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32x32.webp">
+    <link rel="icon" type="image/png" sizes="16x16" href="./favicon-16x16.webp">
+    <link rel="manifest" href="./manifest.webmanifest">
+    <!-- Import Inter font for modern typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="./swiped-events.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+</head>
+
+<body onload="onLoad()">
+    <div class="container">
+        <header class="header">
+            <div class="logo">
+                <a href="https://dirkjan.nl" target="_blank" rel="noopener">
+                    <img src="./dirk-jan-tekst.svg" class="logo-img" alt="Daily DirkJan Title"/>
+                </a>
+            </div>
+        </header>
+        
+        <main>
+            <div class="button-grid">
+                <button class="btn" id="Previous" onclick="PreviousClick()">Vorige</button>
+                <button class="btn" id="Random" onclick="RandomClick()">Willekeurig</button>
+                <button class="btn" id="Next" onclick="NextClick()">Volgende</button>
+                <button class="btn" id="First" onclick="FirstClick()">Eerste</button>
+                <input id="DatePicker" oninput="DateChange()" type="date" min="2015-05-04">
+                <button class="btn btn-primary" id="Current" onclick="CurrentClick()">Vandaag</button>
+            </div>
+            
+            <div class="comic-container">
+                <img id="comic" onclick="Rotate()" class="normal" alt="Loading comic from https://dirkjan.nl...">
+            </div>
+            
+            <div class="settings-bar">
+                <button class="icon-button" id="settings" onclick="HideSettings()">
+                    <img src="./tune.svg" alt="Settings">
+                </button>
+                <button class="icon-button" id="favheart" onclick="Addfav()">
+                    <img src="./heartborder.svg" alt="Favoriet">
+                </button>
+                <button class="icon-button" id="share" onclick="Share()">
+                    <img src="./share.svg" alt="Delen">
+                </button>
+            </div>
+            
+            <div id="settingsDIV" class="settings-panel">
+                <div class="settings-option">
+                    <label class="toggle">
+                        <input type="checkbox" id="swipe" checked>
+                        <span class="slider"></span>
+                    </label>
+                    <span>Swipen ingeschakeld</span>
+                </div>
+                
+                <div class="settings-option">
+                    <label class="toggle">
+                        <input type="checkbox" id="showfavs">
+                        <span class="slider"></span>
+                    </label>
+                    <span>Alleen favorieten tonen</span>
+                </div>
+                
+                <div class="settings-option">
+                    <label class="toggle">
+                        <input type="checkbox" id="lastdate" checked>
+                        <span class="slider"></span>
+                    </label>
+                    <span>Onthou laatste comic bij exit/refresh</span>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="./app.js"></script>
+    <!-- Cloudflare Web Analytics -->
+    <script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "e1b02b3fe1fe45f2addaf5622cf2fcb3"}'></script>
+    <!-- End Cloudflare Web Analytics -->
+</body>
+</html>
