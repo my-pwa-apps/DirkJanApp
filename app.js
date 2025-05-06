@@ -654,43 +654,66 @@ function Rotate() {
     const viewportHeight = window.innerHeight;
     const viewportWidth = window.innerWidth;
     
-    // Reset any previously set styles that might interfere
+    // First clear all size constraints to get natural dimensions
     imgElement.style.maxHeight = null;
     imgElement.style.maxWidth = null;
     imgElement.style.height = null;
     imgElement.style.width = null;
+    imgElement.style.transform = "rotate(90deg)"; // Ensure rotation is applied
     
-    // Give a tiny moment for browser to process the reset
+    // Wait for a browser paint cycle to get accurate measurements
     setTimeout(() => {
-      // For mobile phones, use even more aggressive sizing
-      if (isMobile) {
-        if (isPortrait) {
-          // Portrait mode - rotated comic should use maximum height
-          imgElement.style.height = '98vh';
-          imgElement.style.width = 'auto';
-          imgElement.style.maxWidth = '100vw';
-        } else {
-          // Landscape mode - different approach needed
-          imgElement.style.width = '98vw';
-          imgElement.style.height = 'auto';
-          imgElement.style.maxHeight = '100vh';
-        }
+      // Get natural dimensions after rotation
+      const naturalWidth = imgElement.naturalWidth;
+      const naturalHeight = imgElement.naturalHeight;
+      
+      // When rotated 90 degrees, width becomes height and vice versa
+      const rotatedNaturalWidth = naturalHeight;
+      const rotatedNaturalHeight = naturalWidth;
+      
+      // Calculate aspect ratio (when rotated)
+      const aspectRatio = rotatedNaturalWidth / rotatedNaturalHeight;
+      
+      // Set size based on screen orientation
+      if (isPortrait) {
+        // In portrait mode: Set height to 100% of viewport height
+        // and let width adjust according to aspect ratio
+        imgElement.style.height = "100vh";
+        imgElement.style.width = "auto";
         
-        // Ensure transform origin is centered for better rotation
-        imgElement.style.transformOrigin = 'center center';
-        
-        // Use object-fit for better image handling
-        imgElement.style.objectFit = 'contain';
+        // Check if resulting width exceeds viewport width
+        // If so, adjust to fit width instead
+        setTimeout(() => {
+          if (imgElement.getBoundingClientRect().width > viewportWidth) {
+            imgElement.style.width = "100vw";
+            imgElement.style.height = "auto";
+          }
+        }, 0);
       } else {
-        // Desktop - slightly more conservative approach
-        imgElement.style.height = '95vh';
-        imgElement.style.width = 'auto';
-        imgElement.style.maxWidth = '95vw';
+        // In landscape mode: Similar approach but reversed dimensions
+        imgElement.style.width = "100vh"; // Height becomes width when rotated
+        imgElement.style.height = "auto";
+        
+        // Check if resulting height exceeds viewport height
+        setTimeout(() => {
+          if (imgElement.getBoundingClientRect().height > viewportHeight) {
+            imgElement.style.height = "100vw";
+            imgElement.style.width = "auto";
+          }
+        }, 0);
       }
       
-      // Add some visual enhancement
-      imgElement.style.boxShadow = '0 5px 15px rgba(0,0,0,0.3)';
-    }, 0);
+      // Ensure proper rotation behavior
+      imgElement.style.transformOrigin = "center center";
+      imgElement.style.objectFit = "contain";
+      imgElement.style.position = "relative";
+      imgElement.style.maxWidth = "none"; // Remove any max-width limitations
+      imgElement.style.maxHeight = "none"; // Remove any max-height limitations
+      
+      // Add visual enhancements
+      imgElement.style.boxShadow = "0 5px 15px rgba(0,0,0,0.3)";
+      imgElement.style.transition = "all 0.3s ease"; // Smooth transition for any adjustments
+    }, 50); // Slightly longer timeout to ensure measurements are correct
   }
 }
 
