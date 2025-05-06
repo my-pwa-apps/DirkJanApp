@@ -40,16 +40,54 @@ function enhanceIconsForModernTheme(isModernTheme) {
         // Remove inline styles that might interfere with our CSS
         icons.forEach(icon => {
             if (icon) {
+                // Override any inline styles completely
                 icon.style.position = 'static';
                 icon.style.right = '';
                 icon.style.fontSize = '';
+                
+                // Ensure SVG displays correctly
+                icon.style.display = 'block';
+                icon.style.width = '28px';
+                icon.style.height = '28px';
+                
+                // Add data attribute to mark as enhanced
+                icon.setAttribute('data-modern-enhanced', 'true');
             }
         });
+        
+        // Make sure the container is also properly styled
+        const container = document.querySelector('.settings-icons-container');
+        if (container) {
+            container.style.display = 'flex';
+            container.style.justifyContent = 'center';
+        }
     } else {
         // Reset to original
         icons.forEach(icon => {
             if (icon) {
+                // Remove our modern enhancements
                 icon.removeAttribute('title');
+                icon.removeAttribute('data-modern-enhanced');
+                
+                // Reset styles to what they were in HTML
+                if (icon.id === 'settings') {
+                    icon.style.fontSize = '25px';
+                    icon.style.right = '125px';
+                    icon.style.position = 'absolute';
+                } else if (icon.id === 'favheart') {
+                    icon.style.fontSize = '25px';
+                    icon.style.right = '70px';
+                    icon.style.position = 'absolute';
+                } else if (icon.id === 'share') {
+                    icon.style.fontSize = '25px';
+                    icon.style.right = '20px';
+                    icon.style.position = 'absolute';
+                }
+                
+                // Reset display style
+                icon.style.display = '';
+                icon.style.width = '';
+                icon.style.height = '';
             }
         });
     }
@@ -62,11 +100,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Set the initial theme based on saved preference or default to 'default'
     if (savedTheme) {
         document.documentElement.setAttribute('data-theme', savedTheme);
-        
-        // Update the toggle switch to match the saved theme
+          // Update the toggle switch to match the saved theme
         const themeToggle = document.getElementById('theme-toggle');
         if (savedTheme === 'modern' && themeToggle) {
             themeToggle.checked = true;
+            // Apply modern enhancements right away since we're in modern theme
+            fixComicCentering(true);
+            enhanceIconsForModernTheme(true);
             console.log("Modern theme loaded from localStorage");
         }
     } else {

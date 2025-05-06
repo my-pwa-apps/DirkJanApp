@@ -209,13 +209,14 @@ html[data-theme="modern"] .settings-icons-container {
   margin: var(--spacing-md) auto;
   width: 100%;
   max-width: 300px;
+  z-index: 10; /* Ensure icons are clickable */
 }
 
 html[data-theme="modern"] .settings-icons-container img {
-  width: 24px;
-  height: 24px;
-  padding: var(--spacing-md);
-  border-radius: 12px;
+  width: 28px; /* Slightly larger icon */
+  height: 28px;
+  padding: var(--spacing-sm);
+  border-radius: 8px;
   background-color: var(--primary-color);
   box-shadow: var(--shadow-small);
   transition: var(--transition);
@@ -223,6 +224,7 @@ html[data-theme="modern"] .settings-icons-container img {
   position: static !important;
   filter: brightness(0) invert(1); /* Make icons white */
   margin: 0 10px;
+  object-fit: contain; /* Ensure icon is visible */
 }
 
 html[data-theme="modern"] .settings-icons-container img:hover {
@@ -307,6 +309,16 @@ html[data-theme="modern"] label.labels {
   html[data-theme="modern"] #DatePicker {
     padding: 10px 8px;
     font-size: 14px;
+  }
+  
+  /* Adjust settings icons for mobile */
+  html[data-theme="modern"] .settings-icons-container {
+    max-width: 250px;
+  }
+  
+  html[data-theme="modern"] .settings-icons-container img {
+    margin: 0 8px;
+    padding: 6px;
   }
 }
 
