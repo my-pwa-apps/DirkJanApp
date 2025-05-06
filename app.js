@@ -649,71 +649,35 @@ function Rotate() {
   
   // Helper function to maximize image size
   function maximizeImageSize(imgElement) {
-    const isMobile = window.innerWidth < 768;
-    const isPortrait = window.innerHeight > window.innerWidth;
     const viewportHeight = window.innerHeight;
     const viewportWidth = window.innerWidth;
-    
-    // First clear all size constraints to get natural dimensions
-    imgElement.style.maxHeight = null;
-    imgElement.style.maxWidth = null;
-    imgElement.style.height = null;
-    imgElement.style.width = null;
-    imgElement.style.transform = "rotate(90deg)"; // Ensure rotation is applied
-    
-    // Wait for a browser paint cycle to get accurate measurements
-    setTimeout(() => {
-      // Get natural dimensions after rotation
-      const naturalWidth = imgElement.naturalWidth;
-      const naturalHeight = imgElement.naturalHeight;
-      
-      // When rotated 90 degrees, width becomes height and vice versa
-      const rotatedNaturalWidth = naturalHeight;
-      const rotatedNaturalHeight = naturalWidth;
-      
-      // Calculate aspect ratio (when rotated)
-      const aspectRatio = rotatedNaturalWidth / rotatedNaturalHeight;
-      
-      // Set size based on screen orientation
-      if (isPortrait) {
-        // In portrait mode: Set height to 100% of viewport height
-        // and let width adjust according to aspect ratio
-        imgElement.style.height = "100vh";
-        imgElement.style.width = "auto";
-        
-        // Check if resulting width exceeds viewport width
-        // If so, adjust to fit width instead
-        setTimeout(() => {
-          if (imgElement.getBoundingClientRect().width > viewportWidth) {
-            imgElement.style.width = "100vw";
-            imgElement.style.height = "auto";
-          }
-        }, 0);
-      } else {
-        // In landscape mode: Similar approach but reversed dimensions
-        imgElement.style.width = "100vh"; // Height becomes width when rotated
-        imgElement.style.height = "auto";
-        
-        // Check if resulting height exceeds viewport height
-        setTimeout(() => {
-          if (imgElement.getBoundingClientRect().height > viewportHeight) {
-            imgElement.style.height = "100vw";
-            imgElement.style.width = "auto";
-          }
-        }, 0);
-      }
-      
-      // Ensure proper rotation behavior
-      imgElement.style.transformOrigin = "center center";
-      imgElement.style.objectFit = "contain";
-      imgElement.style.position = "relative";
-      imgElement.style.maxWidth = "none"; // Remove any max-width limitations
-      imgElement.style.maxHeight = "none"; // Remove any max-height limitations
-      
-      // Add visual enhancements
-      imgElement.style.boxShadow = "0 5px 15px rgba(0,0,0,0.3)";
-      imgElement.style.transition = "all 0.3s ease"; // Smooth transition for any adjustments
-    }, 50); // Slightly longer timeout to ensure measurements are correct
+
+    // Get natural dimensions of the image
+    const naturalWidth = imgElement.naturalWidth;
+    const naturalHeight = imgElement.naturalHeight;
+
+    // Calculate aspect ratio
+    const aspectRatio = naturalWidth / naturalHeight;
+
+    // Fit the image within the viewport while maintaining aspect ratio
+    if (viewportWidth / aspectRatio <= viewportHeight) {
+        // Use full width and adjust height
+        imgElement.style.width = `${viewportWidth}px`;
+        imgElement.style.height = `${viewportWidth / aspectRatio}px`;
+    } else {
+        // Use full height and adjust width
+        imgElement.style.height = `${viewportHeight}px`;
+        imgElement.style.width = `${viewportHeight * aspectRatio}px`;
+    }
+
+    // Ensure proper rotation behavior
+    imgElement.style.transformOrigin = "center center";
+    imgElement.style.objectFit = "contain";
+    imgElement.style.position = "relative";
+
+    // Add visual enhancements
+    imgElement.style.boxShadow = "0 5px 15px rgba(0,0,0,0.3)";
+    imgElement.style.transition = "all 0.3s ease"; // Smooth transition for any adjustments
   }
 }
 
