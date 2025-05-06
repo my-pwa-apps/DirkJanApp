@@ -1,18 +1,8 @@
-// Theme switcher functionality - Completely rewritten version
+// Theme switcher functionality - Fixed version
 
 // Function to fix comic centering issues
 function fixComicCentering(isModernTheme) {
-    const comic = document.ge            } else {
-                // Switch back to default theme
-                document.documentElement.setAttribute('data-theme', 'default');
-                localStorage.setItem('dirkjan-theme', 'default');
-                
-                // Reset to original styling
-                fixComicCentering(false);
-                enhanceIconsForModernTheme(false);
-                setupIconObserver(false);
-                console.log("Default theme applied!");
-            }Id('comic');
+    const comic = document.getElementById('comic');
     if (comic) {
         if (isModernTheme) {
             // For modern theme - ensure comic is centered
@@ -151,13 +141,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // Set the initial theme based on saved preference or default to 'default'
     if (savedTheme) {
         document.documentElement.setAttribute('data-theme', savedTheme);
-          // Update the toggle switch to match the saved theme
+        
+        // Update the toggle switch to match the saved theme
         const themeToggle = document.getElementById('theme-toggle');
         if (savedTheme === 'modern' && themeToggle) {
             themeToggle.checked = true;
             // Apply modern enhancements right away since we're in modern theme
             fixComicCentering(true);
             enhanceIconsForModernTheme(true);
+            setupIconObserver(true);
             console.log("Modern theme loaded from localStorage");
         }
     } else {
@@ -179,8 +171,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const themeToggle = document.getElementById('theme-toggle');
     if (themeToggle) {
         console.log("Theme toggle found, adding event listener");
-          themeToggle.addEventListener('change', function(e) {
-            console.log("Theme toggle changed:", e.target.checked ? "modern" : "default");            
+        
+        themeToggle.addEventListener('change', function(e) {
+            console.log("Theme toggle changed:", e.target.checked ? "modern" : "default");
             if (e.target.checked) {
                 // Switch to modern theme
                 document.documentElement.setAttribute('data-theme', 'modern');
@@ -199,9 +192,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Reset to original styling
                 fixComicCentering(false);
                 enhanceIconsForModernTheme(false);
+                setupIconObserver(false);
                 console.log("Default theme applied!");
             }
-        });    } else {
+        });
+    } else {
         console.error("Theme toggle not found in the DOM!");
     }
     
@@ -210,6 +205,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (currentTheme === 'modern') {
         fixComicCentering(true);
         enhanceIconsForModernTheme(true);
+        setupIconObserver(true);
     } else {
         fixComicCentering(false);
         enhanceIconsForModernTheme(false);
