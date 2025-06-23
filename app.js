@@ -558,14 +558,13 @@ function Rotate() {
     fullscreenToolbar.innerHTML = `
       <button class="toolbar-button" onclick="PreviousClick(); return false;" title="Vorige comic">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><polyline points="15 18 9 12 15 6"/></svg>
-      </button>
-      <button class="toolbar-button" onclick="RandomClick(); return false;" title="Willekeurige comic">
+      </button>      <button class="toolbar-button" onclick="RandomClick(); return false;" title="Willekeurige comic">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg">
           <rect x="4" y="4" width="16" height="16" rx="2" ry="2"/>
-          <circle cx="8.5" cy="8.5" r="1" fill="currentColor"/>
-          <circle cx="15.5" cy="8.5" r="1" fill="currentColor"/>
-          <circle cx="15.5" cy="15.5" r="1" fill="currentColor"/>
-          <circle cx="8.5" cy="15.5" r="1" fill="currentColor"/>
+          <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
+          <circle cx="15.5" cy="8.5" r="1.5" fill="currentColor"/>
+          <circle cx="15.5" cy="15.5" r="1.5" fill="currentColor"/>
+          <circle cx="8.5" cy="15.5" r="1.5" fill="currentColor"/>
         </svg>
       </button>
       <button class="toolbar-button" onclick="NextClick(); return false;" title="Volgende comic">
@@ -657,17 +656,14 @@ function Rotate() {
 // Helper function to position the fullscreen toolbar correctly
 function positionFullscreenToolbar() {
   const toolbar = document.getElementById('fullscreen-toolbar');
-  const comic = document.getElementById('rotated-comic');
   
-  if (!toolbar || !comic) return;
+  if (!toolbar) return;
   
-  // Get the comic's position and dimensions
-  const comicRect = comic.getBoundingClientRect();
-  
-  // Position the toolbar below the comic
+  // Position the toolbar at the bottom of the screen
   toolbar.style.position = 'fixed';
   toolbar.style.left = '50%';
-  toolbar.style.top = (comicRect.bottom + 20) + 'px'; // 20px below the comic
+  toolbar.style.bottom = '20px'; // Fixed distance from bottom
+  toolbar.style.top = 'auto'; // Clear any top value
   toolbar.style.transform = 'translateX(-50%)';
   toolbar.style.zIndex = '10002'; // Higher than the comic and overlay
   toolbar.style.maxWidth = '600px'; // Limit width for better appearance
@@ -704,17 +700,16 @@ function maximizeRotatedImage(imgElement) {
     // Image is taller than viewport (relative to aspect ratios)
     scale = (viewportHeight - reservedSpace) / rotatedHeight;
   }
-  
-  // Make the image slightly smaller (85% of the calculated size)
+    // Make the image slightly smaller (85% of the calculated size)
   scale = scale * 0.85;
   
   // Apply dimension with calculated scale
   imgElement.style.width = `${naturalWidth * scale}px`;
   imgElement.style.height = `${naturalHeight * scale}px`;
   
-  // Position element in the center of the viewport but slightly higher to make room for toolbar
+  // Position element in the center of the viewport
   imgElement.style.position = 'fixed';
-  imgElement.style.top = '45%';
+  imgElement.style.top = '50%';  // Center vertically, we don't need to adjust for toolbar anymore
   imgElement.style.left = '50%';
   imgElement.style.transform = 'translate(-50%, -50%) rotate(90deg)';
   imgElement.style.transformOrigin = 'center center';
