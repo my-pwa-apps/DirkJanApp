@@ -552,7 +552,7 @@ input[type="date"]#DatePicker:disabled {
 .fullscreen-toolbar {
   background: linear-gradient(135deg, rgba(0, 0, 0, 0.8) 0%, rgba(80, 80, 80, 0.7) 51%, rgba(0, 0, 0, 0.8) 100%);
   border-radius: 20px;
-  padding: 16px 20px;
+  padding: 16px;
   margin: 0;
   width: auto;
   box-shadow: 
@@ -566,6 +566,7 @@ input[type="date"]#DatePicker:disabled {
   justify-content: space-evenly;
   align-items: center;
   gap: 12px;
+  transition: all 0.3s ease;
 }
 
 /* Ensure all buttons in fullscreen toolbar look consistent */
@@ -579,6 +580,20 @@ input[type="date"]#DatePicker:disabled {
 .fullscreen-toolbar .toolbar-svg {
   width: 24px;
   height: 24px;
+}
+
+/* Landscape mode for fullscreen toolbar */
+@media (orientation: landscape) {
+  .fullscreen-toolbar {
+    flex-direction: column;
+    padding: 16px 10px;
+    max-height: 80vh;
+    max-width: 70px;
+  }
+  
+  .fullscreen-toolbar .toolbar-button {
+    margin: 5px 0;
+  }
 }
 
 /* Responsive styles for the fullscreen toolbar */
@@ -597,6 +612,25 @@ input[type="date"]#DatePicker:disabled {
   .fullscreen-toolbar .toolbar-svg {
     width: 22px;
     height: 22px;
+  }
+  
+  /* Landscape + small screen (mobile) */
+  @media (orientation: landscape) {
+    .fullscreen-toolbar {
+      padding: 12px 8px;
+      max-width: 60px;
+    }
+    
+    .fullscreen-toolbar .toolbar-button {
+      width: 40px;
+      height: 40px;
+      margin: 4px 0;
+    }
+    
+    .fullscreen-toolbar .toolbar-svg {
+      width: 20px;
+      height: 20px;
+    }
   }
 }
 

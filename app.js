@@ -583,14 +583,19 @@ function Rotate() {
     document.body.appendChild(clonedComic);
     document.body.appendChild(fullscreenToolbar);
     
+    // Position toolbar based on current orientation
+    positionFullscreenToolbar();
+    
+    // Add resize and orientation change listeners
+    window.addEventListener('resize', handleRotatedViewResize);
+    window.addEventListener('orientationchange', handleRotatedViewResize);
+    
     // Apply sizing when image is loaded
     if (clonedComic.complete) {
       maximizeRotatedImage(clonedComic);
-      positionFullscreenToolbar();
     } else {
       clonedComic.onload = function() {
         maximizeRotatedImage(clonedComic);
-        positionFullscreenToolbar();
       };
     }
     
@@ -603,11 +608,9 @@ function Rotate() {
     });
     
     // Handler function to exit fullscreen
-    const exitFullscreen = function(e) {
-      // Only exit if clicking on the overlay, not the toolbar or its children
-      if (e && (e.target.closest('#fullscreen-toolbar') || e.target.id === 'fullscreen-toolbar')) {
-        return;
-      }
+    const exitFullscreen = function() {
+      window.removeEventListener('resize', handleRotatedViewResize);
+      window.removeEventListener('orientationchange', handleRotatedViewResize);
       
       const overlay = document.getElementById('comic-overlay');
       if (overlay) document.body.removeChild(overlay);
@@ -634,89 +637,23 @@ function Rotate() {
     clonedComic.addEventListener('click', exitFullscreen);
     overlay.addEventListener('click', exitFullscreen);
     
-    // Add resize listener
-    const resizeHandler = () => {
-      maximizeRotatedImage(clonedComic);
-      positionFullscreenToolbar();
-    };
-    window.addEventListener('resize', resizeHandler);
-    
-    // Override exitFullscreen to remove event listener
-    const originalExit = exitFullscreen;
-    exitFullscreen = function(e) {
-      window.removeEventListener('resize', resizeHandler);
-      originalExit(e);
-    };
+    // Prevent toolbar buttons from closing fullscreen
+    fullscreenToolbar.addEventListener('click', function(e) {
+      e.stopPropagation();
+    });
   }
   else if (element.className === "rotate") {
     element.className = 'normal';
   }
 }
 
-// Helper function to position the fullscreen toolbar correctly
-function positionFullscreenToolbar() {
-  const toolbar = document.getElementById('fullscreen-toolbar');
-  
-  if (!toolbar) return;
-  
-  // Position the toolbar at the bottom of the screen
-  toolbar.style.position = 'fixed';
-  toolbar.style.left = '50%';
-  toolbar.style.bottom = '20px'; // Fixed distance from bottom
-  toolbar.style.top = 'auto'; // Clear any top value
-  toolbar.style.transform = 'translateX(-50%)';
-  toolbar.style.zIndex = '10002'; // Higher than the comic and overlay
-  toolbar.style.maxWidth = '600px'; // Limit width for better appearance
-  toolbar.style.width = '90%'; // Use percentage for responsive width
-}
-
-// Helper function to maximize image size for rotated images
-function maximizeRotatedImage(imgElement) {
-  // Get viewport dimensions
-  const viewportHeight = window.innerHeight;
-  const viewportWidth = window.innerWidth;
-  
-  // Get natural dimensions of the image
-  const naturalWidth = imgElement.naturalWidth;
-  const naturalHeight = imgElement.naturalHeight;
-  
-  // If natural dimensions are not available, do nothing
-  if (!naturalWidth || !naturalHeight) {
-    return;
+// Handle resize and orientation change in rotated view
+function handleRotatedViewResize() {
+  const rotatedComic = document.getElementById('rotated-comic');
+  if (rotatedComic) {
+    maximizeRotatedImage(rotatedComic);
   }
-  
-  // For a rotated image, the visual width is the original height, and vice versa
-  const rotatedWidth = naturalHeight;
-  const rotatedHeight = naturalWidth;
-  
-  // Calculate the scale factor needed to fit the image within the viewport
-  // Reserve space for the toolbar (100px from bottom)
-  const reservedSpace = 100;
-  let scale;
-  if (rotatedWidth / rotatedHeight > viewportWidth / (viewportHeight - reservedSpace)) {
-    // Image is wider than viewport (relative to aspect ratios)
-    scale = viewportWidth / rotatedWidth;
-  } else {
-    // Image is taller than viewport (relative to aspect ratios)
-    scale = (viewportHeight - reservedSpace) / rotatedHeight;
-  }
-    // Make the image slightly smaller (85% of the calculated size)
-  scale = scale * 0.85;
-  
-  // Apply dimension with calculated scale
-  imgElement.style.width = `${naturalWidth * scale}px`;
-  imgElement.style.height = `${naturalHeight * scale}px`;
-  
-  // Position element in the center of the viewport
-  imgElement.style.position = 'fixed';
-  imgElement.style.top = '50%';  // Center vertically, we don't need to adjust for toolbar anymore
-  imgElement.style.left = '50%';
-  imgElement.style.transform = 'translate(-50%, -50%) rotate(90deg)';
-  imgElement.style.transformOrigin = 'center center';
-  imgElement.style.maxWidth = 'none';
-  imgElement.style.maxHeight = 'none';
-  imgElement.style.zIndex = '10001'; // Higher than the overlay
-  imgElement.style.boxShadow = '0 5px 15px rgba(0,0,0,0.3)';
+  positionFullscreenToolbar();
 }
 
 // Native swipe implementation
@@ -827,6 +764,18 @@ document.addEventListener('touchend', handleTouchEnd, { passive: true });
 
 // Add event to prevent toolbar buttons from triggering swipes
 document.addEventListener('DOMContentLoaded', function() {
+  // Add orientation change listener to adjust UI for rotated comics
+  window.addEventListener('orientationchange', function() {
+    // Check if we're in fullscreen/rotated mode
+    const rotatedComic = document.getElementById('rotated-comic');
+    if (rotatedComic) {
+      // Reposition comic and toolbar
+      setTimeout(() => {
+        maximizeRotatedImage(rotatedComic);
+        positionFullscreenToolbar();
+      }, 300); // Small delay to ensure orientation has completed
+    }
+  });
   // Add event delegation for any fullscreen toolbar that might be created
   document.body.addEventListener('touchstart', function(e) {
     if (e.target.closest('#fullscreen-toolbar')) {
