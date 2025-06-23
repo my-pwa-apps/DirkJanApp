@@ -548,4 +548,56 @@ input[type="date"]#DatePicker:disabled {
   fill: none;
 }
 
+/* Fullscreen toolbar styles */
+.fullscreen-toolbar {
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.7) 0%, rgba(80, 80, 80, 0.5) 51%, rgba(0, 0, 0, 0.7) 100%);
+  border-radius: 20px;
+  padding: 16px 20px;
+  margin: 0;
+  width: auto;
+  box-shadow: 
+      0 8px 32px rgba(0, 0, 0, 0.4),
+      0 2px 8px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  display: flex;
+  justify-content: space-evenly;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Ensure all buttons in fullscreen toolbar look consistent */
+.fullscreen-toolbar .toolbar-button {
+  width: 48px;
+  height: 48px;
+  margin: 0;
+  border-radius: 14px;
+}
+
+.fullscreen-toolbar .toolbar-svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* Responsive styles for the fullscreen toolbar */
+@media (max-width: 480px) {
+  .fullscreen-toolbar {
+    padding: 12px 16px;
+    border-radius: 16px;
+  }
+  
+  .fullscreen-toolbar .toolbar-button {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+  }
+  
+  .fullscreen-toolbar .toolbar-svg {
+    width: 22px;
+    height: 22px;
+  }
+}
+
 

@@ -515,6 +515,12 @@ function Rotate() {
       document.body.removeChild(rotatedComic);
     }
     
+    // Remove fullscreen toolbar if it exists
+    const fullscreenToolbar = document.getElementById('fullscreen-toolbar');
+    if (fullscreenToolbar) {
+      document.body.removeChild(fullscreenToolbar);
+    }
+    
     // Restore all elements with data-was-hidden attribute
     const hiddenElements = document.querySelectorAll('[data-was-hidden]');
     hiddenElements.forEach(el => {
@@ -545,21 +551,52 @@ function Rotate() {
     clonedComic.id = 'rotated-comic';
     clonedComic.className = "rotate";
     
-    // Immediately add to body (not to overlay)
+    // Create the fullscreen toolbar
+    const fullscreenToolbar = document.createElement('div');
+    fullscreenToolbar.id = 'fullscreen-toolbar';
+    fullscreenToolbar.className = 'toolbar fullscreen-toolbar';
+    fullscreenToolbar.innerHTML = `
+      <button class="toolbar-button" onclick="PreviousClick(); return false;" title="Vorige comic">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <button class="toolbar-button" onclick="RandomClick(); return false;" title="Willekeurige comic">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg">
+          <rect x="4" y="4" width="16" height="16" rx="2" ry="2"/>
+          <circle cx="8.5" cy="8.5" r="1" fill="currentColor"/>
+          <circle cx="15.5" cy="8.5" r="1" fill="currentColor"/>
+          <circle cx="15.5" cy="15.5" r="1" fill="currentColor"/>
+          <circle cx="8.5" cy="15.5" r="1" fill="currentColor"/>
+        </svg>
+      </button>
+      <button class="toolbar-button" onclick="NextClick(); return false;" title="Volgende comic">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+      <button class="toolbar-button" onclick="CurrentClick(); return false;" title="Vandaag">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><circle cx="12" cy="16" r="2"/></svg>
+      </button>
+      <button class="toolbar-button" onclick="Rotate(); return false;" title="Sluiten">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    `;
+    
+    // Immediately add to body
     document.body.appendChild(overlay);
     document.body.appendChild(clonedComic);
+    document.body.appendChild(fullscreenToolbar);
     
     // Apply sizing when image is loaded
     if (clonedComic.complete) {
       maximizeRotatedImage(clonedComic);
+      positionFullscreenToolbar();
     } else {
       clonedComic.onload = function() {
         maximizeRotatedImage(clonedComic);
+        positionFullscreenToolbar();
       };
     }
     
     // Hide all other elements
-    const elementsToHide = document.querySelectorAll('body > *:not(#comic-overlay):not(#rotated-comic)');
+    const elementsToHide = document.querySelectorAll('body > *:not(#comic-overlay):not(#rotated-comic):not(#fullscreen-toolbar)');
     elementsToHide.forEach(el => {
       el.dataset.originalDisplay = window.getComputedStyle(el).display;
       el.dataset.wasHidden = "true";
@@ -567,12 +604,20 @@ function Rotate() {
     });
     
     // Handler function to exit fullscreen
-    const exitFullscreen = function() {
+    const exitFullscreen = function(e) {
+      // Only exit if clicking on the overlay, not the toolbar or its children
+      if (e && (e.target.closest('#fullscreen-toolbar') || e.target.id === 'fullscreen-toolbar')) {
+        return;
+      }
+      
       const overlay = document.getElementById('comic-overlay');
       if (overlay) document.body.removeChild(overlay);
       
       const rotatedComic = document.getElementById('rotated-comic');
       if (rotatedComic) document.body.removeChild(rotatedComic);
+      
+      const fullscreenToolbar = document.getElementById('fullscreen-toolbar');
+      if (fullscreenToolbar) document.body.removeChild(fullscreenToolbar);
       
       // Restore visibility of hidden elements
       const hiddenElements = document.querySelectorAll('[data-was-hidden]');
@@ -591,19 +636,42 @@ function Rotate() {
     overlay.addEventListener('click', exitFullscreen);
     
     // Add resize listener
-    const resizeHandler = () => maximizeRotatedImage(clonedComic);
+    const resizeHandler = () => {
+      maximizeRotatedImage(clonedComic);
+      positionFullscreenToolbar();
+    };
     window.addEventListener('resize', resizeHandler);
     
     // Override exitFullscreen to remove event listener
     const originalExit = exitFullscreen;
-    exitFullscreen = function() {
+    exitFullscreen = function(e) {
       window.removeEventListener('resize', resizeHandler);
-      originalExit();
+      originalExit(e);
     };
   }
   else if (element.className === "rotate") {
     element.className = 'normal';
   }
+}
+
+// Helper function to position the fullscreen toolbar correctly
+function positionFullscreenToolbar() {
+  const toolbar = document.getElementById('fullscreen-toolbar');
+  const comic = document.getElementById('rotated-comic');
+  
+  if (!toolbar || !comic) return;
+  
+  // Get the comic's position and dimensions
+  const comicRect = comic.getBoundingClientRect();
+  
+  // Position the toolbar below the comic
+  toolbar.style.position = 'fixed';
+  toolbar.style.left = '50%';
+  toolbar.style.top = (comicRect.bottom + 20) + 'px'; // 20px below the comic
+  toolbar.style.transform = 'translateX(-50%)';
+  toolbar.style.zIndex = '10002'; // Higher than the comic and overlay
+  toolbar.style.maxWidth = '600px'; // Limit width for better appearance
+  toolbar.style.width = '90%'; // Use percentage for responsive width
 }
 
 // Helper function to maximize image size for rotated images
@@ -626,25 +694,27 @@ function maximizeRotatedImage(imgElement) {
   const rotatedHeight = naturalWidth;
   
   // Calculate the scale factor needed to fit the image within the viewport
+  // Reserve space for the toolbar (100px from bottom)
+  const reservedSpace = 100;
   let scale;
-  if (rotatedWidth / rotatedHeight > viewportWidth / viewportHeight) {
+  if (rotatedWidth / rotatedHeight > viewportWidth / (viewportHeight - reservedSpace)) {
     // Image is wider than viewport (relative to aspect ratios)
     scale = viewportWidth / rotatedWidth;
   } else {
     // Image is taller than viewport (relative to aspect ratios)
-    scale = viewportHeight / rotatedHeight;
+    scale = (viewportHeight - reservedSpace) / rotatedHeight;
   }
   
-  // Make the image slightly smaller (90% of the calculated size)
-  scale = scale * 0.9;
+  // Make the image slightly smaller (85% of the calculated size)
+  scale = scale * 0.85;
   
   // Apply dimension with calculated scale
   imgElement.style.width = `${naturalWidth * scale}px`;
   imgElement.style.height = `${naturalHeight * scale}px`;
   
-  // Position element in the center of the viewport
+  // Position element in the center of the viewport but slightly higher to make room for toolbar
   imgElement.style.position = 'fixed';
-  imgElement.style.top = '50%';
+  imgElement.style.top = '45%';
   imgElement.style.left = '50%';
   imgElement.style.transform = 'translate(-50%, -50%) rotate(90deg)';
   imgElement.style.transformOrigin = 'center center';
@@ -706,28 +776,51 @@ function handleTouchEnd(e) {
 	const absX = Math.abs(deltaX);
 	const absY = Math.abs(deltaY);
 	
+	// Check if we're in fullscreen/rotated mode
+	const isInFullscreen = document.getElementById('rotated-comic') !== null;
+	
 	// Determine swipe direction
 	if (absX > absY && absX > MIN_SWIPE_DISTANCE) {
-		// Horizontal swipe
+		// Horizontal swipe - if in fullscreen, swap directions due to rotation
 		if (deltaX > 0) {
 			// Swipe right
 			console.log('Swipe right detected');
-			PreviousClick();
+			if (isInFullscreen) {
+				// In rotated view, right swipe should go to next (due to 90° rotation)
+				NextClick();
+			} else {
+				PreviousClick();
+			}
 		} else {
 			// Swipe left
 			console.log('Swipe left detected');
-			NextClick();
+			if (isInFullscreen) {
+				// In rotated view, left swipe should go to previous (due to 90° rotation)
+				PreviousClick();
+			} else {
+				NextClick();
+			}
 		}
 	} else if (absY > absX && absY > MIN_SWIPE_DISTANCE) {
-		// Vertical swipe
+		// Vertical swipe - if in fullscreen, swap directions due to rotation
 		if (deltaY > 0) {
 			// Swipe down
 			console.log('Swipe down detected');
-			RandomClick();
+			if (isInFullscreen) {
+				// In rotated view, down swipe should go to random (due to 90° rotation)
+				RandomClick();
+			} else {
+				RandomClick();
+			}
 		} else {
 			// Swipe up
 			console.log('Swipe up detected');
-			CurrentClick();
+			if (isInFullscreen) {
+				// In rotated view, up swipe should go to today (due to 90° rotation)
+				CurrentClick();
+			} else {
+				CurrentClick();
+			}
 		}
 	}
 }
@@ -736,6 +829,31 @@ function handleTouchEnd(e) {
 document.addEventListener('touchstart', handleTouchStart, { passive: false });
 document.addEventListener('touchmove', handleTouchMove, { passive: false });
 document.addEventListener('touchend', handleTouchEnd, { passive: true });
+
+// Add event to prevent toolbar buttons from triggering swipes
+document.addEventListener('DOMContentLoaded', function() {
+  // Add event delegation for any fullscreen toolbar that might be created
+  document.body.addEventListener('touchstart', function(e) {
+    if (e.target.closest('#fullscreen-toolbar')) {
+      // If touch starts on toolbar or its children, don't initiate swipe
+      e.stopPropagation();
+    }
+  }, { capture: true });
+  
+  document.body.addEventListener('touchmove', function(e) {
+    if (e.target.closest('#fullscreen-toolbar')) {
+      // If touch moves on toolbar or its children, don't trigger swipe
+      e.stopPropagation();
+    }
+  }, { capture: true });
+  
+  document.body.addEventListener('touchend', function(e) {
+    if (e.target.closest('#fullscreen-toolbar')) {
+      // If touch ends on toolbar or its children, don't trigger swipe
+      e.stopPropagation();
+    }
+  }, { capture: true });
+});
 
 setStatus = document.getElementById("swipe");
 setStatus.onclick = function()
