@@ -333,8 +333,8 @@ function RandomClick()
   if(document.getElementById("showfavs").checked) {
 		currentselectedDate = new Date(JSON.parse(localStorage.getItem('favs'))[Math.floor(Math.random() * JSON.parse(localStorage.getItem('favs')).length)]); }
 	else{
-		start = new Date(comicstartDate);
-		end = new Date();
+		var start = new Date(comicstartDate);
+		var end = new Date();
 		currentselectedDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
 	}
 
@@ -484,17 +484,20 @@ function DisplayComic()
   {
     document.getElementById("Current").disabled = true;
   }
-
 	if(document.getElementById("showfavs").checked) {
 		//document.getElementById("Current").disabled = true;
 		if(favs.length == 1) {
 			document.getElementById("Random").disabled = true;
 			document.getElementById("Previous").disabled = true;
 			document.getElementById("First").disabled = true;
-		
-		} }
-	else {
-		document.getElementById("Random").disabled = false;}
+		} else {
+			document.getElementById("Random").disabled = false;
+			document.getElementById("Previous").disabled = false;
+			document.getElementById("First").disabled = false;
+		}
+	} else {
+		document.getElementById("Random").disabled = false;
+	}
 }
 
  function formatDate(datetoFormat)
