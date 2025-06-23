@@ -178,7 +178,7 @@ input
     align-items: center;
     justify-content: center;
     font-size: 24px;
-    color: #333333;
+    color: #333 !important;
     box-shadow: 
         0 4px 16px rgba(240, 152, 25, 0.3),
         0 2px 4px rgba(0, 0, 0, 0.2),
@@ -522,6 +522,15 @@ input[type="date"]#DatePicker:disabled {
     #share {
         right: 22px !important;
     }
+}
+
+.toolbar-svg {
+  width: 28px;
+  height: 28px;
+  display: block;
+  stroke: #333;
+  color: #333;
+  fill: none;
 }
 
 
