@@ -759,26 +759,88 @@ function maximizeRotatedImage(imgElement) {
   imgElement.style.boxShadow = '0 5px 15px rgba(0,0,0,0.3)';
 }
 
-document.addEventListener('swiped-down', function(e) {
-	if(document.getElementById("swipe").checked) {
-		RandomClick() }
-})
+// Native swipe implementation
+let touchStartX = 0;
+let touchStartY = 0;
+let touchEndX = 0;
+let touchEndY = 0;
+let touchStartTime = 0;
 
-document.addEventListener('swiped-right', function(e) {
-	if(document.getElementById("swipe").checked) {
-		PreviousClick() }
-})
+// Minimum distance for a swipe (in pixels)
+const MIN_SWIPE_DISTANCE = 50;
+// Maximum time for a swipe (in milliseconds)
+const MAX_SWIPE_TIME = 500;
 
+function handleTouchStart(e) {
+	if (!document.getElementById("swipe").checked) return;
+	
+	const touch = e.touches[0];
+	touchStartX = touch.clientX;
+	touchStartY = touch.clientY;
+	touchStartTime = Date.now();
+}
 
-document.addEventListener('swiped-left', function(e) {
-	if(document.getElementById("swipe").checked) {
-		NextClick() }
-})
+function handleTouchMove(e) {
+	if (!document.getElementById("swipe").checked) return;
+	
+	// Prevent default scrolling behavior during swipe
+	const touch = e.touches[0];
+	const deltaX = Math.abs(touch.clientX - touchStartX);
+	const deltaY = Math.abs(touch.clientY - touchStartY);
+	
+	// If horizontal swipe is more significant than vertical, prevent vertical scrolling
+	if (deltaX > deltaY && deltaX > 20) {
+		e.preventDefault();
+	}
+}
 
-document.addEventListener('swiped-up', function(e) {
-	if(document.getElementById("swipe").checked) {
-		CurrentClick() }
-})
+function handleTouchEnd(e) {
+	if (!document.getElementById("swipe").checked) return;
+	
+	const touch = e.changedTouches[0];
+	touchEndX = touch.clientX;
+	touchEndY = touch.clientY;
+	
+	const deltaX = touchEndX - touchStartX;
+	const deltaY = touchEndY - touchStartY;
+	const deltaTime = Date.now() - touchStartTime;
+	
+	// Check if the swipe is valid (meets distance and time requirements)
+	if (deltaTime > MAX_SWIPE_TIME) return;
+	
+	const absX = Math.abs(deltaX);
+	const absY = Math.abs(deltaY);
+	
+	// Determine swipe direction
+	if (absX > absY && absX > MIN_SWIPE_DISTANCE) {
+		// Horizontal swipe
+		if (deltaX > 0) {
+			// Swipe right
+			console.log('Swipe right detected');
+			PreviousClick();
+		} else {
+			// Swipe left
+			console.log('Swipe left detected');
+			NextClick();
+		}
+	} else if (absY > absX && absY > MIN_SWIPE_DISTANCE) {
+		// Vertical swipe
+		if (deltaY > 0) {
+			// Swipe down
+			console.log('Swipe down detected');
+			RandomClick();
+		} else {
+			// Swipe up
+			console.log('Swipe up detected');
+			CurrentClick();
+		}
+	}
+}
+
+// Add touch event listeners to the document
+document.addEventListener('touchstart', handleTouchStart, { passive: false });
+document.addEventListener('touchmove', handleTouchMove, { passive: false });
+document.addEventListener('touchend', handleTouchEnd, { passive: true });
 
 setStatus = document.getElementById("swipe");
 setStatus.onclick = function()
