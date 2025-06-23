@@ -289,9 +289,35 @@ input
   border-radius: 16px;
   width: 52px;
   height: 52px;
-  margin: 0 4px;
-  box-shadow: 0 4px 16px rgba(240, 152, 25, 0.3), 0 2px 4px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.3);
+  margin: 0;
+  box-shadow: 
+    0 4px 16px rgba(240, 152, 25, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
   cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.toolbar-datepicker-btn:hover {
+  transform: translateY(-3px) scale(1.05);
+  background-position: right center;
+  box-shadow: 
+      0 8px 24px rgba(240, 152, 25, 0.4),
+      0 4px 8px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.toolbar-datepicker-btn:active {
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 
+      0 4px 12px rgba(240, 152, 25, 0.3),
+      0 2px 4px rgba(0, 0, 0, 0.2),
+      inset 0 2px 4px rgba(0, 0, 0, 0.1);
+  background-position: right center;
 }
 
 .toolbar-datepicker {
@@ -330,9 +356,17 @@ input
   color: #333 !important;
 }
 .toolbar-svg {
+  width: 28px;
+  height: 28px;
   stroke: #333;
   color: #333;
   fill: none;
+}
+
+.toolbar-svg circle[fill="currentColor"],
+.toolbar-svg rect[fill="currentColor"],
+.toolbar-svg path[fill="currentColor"] {
+  fill: #333;
 }
 
 /* Responsive for mobile/tablet */

@@ -185,10 +185,9 @@ function onLoad()
 	if(document.getElementById("showfavs").checked) {
 		currentselectedDate = new Date(favs[0]);
 		if(favs.length === 0)
-		{
-			document.getElementById("showfavs").checked = false;
+		{			document.getElementById("showfavs").checked = false;
 			document.getElementById("showfavs").disabled = true;
-      document.getElementById("Current").innerHTML = "Vandaag";
+			// Keep SVG icon, don't change to text
 			currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
 		}
 	}
@@ -847,13 +846,12 @@ function Addfav()
   else
   {
     favs.splice(favs.indexOf(formattedDate), 1);
-    //$(".favicon").css({"color": "red"}).removeClass('fa-heart-o').addClass('fa-heart');
-    document.getElementById("favheart").src = "./heartborder.svg";
+    //$(".favicon").css({"color": "red"}).removeClass('fa-heart-o').addClass('fa-heart');    document.getElementById("favheart").src = "./heartborder.svg";
     if(favs.length === 0)
     {
       document.getElementById("showfavs").checked = false;
       document.getElementById("showfavs").disabled = true;
-      document.getElementById("Current").innerHTML = 'Vandaag'
+      // Keep SVG icon, don't change to text
     }
   }
   favs.sort();
