@@ -44,6 +44,7 @@ async function fetchWithFallback(url) {
 }
 
 let pictureUrl = ''; // Make pictureUrl global so it's accessible by Share()
+let formattedDate = ''; // Make formattedDate global for sharing
 
 async function Share() 
 {
@@ -53,23 +54,118 @@ async function Share()
 		return;
 	}
 
+	// Create share text with current date
+	const shareText = `Check out this DirkJan comic from ${formattedDate}!`;
+	const shareUrl = 'https://dirkjanapp.pages.dev';
+	
+	console.log('Attempting to share:', shareText, shareUrl, 'Image:', pictureUrl);
+
 	if(navigator.share) {
+		// First try to share with the comic image
 		try {
-			const response = await fetchWithFallback(pictureUrl);
-			const blob = await response.blob();
-			const file = new File([blob], "dirkjan.png", {type: "image/png",
-			lastModified: new Date().getTime()});
-			navigator.share({
-				url: 'https://dirkjanapp.pages.dev',
-				text: 'Shared from https://dirkjanapp.pages.dev',
-				files: [file]
-			});
+			await shareWithImage(shareText, shareUrl);
+			console.log('Comic with image shared successfully');
+			return;
 		} catch (error) {
-			console.error('Error sharing comic:', error);
-			alert('Sorry, could not share the comic. Please try again later.');
+			console.log('Image sharing failed, trying text-only share:', error);
+			
+			// Try text-only share as fallback
+			try {
+				await navigator.share({
+					title: 'DirkJan Comic',
+					text: shareText,
+					url: shareUrl
+				});
+				console.log('Comic shared successfully via Web Share API (text-only)');
+				return;
+			} catch (textError) {
+				console.error('Text-only Web Share API also failed:', textError);
+			}
 		}
+	}
+	
+	console.log('Web Share API not supported or failed, using clipboard fallback');
+	// Fallback for browsers without Web Share API or when sharing fails
+	fallbackShare(shareText, shareUrl);
+}
+
+async function shareWithImage(shareText, shareUrl) {
+	// Check if the browser supports file sharing
+	if (!navigator.canShare || !navigator.canShare({ files: [new File([], 'test')] })) {
+		throw new Error('File sharing not supported');
+	}
+
+	try {
+		// Try to fetch the image and convert to shareable file
+		const response = await fetch(pictureUrl, { 
+			mode: 'cors',
+			headers: {
+				'Accept': 'image/*'
+			}
+		});
+		
+		if (!response.ok) {
+			throw new Error(`Failed to fetch image: ${response.status}`);
+		}
+		
+		const blob = await response.blob();
+		
+		// Create a file from the blob
+		const file = new File([blob], `dirkjan-${formattedDate}.jpg`, {
+			type: blob.type || 'image/jpeg',
+			lastModified: new Date().getTime()
+		});
+
+		// Share with the image file
+		await navigator.share({
+			title: 'DirkJan Comic',
+			text: shareText,
+			url: shareUrl,
+			files: [file]
+		});
+	} catch (fetchError) {
+		console.log('Direct image fetch failed, trying proxy:', fetchError);
+		
+		// Try with CORS proxy as fallback
+		const response = await fetchWithFallback(pictureUrl);
+		const blob = await response.blob();
+		
+		const file = new File([blob], `dirkjan-${formattedDate}.jpg`, {
+			type: blob.type || 'image/jpeg',
+			lastModified: new Date().getTime()
+		});
+
+		await navigator.share({
+			title: 'DirkJan Comic',
+			text: shareText,
+			url: shareUrl,
+			files: [file]
+		});
+	}
+}
+
+function fallbackShare(text, url) {
+	// Try to copy to clipboard with image URL included
+	const shareContent = `${text}\n${url}\n\nComic image: ${pictureUrl}`;
+	
+	if (navigator.clipboard && navigator.clipboard.writeText) {
+		navigator.clipboard.writeText(shareContent).then(() => {
+			alert('Comic link and image URL copied to clipboard! You can now paste it anywhere to share.');
+		}).catch(() => {
+			// Final fallback - show the content to copy manually
+			showShareDialog(shareContent);
+		});
 	} else {
-		alert('Your browser does not support the Web Share API');
+		// Older browsers - show the content to copy manually
+		showShareDialog(shareContent);
+	}
+}
+
+function showShareDialog(content) {
+	// Create a more user-friendly dialog
+	const userCopied = prompt('Copy this text to share the comic (includes both link and image URL):\n\n(Tip: Select all with Ctrl+A, then copy with Ctrl+C)', content);
+	if (userCopied !== null) {
+		alert('Thanks for sharing DirkJan comics!');
 	}
 }
 
