@@ -531,10 +531,23 @@ function Rotate() {
     
     // Make sure original comic is in normal state
     element.className = "normal";
+    
+    // Remove any event listeners added during rotation
+    window.removeEventListener('resize', handleRotatedViewResize);
+    window.removeEventListener('orientationchange', handleRotatedViewResize);
+    
     return;
   }
   
   if (element.className === "normal") {
+    // First hide all elements to prevent flickering
+    const elementsToHideInitial = document.querySelectorAll('body > *');
+    elementsToHideInitial.forEach(el => {
+      el.dataset.originalDisplay = window.getComputedStyle(el).display;
+      el.dataset.wasHidden = "true";
+      el.style.setProperty('display', 'none', 'important');
+    });
+    
     // Create an overlay without any layout constraints
     const overlay = document.createElement('div');
     overlay.id = 'comic-overlay';
@@ -577,8 +590,7 @@ function Rotate() {
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
       </button>
     `;
-    
-    // Immediately add to body
+      // Immediately add to body in proper order
     document.body.appendChild(overlay);
     document.body.appendChild(clonedComic);
     document.body.appendChild(fullscreenToolbar);
@@ -599,47 +611,24 @@ function Rotate() {
       };
     }
     
-    // Hide all other elements
-    const elementsToHide = document.querySelectorAll('body > *:not(#comic-overlay):not(#rotated-comic):not(#fullscreen-toolbar)');
-    elementsToHide.forEach(el => {
-      el.dataset.originalDisplay = window.getComputedStyle(el).display;
-      el.dataset.wasHidden = "true";
-      el.style.setProperty('display', 'none', 'important');
-    });
-    
-    // Handler function to exit fullscreen
-    const exitFullscreen = function() {
-      window.removeEventListener('resize', handleRotatedViewResize);
-      window.removeEventListener('orientationchange', handleRotatedViewResize);
-      
-      const overlay = document.getElementById('comic-overlay');
-      if (overlay) document.body.removeChild(overlay);
-      
-      const rotatedComic = document.getElementById('rotated-comic');
-      if (rotatedComic) document.body.removeChild(rotatedComic);
-      
-      const fullscreenToolbar = document.getElementById('fullscreen-toolbar');
-      if (fullscreenToolbar) document.body.removeChild(fullscreenToolbar);
-      
-      // Restore visibility of hidden elements
-      const hiddenElements = document.querySelectorAll('[data-was-hidden]');
-      hiddenElements.forEach(el => {
-        el.style.display = el.dataset.originalDisplay || '';
-        delete el.dataset.wasHidden;
-        delete el.dataset.originalDisplay;
-      });
-      
-      // Ensure original comic is back to normal
-      if (element) element.className = "normal";
-    };
-    
-    // Add click handlers
-    clonedComic.addEventListener('click', exitFullscreen);
-    overlay.addEventListener('click', exitFullscreen);
-    
     // Prevent toolbar buttons from closing fullscreen
     fullscreenToolbar.addEventListener('click', function(e) {
       e.stopPropagation();
+    });
+    
+    // Add swipe support in rotated view
+    // We use the overlay for swipe events
+    overlay.addEventListener('touchstart', handleTouchStart, { passive: false });
+    overlay.addEventListener('touchmove', handleTouchMove, { passive: false });
+    overlay.addEventListener('touchend', function(e) {
+      handleTouchEnd(e);
+      // Don't exit fullscreen mode on simple touch if it was a swipe
+      e.stopPropagation();
+    }, { passive: true });
+    
+    // Add click handler to exit fullscreen
+    overlay.addEventListener('click', function() {
+      Rotate(); // Call Rotate again to exit fullscreen
     });
   }
   else if (element.className === "rotate") {
@@ -999,4 +988,86 @@ function showInstallPromotion() {
 	  deferredPrompt = null;
 	});
   });
+}
+
+// Helper function to maximize image size for rotated images
+function maximizeRotatedImage(imgElement) {
+  // Get viewport dimensions
+  const viewportHeight = window.innerHeight;
+  const viewportWidth = window.innerWidth;
+  
+  // Get natural dimensions of the image
+  const naturalWidth = imgElement.naturalWidth;
+  const naturalHeight = imgElement.naturalHeight;
+  
+  // If natural dimensions are not available, do nothing
+  if (!naturalWidth || !naturalHeight) {
+    return;
+  }
+  
+  // For a rotated image, the visual width is the original height, and vice versa
+  const rotatedWidth = naturalHeight;
+  const rotatedHeight = naturalWidth;
+  
+  // Calculate the scale factor needed to fit the image within the viewport
+  let scale;
+  if (rotatedWidth / rotatedHeight > viewportWidth / viewportHeight) {
+    // Image is wider than viewport (relative to aspect ratios)
+    scale = viewportWidth / rotatedWidth;
+  } else {
+    // Image is taller than viewport (relative to aspect ratios)
+    scale = viewportHeight / rotatedHeight;
+  }
+  
+  // Make the image slightly smaller (90% of the calculated size)
+  scale = scale * 0.9;
+  
+  // Apply dimension with calculated scale
+  imgElement.style.width = `${naturalWidth * scale}px`;
+  imgElement.style.height = `${naturalHeight * scale}px`;
+  
+  // Position element in the center of the viewport
+  imgElement.style.position = 'fixed';
+  imgElement.style.top = '50%';
+  imgElement.style.left = '50%';
+  imgElement.style.transform = 'translate(-50%, -50%) rotate(90deg)';
+  imgElement.style.transformOrigin = 'center center';
+  imgElement.style.maxWidth = 'none';
+  imgElement.style.maxHeight = 'none';
+  imgElement.style.zIndex = '10001'; // Higher than the overlay
+  imgElement.style.boxShadow = '0 5px 15px rgba(0,0,0,0.3)';
+}
+
+// Position the fullscreen toolbar based on device orientation
+function positionFullscreenToolbar() {
+  const toolbar = document.getElementById('fullscreen-toolbar');
+  if (!toolbar) return;
+  
+  const isLandscape = window.innerWidth > window.innerHeight;
+  const rotatedComic = document.getElementById('rotated-comic');
+  
+  if (isLandscape) {
+    // In landscape mode, position the toolbar on the left side
+    toolbar.style.position = 'fixed';
+    toolbar.style.top = '50%';
+    toolbar.style.left = '20px';
+    toolbar.style.transform = 'translateY(-50%)';
+    toolbar.style.flexDirection = 'column';
+    toolbar.style.maxHeight = '80vh';
+    toolbar.style.maxWidth = '70px';
+    toolbar.style.width = 'auto';
+    toolbar.style.height = 'auto';
+    toolbar.style.zIndex = '10002';
+  } else {
+    // In portrait mode, position the toolbar at the bottom
+    toolbar.style.position = 'fixed';
+    toolbar.style.bottom = '20px';
+    toolbar.style.left = '50%';
+    toolbar.style.transform = 'translateX(-50%)';
+    toolbar.style.flexDirection = 'row';
+    toolbar.style.width = 'auto';
+    toolbar.style.maxWidth = '90vw';
+    toolbar.style.height = 'auto';
+    toolbar.style.zIndex = '10002';
+  }
 }
