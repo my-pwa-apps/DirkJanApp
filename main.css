@@ -473,6 +473,13 @@ input[type="date"]#DatePicker:disabled {
     padding-right: 15px;
 }
 
+.settings-icons-container img {
+  color: #333333;
+  fill: currentColor;
+  filter: none;
+  /* Remove any previous color overrides */
+}
+
 /* Mobile responsive styles for icon buttons */
 @media (max-width: 768px) {
     #settings, #favheart, #share {
