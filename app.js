@@ -771,7 +771,6 @@ setStatus.onclick = function()
   if(document.getElementById('showfavs').checked)
 	{
 		localStorage.setItem('showfavs', "true");
-    document.getElementById('Current').innerHTML = 'Laatste'
 		if(favs.indexOf(formattedDate) !== -1)
 		{
 		}
@@ -783,7 +782,6 @@ setStatus.onclick = function()
 	else
 	{
 		localStorage.setItem('showfavs', "false");
-    document.getElementById('Current').innerHTML = 'Vandaag'
 	}
 
 	CompareDates();
@@ -805,12 +803,10 @@ getStatus = localStorage.getItem('showfavs');
   if (getStatus == "true")
   {
     document.getElementById("showfavs").checked = true;
-    document.getElementById('Current').innerHTML = 'Laatste'
   }
   else
   {
     document.getElementById("showfavs").checked = false;
-    document.getElementById('Current').innerHTML = 'Vandaag'
   }
 
 getStatus = localStorage.getItem('lastdate');

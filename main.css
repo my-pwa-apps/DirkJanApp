@@ -277,59 +277,62 @@ input
     flex-shrink: 0;
 }
 
-.toolbar-datepicker-wrapper {
+.toolbar-datepicker-btn {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
+  background: linear-gradient(45deg, #FFD700 0%, #F09819 51%, #FFD700 100%);
+  background-size: 200% auto;
+  border: none;
+  border-radius: 16px;
   width: 52px;
   height: 52px;
+  margin: 0 4px;
+  box-shadow: 0 4px 16px rgba(240, 152, 25, 0.3), 0 2px 4px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.3);
+  cursor: pointer;
 }
 
 .toolbar-datepicker {
-  width: 52px;
-  height: 52px;
-  border-radius: 16px;
-  background: linear-gradient(45deg, #FFD700 0%, #F09819 51%, #FFD700 100%);
-  color: transparent !important;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 4px 16px rgba(240, 152, 25, 0.3), 0 2px 4px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.3);
-  font-size: 0;
   position: absolute;
-  left: 0; top: 0;
-  z-index: 2;
-  cursor: pointer;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   opacity: 0;
+  cursor: pointer;
+  z-index: 2;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
 }
 
-.datepicker-svg {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
+.toolbar-datepicker::-webkit-calendar-picker-indicator {
+  opacity: 0;
+  display: none;
+}
+.toolbar-datepicker::-ms-input-placeholder { color: transparent; }
+.toolbar-datepicker::placeholder { color: transparent; }
+.toolbar-datepicker:focus { outline: none; }
+
+.toolbar-datepicker-btn svg.toolbar-svg {
+  position: relative;
   z-index: 1;
   pointer-events: none;
-  color: #333;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
-/* Hide all default calendar icons */
-.toolbar-datepicker::-webkit-calendar-picker-indicator,
-input[type="date"]::-webkit-calendar-picker-indicator {
-  opacity: 0 !important;
-  display: none !important;
+.toolbar-datepicker::before { content: none; }
+
+/* Always keep .toolbar-button and .toolbar-svg flat and single color */
+.toolbar-button, .toolbar-datepicker-btn {
+  color: #333 !important;
 }
-.toolbar-datepicker::-ms-input-placeholder,
-.toolbar-datepicker::-webkit-input-placeholder,
-.toolbar-datepicker::-moz-placeholder,
-.toolbar-datepicker:-ms-input-placeholder {
-  color: transparent !important;
-}
-.toolbar-datepicker::before,
-.toolbar-datepicker::after {
-  display: none !important;
+.toolbar-svg {
+  stroke: #333;
+  color: #333;
+  fill: none;
 }
 
 /* Responsive for mobile/tablet */
