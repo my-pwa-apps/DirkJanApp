@@ -22,19 +22,39 @@
 
 <body onload="onLoad()">
   
-  <h1 hidden>Daily DirkJan Comics</h1>
-  <div class="logo">
+  <h1 hidden>Daily DirkJan Comics</h1>  <div class="logo">
     <a href="https://dirkjan.nl" target="_blank" rel="noopener"><img src="./dirk-jan-tekst.svg" class="logo-img" alt="Daily DirkJan Title"/></a>
   </div>
     
-  <div class="buttongrid">
-    <button class="button" id="Previous" onclick="PreviousClick()"></i>Vorige</button>
-    <button class="button" id="Random" onclick="RandomClick()">Willekeurig</button>
-    <button class="button" id="Next" onclick="NextClick()">Volgende</button>
-    <button class="button" id="First"  onclick="FirstClick()">Eerste</button>
-    <input id="DatePicker" oninput="DateChange()" type="date" min="2015-05-04">
-    <button class="button" id="Current" onclick="CurrentClick()">Vandaag</button>
-  </div>  
+  <!-- Modern Toolbar -->
+  <div class="toolbar">
+    <button class="toolbar-button" id="First" onclick="FirstClick()" title="Eerste comic">
+      ⏮️
+    </button>
+    <button class="toolbar-button" id="Previous" onclick="PreviousClick()" title="Vorige comic">
+      ⬅️
+    </button>
+    <button class="toolbar-button" id="Random" onclick="RandomClick()" title="Willekeurige comic">
+      🎲
+    </button>
+    <input id="DatePicker" class="toolbar-datepicker" oninput="DateChange()" type="date" min="2015-05-04" title="Selecteer datum">
+    <button class="toolbar-button" id="Next" onclick="NextClick()" title="Volgende comic">
+      ➡️
+    </button>
+    <button class="toolbar-button" id="Current" onclick="CurrentClick()" title="Vandaag">
+      🏠
+    </button>
+  </div>
+  
+  <!-- Keep old buttongrid hidden for backwards compatibility -->
+  <div class="buttongrid" style="display: none;">
+    <button class="button" id="Previous-old" onclick="PreviousClick()">Vorige</button>
+    <button class="button" id="Random-old" onclick="RandomClick()">Willekeurig</button>
+    <button class="button" id="Next-old" onclick="NextClick()">Volgende</button>
+    <button class="button" id="First-old" onclick="FirstClick()">Eerste</button>
+    <input id="DatePicker-old" oninput="DateChange()" type="date" min="2015-05-04">
+    <button class="button" id="Current-old" onclick="CurrentClick()">Vandaag</button>
+  </div>
   <br>
   <br>
   <img id="comic" onclick=Rotate() class="normal" alt="Loading comic from https://dirkjan.nl..." >
