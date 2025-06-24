@@ -590,6 +590,9 @@ function Rotate() {
     document.body.appendChild(clonedComic);
     document.body.appendChild(fullscreenToolbar);
 
+    // Add rotated class to toolbar for SVG rotation
+    fullscreenToolbar.classList.add('rotated');
+
     // Show the comic and toolbar
     clonedComic.style.display = 'block';
     fullscreenToolbar.style.display = 'flex';

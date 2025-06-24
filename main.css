@@ -660,4 +660,14 @@ input[type="date"]#DatePicker:disabled {
   }
 }
 
+/* --- ROTATED MODE: Rotate toolbar SVGs upright --- */
+.fullscreen-toolbar.rotated .toolbar-svg {
+  transform: rotate(-90deg);
+}
+
+/* Ensure no double-rotation in normal mode */
+.fullscreen-toolbar:not(.rotated) .toolbar-svg {
+  transform: none;
+}
+
 
