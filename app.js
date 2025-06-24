@@ -337,26 +337,49 @@ function RandomClick()
 
 function DateChange()
 {
-  currentselectedDate = document.getElementById('DatePicker');
-  currentselectedDate = new Date(currentselectedDate.value);
-  if (currentselectedDate.getDay() == 0) 
-    {
+  // Get the date from either the main or rotated date picker
+  const mainDatePicker = document.getElementById('DatePicker');
+  const rotatedDatePicker = document.getElementById('rotated-DatePicker');
+  
+  let selectedDate;
+  if (rotatedDatePicker && rotatedDatePicker.value) {
+    selectedDate = rotatedDatePicker.value;
+    // Sync the main date picker
+    if (mainDatePicker) {
+      mainDatePicker.value = selectedDate;
+    }
+  } else if (mainDatePicker && mainDatePicker.value) {
+    selectedDate = mainDatePicker.value;
+    // Sync the rotated date picker if it exists
+    if (rotatedDatePicker) {
+      rotatedDatePicker.value = selectedDate;
+    }
+  }
+  
+  if (selectedDate) {
+    currentselectedDate = new Date(selectedDate);
+    if (currentselectedDate.getDay() == 0) {
       currentselectedDate.setDate(currentselectedDate.getDate()-1);
     }
-  CompareDates();
-  
-  DisplayComic();
-  
+    CompareDates();
+    DisplayComic();
+  }
 }
 
 function DisplayComic()
 {
-  
-  formatDate(currentselectedDate);
+    formatDate(currentselectedDate);
 
   formattedDate = year+"-"+month+"-"+day;
   formattedComicDate = year+month+day;
   document.getElementById('DatePicker').value = formattedDate;
+  
+  // Also sync the rotated date picker if it exists
+  const rotatedDatePicker = document.getElementById('rotated-DatePicker');
+  if (rotatedDatePicker) {
+    rotatedDatePicker.value = formattedDate;
+  }
+  
   const url = `https://dirkjan.nl/cartoon/${formattedComicDate}`;
 
   localStorage.setItem('lastcomic', currentselectedDate);
@@ -586,10 +609,9 @@ function Rotate() {
           <circle cx="15.5" cy="15.5" r="1.5" fill="currentColor"/>
           <circle cx="8.5" cy="15.5" r="1.5" fill="currentColor"/>
         </svg>
-      </button>
-      <button class="toolbar-button toolbar-datepicker-btn" title="Selecteer datum">
+      </button>      <button class="toolbar-button toolbar-datepicker-btn" title="Selecteer datum">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        <input class="toolbar-datepicker" oninput="DateChange()" type="date" min="2015-05-04" title="Selecteer datum">
+        <input id="rotated-DatePicker" class="toolbar-datepicker" oninput="DateChange()" type="date" min="2015-05-04" title="Selecteer datum">
       </button>
       <button class="toolbar-button" onclick="NextClick(); return false;" title="Volgende comic">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><polyline points="9 18 15 12 9 6"/></svg>
