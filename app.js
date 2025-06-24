@@ -563,17 +563,29 @@ function Rotate() {
     const clonedComic = element.cloneNode(true);
     clonedComic.id = 'rotated-comic';
     clonedComic.className = "rotate";
-    clonedComic.style.display = 'block'; // Ensure visible
-
-    // Create the fullscreen toolbar
+    clonedComic.style.display = 'block'; // Ensure visible    // Create the fullscreen toolbar
     const fullscreenToolbar = document.createElement('div');
     fullscreenToolbar.id = 'fullscreen-toolbar';
     fullscreenToolbar.className = 'toolbar fullscreen-toolbar';
     fullscreenToolbar.innerHTML = `
+      <button class="toolbar-button" onclick="FirstClick(); return false;" title="Eerste comic">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
+      </button>
       <button class="toolbar-button" onclick="PreviousClick(); return false;" title="Vorige comic">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><polyline points="15 18 9 12 15 6"/></svg>
-      </button>      <button class="toolbar-button" onclick="RandomClick(); return false;" title="Willekeurige comic">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><path d="M16 3h5v5"/><path d="M4 20l7-7 3 3 7-7"/><path d="M21 16v5h-5"/><path d="M3 4l7 7-3 3 7 7"/></svg>
+      </button>
+      <button class="toolbar-button" onclick="RandomClick(); return false;" title="Willekeurige comic">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg">
+          <rect x="4" y="4" width="16" height="16" rx="2" ry="2"/>
+          <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
+          <circle cx="15.5" cy="8.5" r="1.5" fill="currentColor"/>
+          <circle cx="15.5" cy="15.5" r="1.5" fill="currentColor"/>
+          <circle cx="8.5" cy="15.5" r="1.5" fill="currentColor"/>
+        </svg>
+      </button>
+      <button class="toolbar-button toolbar-datepicker-btn" title="Selecteer datum">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <input class="toolbar-datepicker" oninput="DateChange()" type="date" min="2015-05-04" title="Selecteer datum">
       </button>
       <button class="toolbar-button" onclick="NextClick(); return false;" title="Volgende comic">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><polyline points="9 18 15 12 9 6"/></svg>
