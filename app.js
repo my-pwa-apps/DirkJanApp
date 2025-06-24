@@ -1044,15 +1044,19 @@ function maximizeRotatedImage(imgElement) {
 function positionFullscreenToolbar() {
   const toolbar = document.getElementById('fullscreen-toolbar');
   if (!toolbar) return;
-  // Always position at the bottom, below the comic
+  
+  // For rotated mode, let CSS handle the positioning via media queries
+  // Just ensure the toolbar has the necessary base styles
   toolbar.style.position = 'fixed';
-  toolbar.style.left = '50%';
-  toolbar.style.bottom = '20px';
-  toolbar.style.top = '';
-  toolbar.style.transform = 'translateX(-50%)';
-  toolbar.style.flexDirection = 'row';
-  toolbar.style.width = 'auto';
-  toolbar.style.maxWidth = '90vw';
-  toolbar.style.height = 'auto';
   toolbar.style.zIndex = '10002';
+  
+  // Clear any inline positioning to let CSS media queries take over
+  toolbar.style.left = '';
+  toolbar.style.bottom = '';
+  toolbar.style.top = '';
+  toolbar.style.transform = '';
+  toolbar.style.flexDirection = '';
+  toolbar.style.width = '';
+  toolbar.style.maxWidth = '';
+  toolbar.style.height = '';
 }

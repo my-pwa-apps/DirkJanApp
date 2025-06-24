@@ -589,19 +589,20 @@ input[type="date"]#DatePicker:disabled {
   height: 24px;
 }
 
-/* Landscape mode for fullscreen toolbar - vertical on left */
-@media (orientation: landscape) {
-  .fullscreen-toolbar {
+/* Portrait mode for rotated comic - toolbar on left side */
+@media (orientation: portrait) {
+  .fullscreen-toolbar.rotated {
     flex-direction: column;
     padding: 16px 10px;
     max-height: 80vh;
     max-width: 70px;
     top: 50%;
     left: 20px;
+    bottom: auto;
     transform: translateY(-50%);
   }
   
-  .fullscreen-toolbar .toolbar-button {
+  .fullscreen-toolbar.rotated .toolbar-button {
     margin: 5px 0;
   }
   
@@ -610,15 +611,25 @@ input[type="date"]#DatePicker:disabled {
   }
 }
 
-/* Portrait mode for fullscreen toolbar - horizontal at bottom */
-@media (orientation: portrait) {
-  .fullscreen-toolbar {
+/* Landscape mode for rotated comic - toolbar at bottom */
+@media (orientation: landscape) {
+  .fullscreen-toolbar.rotated {
     flex-direction: row;
     padding: 12px 16px;
     max-width: 90vw;
     bottom: 20px;
     left: 50%;
+    top: auto;
     transform: translateX(-50%);
+  }
+  
+  .fullscreen-toolbar.rotated .toolbar-button {
+    margin: 0 5px;
+  }
+  
+  #rotated-comic {
+    margin-left: 0 !important;
+    margin-bottom: 90px !important; /* Make room for the toolbar at bottom */
   }
 }
 
@@ -640,20 +651,39 @@ input[type="date"]#DatePicker:disabled {
     height: 22px;
   }
   
-  /* Landscape + small screen (mobile) */
-  @media (orientation: landscape) {
-    .fullscreen-toolbar {
+  /* Portrait + small screen (mobile) - toolbar on left for rotated comic */
+  @media (orientation: portrait) {
+    .fullscreen-toolbar.rotated {
       padding: 12px 8px;
       max-width: 60px;
     }
     
-    .fullscreen-toolbar .toolbar-button {
+    .fullscreen-toolbar.rotated .toolbar-button {
       width: 40px;
       height: 40px;
       margin: 4px 0;
     }
     
-    .fullscreen-toolbar .toolbar-svg {
+    .fullscreen-toolbar.rotated .toolbar-svg {
+      width: 20px;
+      height: 20px;
+    }
+  }
+  
+  /* Landscape + small screen (mobile) - toolbar at bottom for rotated comic */
+  @media (orientation: landscape) {
+    .fullscreen-toolbar.rotated {
+      padding: 12px 16px;
+      max-width: 90vw;
+    }
+    
+    .fullscreen-toolbar.rotated .toolbar-button {
+      width: 40px;
+      height: 40px;
+      margin: 0 4px;
+    }
+    
+    .fullscreen-toolbar.rotated .toolbar-svg {
       width: 20px;
       height: 20px;
     }
