@@ -547,7 +547,7 @@ function Rotate() {
       el.dataset.wasHidden = "true";
       el.style.setProperty('display', 'none', 'important');
     });
-    
+
     // Create an overlay without any layout constraints
     const overlay = document.createElement('div');
     overlay.id = 'comic-overlay';
@@ -558,12 +558,13 @@ function Rotate() {
     overlay.style.height = '100vh';
     overlay.style.backgroundColor = 'rgba(0,0,0,0.3)';
     overlay.style.zIndex = '10000';
-    
+
     // Clone the comic image
     const clonedComic = element.cloneNode(true);
     clonedComic.id = 'rotated-comic';
     clonedComic.className = "rotate";
-    
+    clonedComic.style.display = 'block'; // Ensure visible
+
     // Create the fullscreen toolbar
     const fullscreenToolbar = document.createElement('div');
     fullscreenToolbar.id = 'fullscreen-toolbar';
@@ -572,13 +573,7 @@ function Rotate() {
       <button class="toolbar-button" onclick="PreviousClick(); return false;" title="Vorige comic">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><polyline points="15 18 9 12 15 6"/></svg>
       </button>      <button class="toolbar-button" onclick="RandomClick(); return false;" title="Willekeurige comic">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg">
-          <rect x="4" y="4" width="16" height="16" rx="2" ry="2"/>
-          <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
-          <circle cx="15.5" cy="8.5" r="1.5" fill="currentColor"/>
-          <circle cx="15.5" cy="15.5" r="1.5" fill="currentColor"/>
-          <circle cx="8.5" cy="15.5" r="1.5" fill="currentColor"/>
-        </svg>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><path d="M16 3h5v5"/><path d="M4 20l7-7 3 3 7-7"/><path d="M21 16v5h-5"/><path d="M3 4l7 7-3 3 7 7"/></svg>
       </button>
       <button class="toolbar-button" onclick="NextClick(); return false;" title="Volgende comic">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><polyline points="9 18 15 12 9 6"/></svg>
@@ -590,14 +585,18 @@ function Rotate() {
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
       </button>
     `;
-      // Immediately add to body in proper order
+    // Add overlay, comic, and toolbar in order
     document.body.appendChild(overlay);
     document.body.appendChild(clonedComic);
     document.body.appendChild(fullscreenToolbar);
-    
-    // Position toolbar based on current orientation
+
+    // Show the comic and toolbar
+    clonedComic.style.display = 'block';
+    fullscreenToolbar.style.display = 'flex';
+
+    // Position toolbar at the bottom always
     positionFullscreenToolbar();
-    
+
     // Add resize and orientation change listeners
     window.addEventListener('resize', handleRotatedViewResize);
     window.addEventListener('orientationchange', handleRotatedViewResize);
@@ -1042,32 +1041,15 @@ function maximizeRotatedImage(imgElement) {
 function positionFullscreenToolbar() {
   const toolbar = document.getElementById('fullscreen-toolbar');
   if (!toolbar) return;
-  
-  const isLandscape = window.innerWidth > window.innerHeight;
-  const rotatedComic = document.getElementById('rotated-comic');
-  
-  if (isLandscape) {
-    // In landscape mode, position the toolbar on the left side
-    toolbar.style.position = 'fixed';
-    toolbar.style.top = '50%';
-    toolbar.style.left = '20px';
-    toolbar.style.transform = 'translateY(-50%)';
-    toolbar.style.flexDirection = 'column';
-    toolbar.style.maxHeight = '80vh';
-    toolbar.style.maxWidth = '70px';
-    toolbar.style.width = 'auto';
-    toolbar.style.height = 'auto';
-    toolbar.style.zIndex = '10002';
-  } else {
-    // In portrait mode, position the toolbar at the bottom
-    toolbar.style.position = 'fixed';
-    toolbar.style.bottom = '20px';
-    toolbar.style.left = '50%';
-    toolbar.style.transform = 'translateX(-50%)';
-    toolbar.style.flexDirection = 'row';
-    toolbar.style.width = 'auto';
-    toolbar.style.maxWidth = '90vw';
-    toolbar.style.height = 'auto';
-    toolbar.style.zIndex = '10002';
-  }
+  // Always position at the bottom, below the comic
+  toolbar.style.position = 'fixed';
+  toolbar.style.left = '50%';
+  toolbar.style.bottom = '20px';
+  toolbar.style.top = '';
+  toolbar.style.transform = 'translateX(-50%)';
+  toolbar.style.flexDirection = 'row';
+  toolbar.style.width = 'auto';
+  toolbar.style.maxWidth = '90vw';
+  toolbar.style.height = 'auto';
+  toolbar.style.zIndex = '10002';
 }
