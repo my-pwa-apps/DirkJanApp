@@ -373,12 +373,17 @@ function DisplayComic()
       picturePosition = siteBody.indexOf('<article class="cartoon">');
       picturePosition = picturePosition+41;
       if (notFound == false)
-      {
-        // Store pictureUrl in the global variable
+      {        // Store pictureUrl in the global variable
         pictureUrl = siteBody.substring(picturePosition, picturePosition+88);
         endPosition = pictureUrl.lastIndexOf('"');
         pictureUrl = siteBody.substring(picturePosition, picturePosition+endPosition);
         document.getElementById("comic").src = pictureUrl;
+        
+        // Also update the rotated comic if it exists
+        const rotatedComic = document.getElementById('rotated-comic');
+        if (rotatedComic) {
+          rotatedComic.src = pictureUrl;
+        }
       }
       else
       {
