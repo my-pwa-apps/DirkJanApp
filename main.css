@@ -695,9 +695,19 @@ input[type="date"]#DatePicker:disabled {
 }
 
 /* Special rotation for arrow buttons in rotated mode */
-.fullscreen-toolbar.rotated .toolbar-button:nth-child(2) .toolbar-svg,
+/* First button (skip to beginning) - rotate 90 degrees */
+.fullscreen-toolbar.rotated .toolbar-button:nth-child(1) .toolbar-svg {
+  transform: rotate(0deg);
+}
+
+/* Second button (Previous) - rotate 45 degrees to the left */
+.fullscreen-toolbar.rotated .toolbar-button:nth-child(2) .toolbar-svg {
+  transform: rotate(-45deg);
+}
+
+/* Fifth button (Next) - rotate 45 degrees to the right */
 .fullscreen-toolbar.rotated .toolbar-button:nth-child(5) .toolbar-svg {
-  transform: rotate(180deg);
+  transform: rotate(-135deg);
 }
 
 /* Ensure no double-rotation in normal mode */
