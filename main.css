@@ -589,8 +589,8 @@ input[type="date"]#DatePicker:disabled {
   height: 24px;
 }
 
-/* Portrait mode for rotated comic - toolbar on left side */
-@media (orientation: portrait) {
+/* Landscape mode for rotated comic - toolbar on left side */
+@media (orientation: landscape) {
   .fullscreen-toolbar.rotated {
     flex-direction: column;
     padding: 16px 10px;
@@ -612,8 +612,8 @@ input[type="date"]#DatePicker:disabled {
   }
 }
 
-/* Landscape mode for rotated comic - toolbar at bottom */
-@media (orientation: landscape) {
+/* Portrait mode for rotated comic - toolbar at bottom */
+@media (orientation: portrait) {
   .fullscreen-toolbar.rotated {
     flex-direction: row;
     padding: 12px 16px;
@@ -650,9 +650,8 @@ input[type="date"]#DatePicker:disabled {
     width: 22px;
     height: 22px;
   }
-  
-  /* Portrait + small screen (mobile) - toolbar on left for rotated comic */
-  @media (orientation: portrait) {
+    /* Landscape + small screen (mobile) - toolbar on left for rotated comic */
+  @media (orientation: landscape) {
     .fullscreen-toolbar.rotated {
       padding: 12px 8px;
       max-width: 60px;
@@ -670,8 +669,8 @@ input[type="date"]#DatePicker:disabled {
     }
   }
   
-  /* Landscape + small screen (mobile) - toolbar at bottom for rotated comic */
-  @media (orientation: landscape) {
+  /* Portrait + small screen (mobile) - toolbar at bottom for rotated comic */
+  @media (orientation: portrait) {
     .fullscreen-toolbar.rotated {
       padding: 12px 16px;
       max-width: 90vw;
