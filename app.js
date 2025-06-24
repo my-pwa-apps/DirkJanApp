@@ -557,13 +557,12 @@ function Rotate() {
     overlay.style.width = '100vw';
     overlay.style.height = '100vh';
     overlay.style.backgroundColor = 'rgba(0,0,0,0.3)';
-    overlay.style.zIndex = '10000';
-
-    // Clone the comic image
+    overlay.style.zIndex = '10000';    // Clone the comic image
     const clonedComic = element.cloneNode(true);
     clonedComic.id = 'rotated-comic';
     clonedComic.className = "rotate";
-    clonedComic.style.display = 'block'; // Ensure visible    // Create the fullscreen toolbar
+    clonedComic.style.display = 'block'; // Ensure visible
+    clonedComic.onclick = null; // Remove the onclick handler to prevent recursive calls// Create the fullscreen toolbar
     const fullscreenToolbar = document.createElement('div');
     fullscreenToolbar.id = 'fullscreen-toolbar';
     fullscreenToolbar.className = 'toolbar fullscreen-toolbar';
