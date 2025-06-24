@@ -694,6 +694,12 @@ input[type="date"]#DatePicker:disabled {
   transform: rotate(-90deg);
 }
 
+/* Special rotation for arrow buttons in rotated mode */
+.fullscreen-toolbar.rotated .toolbar-button:nth-child(2) .toolbar-svg,
+.fullscreen-toolbar.rotated .toolbar-button:nth-child(5) .toolbar-svg {
+  transform: rotate(180deg);
+}
+
 /* Ensure no double-rotation in normal mode */
 .fullscreen-toolbar:not(.rotated) .toolbar-svg {
   transform: none;
