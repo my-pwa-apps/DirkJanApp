@@ -624,8 +624,12 @@ input[type="date"]#DatePicker:disabled {
     margin: 0; /* Use gap for spacing, so remove margin */
 }
   
+/* Rotated comic positioning */
 #rotated-comic {
-    margin-left: 90px !important; /* Make room for the toolbar */
+    /* Using margin-left pushes the comic off-center. 
+       Instead, we adjust `left` to re-center the comic in the space available next to the toolbar. */
+    left: calc(50% + 40px) !important; /* Nudge to center in space right of toolbar */
+    margin-left: 0 !important; /* Reset margin */
     margin-bottom: 0 !important;
 }
 
@@ -676,22 +680,21 @@ input[type="date"]#DatePicker:disabled {
 /* Additional responsive styles for the rotated toolbar on small height screens */
 @media (max-height: 420px) {
     .fullscreen-toolbar.rotated {
-        padding: 8px 5px;
-        gap: 3px;
-        max-width: 54px;
-        left: 10px;
-        max-height: 90vh; /* Allow it to use more height */
+        gap: 4px; /* Further reduce gap */
+        padding: 8px 4px; /* Adjust padding */
+        left: 10px; /* Keep it close to the edge */
     }
 
-    .fullscreen-toolbar.rotated .toolbar-button {
-        width: 34px;
-        height: 34px;
+    .fullscreen-toolbar.rotated .toolbar-button,
+    .fullscreen-toolbar.rotated .toolbar-datepicker-btn {
+        width: 36px; /* Smaller buttons */
+        height: 36px;
         border-radius: 10px;
     }
 
     .fullscreen-toolbar.rotated .toolbar-svg {
-        width: 16px;
-        height: 16px;
+        width: 18px; /* Smaller icons */
+        height: 18px;
     }
 }
 
