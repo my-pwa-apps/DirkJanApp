@@ -617,10 +617,11 @@ input[type="date"]#DatePicker:disabled {
     left: 20px;
     bottom: auto;
     transform: translateY(-50%);
+    gap: 5px; /* Use gap for consistent spacing */
 }
   
 .fullscreen-toolbar.rotated .toolbar-button {
-    margin: 5px 0;
+    margin: 0; /* Use gap for spacing, so remove margin */
 }
   
 #rotated-comic {
@@ -632,14 +633,14 @@ input[type="date"]#DatePicker:disabled {
 /* Since the comic is rotated 90° clockwise, we need to rotate the navigation arrows accordingly */
 /* For a vertical toolbar on the left, Up = Previous/First, Down = Next */
 
-/* First button (skip to beginning) - rotate -90deg to point UP */
+/* First button (skip to beginning) - rotate 180deg to point LEFT */
 .fullscreen-toolbar.rotated .toolbar-button:nth-child(1) .toolbar-svg {
-  transform: rotate(-90deg);
+  transform: rotate(180deg);
 }
 
-/* Second button (Previous) - rotate -90deg to point UP */
+/* Second button (Previous) - rotate 180deg to point LEFT */
 .fullscreen-toolbar.rotated .toolbar-button:nth-child(2) .toolbar-svg {
-  transform: rotate(-90deg);
+  transform: rotate(180deg);
 }
 
 /* Third button (Random) - rotate -90 degrees so dice stays upright */
@@ -670,6 +671,28 @@ input[type="date"]#DatePicker:disabled {
 /* Ensure no rotation in normal mode */
 .fullscreen-toolbar:not(.rotated) .toolbar-svg {
   transform: none;
+}
+
+/* Additional responsive styles for the rotated toolbar on small height screens */
+@media (max-height: 420px) {
+    .fullscreen-toolbar.rotated {
+        padding: 8px 5px;
+        gap: 3px;
+        max-width: 54px;
+        left: 10px;
+        max-height: 90vh; /* Allow it to use more height */
+    }
+
+    .fullscreen-toolbar.rotated .toolbar-button {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+    }
+
+    .fullscreen-toolbar.rotated .toolbar-svg {
+        width: 16px;
+        height: 16px;
+    }
 }
 
 
