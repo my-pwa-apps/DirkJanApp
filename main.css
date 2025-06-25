@@ -617,7 +617,7 @@ input[type="date"]#DatePicker:disabled {
     left: 20px;
     bottom: auto;
     transform: translateY(-50%);
-    gap: 5px; /* Use gap for consistent spacing */
+    gap: 10px; /* Increased gap for better spacing */
 }
   
 .fullscreen-toolbar.rotated .toolbar-button {
@@ -633,14 +633,14 @@ input[type="date"]#DatePicker:disabled {
 /* Since the comic is rotated 90° clockwise, we need to rotate the navigation arrows accordingly */
 /* For a vertical toolbar on the left, Up = Previous/First, Down = Next */
 
-/* First button (skip to beginning) - rotate 180deg to point LEFT */
+/* First button (skip to beginning) - rotate 0deg to point LEFT */
 .fullscreen-toolbar.rotated .toolbar-button:nth-child(1) .toolbar-svg {
-  transform: rotate(180deg);
+  transform: rotate(0deg);
 }
 
-/* Second button (Previous) - rotate 180deg to point LEFT */
+/* Second button (Previous) - rotate 0deg to point LEFT */
 .fullscreen-toolbar.rotated .toolbar-button:nth-child(2) .toolbar-svg {
-  transform: rotate(180deg);
+  transform: rotate(0deg);
 }
 
 /* Third button (Random) - rotate -90 degrees so dice stays upright */
