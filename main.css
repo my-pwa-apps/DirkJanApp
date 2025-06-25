@@ -713,9 +713,9 @@ input[type="date"]#DatePicker:disabled {
 /* --- ROTATED MODE: Rotate toolbar SVGs for proper direction --- */
 /* Since the comic is rotated 90° clockwise, we need to rotate the navigation arrows accordingly */
 
-/* First button (skip to beginning) - rotate 180 degrees so it points left (beginning direction in rotated view) */
+/* First button (skip to beginning) - rotate 0 degrees so it points left */
 .fullscreen-toolbar.rotated .toolbar-button:nth-child(1) .toolbar-svg {
-  transform: rotate(180deg);
+  transform: rotate(0deg);
 }
 
 /* Second button (Previous) - rotate 90 degrees clockwise so left arrow points up */
