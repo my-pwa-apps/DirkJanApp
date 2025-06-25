@@ -689,28 +689,45 @@ input[type="date"]#DatePicker:disabled {
   }
 }
 
-/* --- ROTATED MODE: Rotate toolbar SVGs upright --- */
-.fullscreen-toolbar.rotated .toolbar-svg {
-  transform: rotate(-90deg);
-}
+/* --- ROTATED MODE: Rotate toolbar SVGs for proper direction --- */
+/* Since the comic is rotated 90° clockwise, we need to rotate the navigation arrows accordingly */
 
-/* Special rotation for arrow buttons in rotated mode */
-/* First button (skip to beginning) - rotate 90 degrees */
+/* First button (skip to beginning) - keep as is, it's already correct */
 .fullscreen-toolbar.rotated .toolbar-button:nth-child(1) .toolbar-svg {
   transform: rotate(0deg);
 }
 
-/* Second button (Previous) - rotate 45 degrees to the left */
+/* Second button (Previous) - rotate 90 degrees clockwise so left arrow points up */
 .fullscreen-toolbar.rotated .toolbar-button:nth-child(2) .toolbar-svg {
-  transform: rotate(-45deg);
+  transform: rotate(90deg);
 }
 
-/* Fifth button (Next) - rotate 45 degrees to the right */
+/* Third button (Random) - rotate -90 degrees so dice stays upright */
+.fullscreen-toolbar.rotated .toolbar-button:nth-child(3) .toolbar-svg {
+  transform: rotate(-90deg);
+}
+
+/* Fourth button (Date picker) - rotate -90 degrees so calendar stays upright */
+.fullscreen-toolbar.rotated .toolbar-button:nth-child(4) .toolbar-svg {
+  transform: rotate(-90deg);
+}
+
+/* Fifth button (Next) - rotate 90 degrees clockwise so right arrow points down */
 .fullscreen-toolbar.rotated .toolbar-button:nth-child(5) .toolbar-svg {
-  transform: rotate(-135deg);
+  transform: rotate(90deg);
 }
 
-/* Ensure no double-rotation in normal mode */
+/* Sixth button (Today) - rotate -90 degrees so calendar stays upright */
+.fullscreen-toolbar.rotated .toolbar-button:nth-child(6) .toolbar-svg {
+  transform: rotate(-90deg);
+}
+
+/* Seventh button (Close) - rotate -90 degrees so X stays upright */
+.fullscreen-toolbar.rotated .toolbar-button:nth-child(7) .toolbar-svg {
+  transform: rotate(-90deg);
+}
+
+/* Ensure no rotation in normal mode */
 .fullscreen-toolbar:not(.rotated) .toolbar-svg {
   transform: none;
 }
