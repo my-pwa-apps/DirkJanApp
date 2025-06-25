@@ -633,14 +633,14 @@ input[type="date"]#DatePicker:disabled {
 /* Since the comic is rotated 90° clockwise, we need to rotate the navigation arrows accordingly */
 /* For a vertical toolbar on the left, Up = Previous/First, Down = Next */
 
-/* First button (skip to beginning) - rotate 0deg to point LEFT */
+/* First button (skip to beginning) - rotate 90deg to point UP */
 .fullscreen-toolbar.rotated .toolbar-button:nth-child(1) .toolbar-svg {
-  transform: rotate(0deg);
+  transform: rotate(90deg);
 }
 
-/* Second button (Previous) - rotate 0deg to point LEFT */
+/* Second button (Previous) - rotate 90deg to point UP */
 .fullscreen-toolbar.rotated .toolbar-button:nth-child(2) .toolbar-svg {
-  transform: rotate(0deg);
+  transform: rotate(90deg);
 }
 
 /* Third button (Random) - rotate -90 degrees so dice stays upright */
