@@ -444,17 +444,30 @@ function DisplayComic()
 		}  
 }
 
-
+function setButtonDisabled(id, disabled) {
+  const mainButton = document.getElementById(id);
+  if (mainButton) {
+    mainButton.disabled = disabled;
+  }
+  
+  const rotatedButton = document.getElementById(`rotated-${id}`);
+  if (rotatedButton) {
+    rotatedButton.disabled = disabled;
+  }
+}
 
  function CompareDates() {
 	var favs = JSON.parse(localStorage.getItem('favs'));
+	const rotatedDatePicker = document.getElementById('rotated-DatePicker');
 	if(document.getElementById("showfavs").checked)
 	{
 		document.getElementById("DatePicker").disabled = true;
+		if (rotatedDatePicker) rotatedDatePicker.disabled = true;
 		startDate = new Date(favs[0])}
 	else
   {	
 		document.getElementById("DatePicker").disabled = false;
+		if (rotatedDatePicker) rotatedDatePicker.disabled = false;
 		startDate = new Date(comicstartDate);
 	}
 	startDate = startDate.setHours(0, 0, 0, 0);
@@ -462,14 +475,14 @@ function DisplayComic()
 	startDate = new Date(startDate);
 	currentselectedDate = new Date(currentselectedDate);
 	if(currentselectedDate.getTime() <= startDate.getTime()) {
-		document.getElementById("Previous").disabled = true;
-		document.getElementById("First").disabled = true;
+		setButtonDisabled("Previous", true);
+		setButtonDisabled("First", true);
 		formatDate(startDate);
 		startDate = year + '-' + month + '-' + day;
 		currentselectedDate = new Date(Date.UTC(year, month-1, day,12));
 	} else {
-		document.getElementById("Previous").disabled = false;
-		document.getElementById("First").disabled = false;
+		setButtonDisabled("Previous", false);
+		setButtonDisabled("First", false);
 	}
 	if(document.getElementById("showfavs").checked) {
 		endDate = new Date(favs[favs.length - 1]);
@@ -481,41 +494,41 @@ function DisplayComic()
   endDate = new Date(endDate);
 
   if(currentselectedDate.getTime() >= endDate.getTime()) {
-		document.getElementById("Next").disabled = true;
+		setButtonDisabled("Next", true);
 		formatDate(endDate);
 		endDate = year + '-' + month + '-' + day;
 		currentselectedDate = new Date(Date.UTC(year, month-1, day,12));
 	} else {
-		document.getElementById("Next").disabled = false;
-		document.getElementById("Current").disabled = false;
+		setButtonDisabled("Next", false);
+		setButtonDisabled("Current", false);
 	}
 
   if((currentselectedDate.getDate() == new Date().getDate()) && showfavs.checked == false)
   {
-    document.getElementById("Current").disabled = true;
+    setButtonDisabled("Current", true);
   }
   else
   {
-    document.getElementById("Current").disabled = false;
+    setButtonDisabled("Current", false);
   }
 
   if (showfavs.checked && (currentselectedDate.getDate() == new Date (favs[favs.length - 1 ]).getDate()))
   {
-    document.getElementById("Current").disabled = true;
+    setButtonDisabled("Current", true);
   }
 	if(document.getElementById("showfavs").checked) {
 		//document.getElementById("Current").disabled = true;
 		if(favs.length == 1) {
-			document.getElementById("Random").disabled = true;
-			document.getElementById("Previous").disabled = true;
-			document.getElementById("First").disabled = true;
+			setButtonDisabled("Random", true);
+			setButtonDisabled("Previous", true);
+			setButtonDisabled("First", true);
 		} else {
-			document.getElementById("Random").disabled = false;
-			document.getElementById("Previous").disabled = false;
-			document.getElementById("First").disabled = false;
+			setButtonDisabled("Random", false);
+			setButtonDisabled("Previous", false);
+			setButtonDisabled("First", false);
 		}
 	} else {
-		document.getElementById("Random").disabled = false;
+		setButtonDisabled("Random", false);
 	}
 }
 
@@ -595,13 +608,13 @@ function Rotate() {
     fullscreenToolbar.id = 'fullscreen-toolbar';
     fullscreenToolbar.className = 'toolbar fullscreen-toolbar';
     fullscreenToolbar.innerHTML = `
-      <button class="toolbar-button" onclick="FirstClick(); return false;" title="Eerste comic">
+      <button id="rotated-First" class="toolbar-button" onclick="FirstClick(); return false;" title="Eerste comic">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
       </button>
-      <button class="toolbar-button" onclick="PreviousClick(); return false;" title="Vorige comic">
+      <button id="rotated-Previous" class="toolbar-button" onclick="PreviousClick(); return false;" title="Vorige comic">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
-      <button class="toolbar-button" onclick="RandomClick(); return false;" title="Willekeurige comic">
+      <button id="rotated-Random" class="toolbar-button" onclick="RandomClick(); return false;" title="Willekeurige comic">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg">
           <rect x="4" y="4" width="16" height="16" rx="2" ry="2"/>
           <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
@@ -609,14 +622,15 @@ function Rotate() {
           <circle cx="15.5" cy="15.5" r="1.5" fill="currentColor"/>
           <circle cx="8.5" cy="15.5" r="1.5" fill="currentColor"/>
         </svg>
-      </button>      <button class="toolbar-button toolbar-datepicker-btn" title="Selecteer datum">
+      </button>
+      <button class="toolbar-button toolbar-datepicker-btn" title="Selecteer datum">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         <input id="rotated-DatePicker" class="toolbar-datepicker" oninput="DateChange()" type="date" min="2015-05-04" title="Selecteer datum">
       </button>
-      <button class="toolbar-button" onclick="NextClick(); return false;" title="Volgende comic">
+      <button id="rotated-Next" class="toolbar-button" onclick="NextClick(); return false;" title="Volgende comic">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
-      <button class="toolbar-button" onclick="CurrentClick(); return false;" title="Vandaag">
+      <button id="rotated-Current" class="toolbar-button" onclick="CurrentClick(); return false;" title="Vandaag">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><circle cx="12" cy="16" r="2"/></svg>
       </button>
       <button class="toolbar-button" onclick="Rotate(); return false;" title="Sluiten">
@@ -630,6 +644,9 @@ function Rotate() {
 
     // Add rotated class to toolbar for SVG rotation
     fullscreenToolbar.classList.add('rotated');
+
+    // Call CompareDates to set initial button states
+    CompareDates();
 
     // Show the comic and toolbar
     clonedComic.style.display = 'block';
