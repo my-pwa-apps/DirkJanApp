@@ -757,50 +757,58 @@ function handleTouchEnd(e) {
 	// Check if we're in fullscreen/rotated mode
 	const isInFullscreen = document.getElementById('rotated-comic') !== null;
 	
-	// Determine swipe direction
-	if (absX > absY && absX > MIN_SWIPE_DISTANCE) {
-		// Horizontal swipe - if in fullscreen, swap directions due to rotation
-		if (deltaX > 0) {
-			// Swipe right
-			console.log('Swipe right detected');
-			if (isInFullscreen) {
-				// In rotated view, right swipe should go to next (due to 90° rotation)
-				NextClick();
-			} else {
-				PreviousClick();
-			}
-		} else {
-			// Swipe left
-			console.log('Swipe left detected');
-			if (isInFullscreen) {
-				// In rotated view, left swipe should go to previous (due to 90° rotation)
-				PreviousClick();
-			} else {
-				NextClick();
-			}
-		}
-	} else if (absY > absX && absY > MIN_SWIPE_DISTANCE) {
-		// Vertical swipe - if in fullscreen, swap directions due to rotation
-		if (deltaY > 0) {
-			// Swipe down
-			console.log('Swipe down detected');
-			if (isInFullscreen) {
-				// In rotated view, down swipe should go to random (due to 90° rotation)
-				RandomClick();
-			} else {
-				RandomClick();
-			}
-		} else {
-			// Swipe up
-			console.log('Swipe up detected');
-			if (isInFullscreen) {
-				// In rotated view, up swipe should go to today (due to 90° rotation)
-				CurrentClick();
-			} else {
-				CurrentClick();
-			}
-		}
-	}
+	// Determine swipe direction based on mode
+	if (isInFullscreen) {
+    // Rotated mode: Vertical for Next/Prev, Horizontal for Random/Today
+    if (absY > absX && absY > MIN_SWIPE_DISTANCE) {
+      // Vertical swipe
+      if (deltaY < 0) {
+        // Swipe Up -> Previous
+        console.log('Swipe up detected in rotated view');
+        PreviousClick();
+      } else {
+        // Swipe Down -> Next
+        console.log('Swipe down detected in rotated view');
+        NextClick();
+      }
+    } else if (absX > absY && absX > MIN_SWIPE_DISTANCE) {
+      // Horizontal swipe
+      if (deltaX < 0) {
+        // Swipe Left -> Random
+        console.log('Swipe left detected in rotated view');
+        RandomClick();
+      } else {
+        // Swipe Right -> Today
+        console.log('Swipe right detected in rotated view');
+        CurrentClick();
+      }
+    }
+  } else {
+    // Normal mode: Horizontal for Next/Prev, Vertical for Random/Today
+    if (absX > absY && absX > MIN_SWIPE_DISTANCE) {
+      // Horizontal swipe
+      if (deltaX > 0) {
+        // Swipe right
+        console.log('Swipe right detected');
+        PreviousClick();
+      } else {
+        // Swipe left
+        console.log('Swipe left detected');
+        NextClick();
+      }
+    } else if (absY > absX && absY > MIN_SWIPE_DISTANCE) {
+      // Vertical swipe
+      if (deltaY > 0) {
+        // Swipe down
+        console.log('Swipe down detected');
+        RandomClick();
+      } else {
+        // Swipe up
+        console.log('Swipe up detected');
+        CurrentClick();
+      }
+    }
+  }
 }
 
 // Add touch event listeners to the document
