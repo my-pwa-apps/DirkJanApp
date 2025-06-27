@@ -1133,7 +1133,6 @@ function makeMainToolbarDraggable(toolbar) {
   if (!toolbar) return;
 
   let isDragging = false;
-  let dragTimeout;
   let offsetX, offsetY;
 
   // Restore saved position on load
@@ -1144,52 +1143,49 @@ function makeMainToolbarDraggable(toolbar) {
   }
 
   const onDown = (e) => {
+    // For mouse events, only drag with the left button
+    if (e.type === 'mousedown' && e.button !== 0) {
+      return;
+    }
+    
     // Prevent dragging when interacting with buttons or inputs
     if (e.target.closest('button, input')) {
       return;
     }
 
-    // For mouse events, only drag with the left button
-    if (e.type === 'mousedown' && e.button !== 0) {
-      return;
-    }
+    isDragging = true;
+    toolbar.style.cursor = 'grabbing';
+    toolbar.style.transition = 'none'; // No transition during drag
 
     const event = e.touches ? e.touches[0] : e;
+    
+    // Calculate offset from the top-left of the toolbar itself
     const rect = toolbar.getBoundingClientRect();
-    const parentRect = toolbar.parentElement.getBoundingClientRect();
+    offsetX = event.clientX - rect.left;
+    offsetY = event.clientY - rect.top;
 
-    offsetX = event.clientX - (rect.left - parentRect.left);
-    offsetY = event.clientY - (rect.top - parentRect.top);
-
-    // Set a timeout to initiate dragging after a short hold
-    dragTimeout = setTimeout(() => {
-      isDragging = true;
-      toolbar.style.cursor = 'grabbing';
-      toolbar.style.transition = 'none';
-    }, 200); // 200ms delay for hold-to-drag
-
+    // Add move and up listeners
     document.addEventListener('mousemove', onMove);
     document.addEventListener('touchmove', onMove, { passive: false });
     document.addEventListener('mouseup', onUp);
     document.addEventListener('touchend', onUp);
 
-    // Prevent default on touchmove only when dragging
-    if (e.type === 'touchstart') {
-        document.addEventListener('touchmove', (evt) => {
-            if(isDragging) evt.preventDefault();
-        }, { passive: false });
-    }
+    // Prevent default actions like text selection or page scrolling
+    e.preventDefault();
   };
 
   const onMove = (e) => {
     if (!isDragging) return;
 
     const event = e.touches ? e.touches[0] : e;
-    const parentRect = toolbar.parentElement.getBoundingClientRect();
+    const parent = toolbar.parentElement;
+    const parentRect = parent.getBoundingClientRect();
 
+    // Calculate new position relative to the parent
     let newLeft = event.clientX - parentRect.left - offsetX;
     let newTop = event.clientY - parentRect.top - offsetY;
 
+    // Constrain within the parent element
     const toolbarRect = toolbar.getBoundingClientRect();
     newLeft = Math.max(0, Math.min(newLeft, parentRect.width - toolbarRect.width));
     newTop = Math.max(0, Math.min(newTop, parentRect.height - toolbarRect.height));
@@ -1199,23 +1195,24 @@ function makeMainToolbarDraggable(toolbar) {
   };
 
   const onUp = () => {
-    clearTimeout(dragTimeout); // Clear timeout if released before drag starts
-
     if (isDragging) {
       isDragging = false;
       toolbar.style.cursor = 'grab';
-      toolbar.style.transition = '';
+      toolbar.style.transition = ''; // Restore original transition
 
+      // Save the final position
       const pos = { top: toolbar.style.top, left: toolbar.style.left };
       localStorage.setItem('mainToolbarPosition', JSON.stringify(pos));
     }
 
+    // Remove listeners
     document.removeEventListener('mousemove', onMove);
     document.removeEventListener('touchmove', onMove);
     document.removeEventListener('mouseup', onUp);
     document.removeEventListener('touchend', onUp);
   };
 
+  // Attach initial listeners
   toolbar.addEventListener('mousedown', onDown);
-  toolbar.addEventListener('touchstart', onDown, { passive: true });
+  toolbar.addEventListener('touchstart', onDown, { passive: false });
 }
