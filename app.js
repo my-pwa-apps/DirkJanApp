@@ -853,7 +853,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }, { capture: true });
   
   // Make the main toolbar draggable
-  const mainToolbar = document.querySelector('.toolbar:not(.fullscreen-toolbar)');
+  const mainToolbar = document.querySelector('.toolbar-container .toolbar');
   makeMainToolbarDraggable(mainToolbar);
 });
 
@@ -1130,7 +1130,10 @@ function positionFullscreenToolbar() {
 
 // Make the main toolbar draggable
 function makeMainToolbarDraggable(toolbar) {
-  if (!toolbar) return;
+  if (!toolbar) {
+    console.log('Toolbar not found for dragging');
+    return;
+  }
 
   let isDragging = false;
   let offsetX, offsetY;
@@ -1138,6 +1141,8 @@ function makeMainToolbarDraggable(toolbar) {
   // Restore saved position on load
   const savedPos = JSON.parse(localStorage.getItem('mainToolbarPosition'));
   if (savedPos && savedPos.top && savedPos.left) {
+    // Ensure the toolbar is positioned absolutely within its container
+    toolbar.style.position = 'absolute';
     toolbar.style.top = savedPos.top;
     toolbar.style.left = savedPos.left;
   }
@@ -1153,14 +1158,19 @@ function makeMainToolbarDraggable(toolbar) {
       return;
     }
 
+    console.log('Starting drag');
     isDragging = true;
     toolbar.style.cursor = 'grabbing';
     toolbar.style.transition = 'none'; // No transition during drag
+    
+    // Ensure absolute positioning
+    toolbar.style.position = 'absolute';
 
     const event = e.touches ? e.touches[0] : e;
-    
-    // Calculate offset from the top-left of the toolbar itself
     const rect = toolbar.getBoundingClientRect();
+    const containerRect = toolbar.parentElement.getBoundingClientRect();
+    
+    // Calculate offset from the mouse/touch position to toolbar's position relative to container
     offsetX = event.clientX - rect.left;
     offsetY = event.clientY - rect.top;
 
@@ -1178,17 +1188,19 @@ function makeMainToolbarDraggable(toolbar) {
     if (!isDragging) return;
 
     const event = e.touches ? e.touches[0] : e;
-    const parent = toolbar.parentElement;
-    const parentRect = parent.getBoundingClientRect();
+    const container = toolbar.parentElement;
+    const containerRect = container.getBoundingClientRect();
 
-    // Calculate new position relative to the parent
-    let newLeft = event.clientX - parentRect.left - offsetX;
-    let newTop = event.clientY - parentRect.top - offsetY;
+    // Calculate new position relative to the container
+    let newLeft = event.clientX - containerRect.left - offsetX;
+    let newTop = event.clientY - containerRect.top - offsetY;
 
-    // Constrain within the parent element
+    // Get toolbar dimensions
     const toolbarRect = toolbar.getBoundingClientRect();
-    newLeft = Math.max(0, Math.min(newLeft, parentRect.width - toolbarRect.width));
-    newTop = Math.max(0, Math.min(newTop, parentRect.height - toolbarRect.height));
+    
+    // Constrain within the container
+    newLeft = Math.max(0, Math.min(newLeft, containerRect.width - toolbarRect.width));
+    newTop = Math.max(0, Math.min(newTop, containerRect.height - toolbarRect.height));
 
     toolbar.style.left = `${newLeft}px`;
     toolbar.style.top = `${newTop}px`;
@@ -1196,6 +1208,7 @@ function makeMainToolbarDraggable(toolbar) {
 
   const onUp = () => {
     if (isDragging) {
+      console.log('Ending drag');
       isDragging = false;
       toolbar.style.cursor = 'grab';
       toolbar.style.transition = ''; // Restore original transition
@@ -1215,4 +1228,6 @@ function makeMainToolbarDraggable(toolbar) {
   // Attach initial listeners
   toolbar.addEventListener('mousedown', onDown);
   toolbar.addEventListener('touchstart', onDown, { passive: false });
+  
+  console.log('Toolbar drag functionality attached');
 }
