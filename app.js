@@ -1141,42 +1141,30 @@ function makeMainToolbarDraggable(toolbar) {
     toolbar.style.position = 'absolute';
     toolbar.style.top = savedPos.top;
     toolbar.style.left = savedPos.left;
-    toolbar.style.transform = 'none'; // Clear transform if any
+    toolbar.style.transform = 'none';
   }
 
   const onDown = (e) => {
-    // For mouse events, only drag with the left button
-    if (e.type === 'mousedown' && e.button !== 0) {
-      return;
-    }
-    
-    // Prevent dragging when interacting with buttons or inputs
-    if (e.target.closest('button, input')) {
+    if ((e.type === 'mousedown' && e.button !== 0) || e.target.closest('button, input')) {
       return;
     }
 
     isDragging = true;
     toolbar.style.cursor = 'grabbing';
-    toolbar.style.transition = 'none'; // No transition during drag
-
-    // Use absolute positioning for dragging
+    toolbar.style.transition = 'none';
     toolbar.style.position = 'absolute';
 
     const event = e.touches ? e.touches[0] : e;
     const rect = toolbar.getBoundingClientRect();
-    const parentRect = toolbar.parentElement.getBoundingClientRect();
 
-    // Calculate offset from the top-left of the parent container
-    offsetX = event.clientX - (rect.left - parentRect.left);
-    offsetY = event.clientY - (rect.top - parentRect.top);
+    offsetX = event.clientX - rect.left;
+    offsetY = event.clientY - rect.top;
 
-    // Add move and up listeners
     document.addEventListener('mousemove', onMove);
     document.addEventListener('touchmove', onMove, { passive: false });
     document.addEventListener('mouseup', onUp);
     document.addEventListener('touchend', onUp);
 
-    // Prevent default actions like text selection or page scrolling
     e.preventDefault();
   };
 
@@ -1184,41 +1172,39 @@ function makeMainToolbarDraggable(toolbar) {
     if (!isDragging) return;
 
     const event = e.touches ? e.touches[0] : e;
-    const parentRect = toolbar.parentElement.getBoundingClientRect();
+    
+    let newLeft = event.clientX - offsetX;
+    let newTop = event.clientY - offsetY;
 
-    // Calculate new position relative to the parent
-    let newLeft = event.clientX - parentRect.left - offsetX;
-    let newTop = event.clientY - parentRect.top - offsetY;
-
-    // Constrain within the parent element
     const toolbarRect = toolbar.getBoundingClientRect();
-    newLeft = Math.max(0, Math.min(newLeft, parentRect.width - toolbarRect.width));
-    newTop = Math.max(0, Math.min(newTop, parentRect.height - toolbarRect.height));
+    newLeft = Math.max(0, Math.min(newLeft, window.innerWidth - toolbarRect.width));
+    newTop = Math.max(0, Math.min(newTop, window.innerHeight - toolbarRect.height));
 
-    toolbar.style.left = `${newLeft}px`;
-    toolbar.style.top = `${newTop}px`;
-    toolbar.style.transform = 'none'; // Clear transform
+    const containerRect = toolbar.parentElement.getBoundingClientRect();
+    const finalLeft = newLeft - containerRect.left;
+    const finalTop = newTop - containerRect.top;
+
+    toolbar.style.left = `${finalLeft}px`;
+    toolbar.style.top = `${finalTop}px`;
+    toolbar.style.transform = 'none';
   };
 
   const onUp = () => {
     if (isDragging) {
       isDragging = false;
       toolbar.style.cursor = 'grab';
-      toolbar.style.transition = ''; // Restore original transition
+      toolbar.style.transition = '';
 
-      // Save the final position
       const pos = { top: toolbar.style.top, left: toolbar.style.left };
       localStorage.setItem('mainToolbarPosition', JSON.stringify(pos));
     }
 
-    // Remove listeners
     document.removeEventListener('mousemove', onMove);
     document.removeEventListener('touchmove', onMove);
     document.removeEventListener('mouseup', onUp);
     document.removeEventListener('touchend', onUp);
   };
 
-  // Attach initial listeners
   toolbar.addEventListener('mousedown', onDown);
   toolbar.addEventListener('touchstart', onDown, { passive: false });
 }
