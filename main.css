@@ -179,6 +179,63 @@ input
     gap: 8px; /* Add default gap between buttons */
 }
 
+/* Mobile responsive styles for toolbar */
+@media (max-width: 768px) {
+    .toolbar {
+        width: calc(100vw - 20px); /* Use almost full width on mobile */
+        padding: 12px 10px; /* Reduce padding on mobile */
+        gap: 6px; /* Smaller gap on mobile */
+        border-radius: 16px; /* Slightly smaller border radius */
+        left: 10px; /* Position from left edge */
+        transform: none; /* Remove centering transform */
+    }
+    
+    .toolbar-button {
+        width: 44px; /* Smaller buttons on mobile */
+        height: 44px;
+        min-width: 44px; /* Ensure minimum size */
+        border-radius: 12px;
+    }
+    
+    .toolbar-datepicker-btn {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+    }
+    
+    .toolbar-svg {
+        width: 22px;
+        height: 22px;
+    }
+}
+
+@media (max-width: 480px) {
+    .toolbar {
+        width: calc(100vw - 16px); /* Even more width on small screens */
+        padding: 10px 8px;
+        gap: 4px; /* Minimal gap on very small screens */
+        left: 8px;
+    }
+    
+    .toolbar-button {
+        width: 40px; /* Even smaller buttons on very small screens */
+        height: 40px;
+        min-width: 40px;
+        border-radius: 10px;
+    }
+    
+    .toolbar-datepicker-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+    }
+    
+    .toolbar-svg {
+        width: 20px;
+        height: 20px;
+    }
+}
+
 .toolbar-button {
     background: linear-gradient(45deg, #FFD700 0%, #F09819 51%, #FFD700 100%);
     background-size: 200% auto;
