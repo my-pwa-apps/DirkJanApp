@@ -146,6 +146,12 @@ input
 }
 
 /* Modern toolbar design with Fluent Design */
+.toolbar-container {
+    position: relative;
+    height: 84px; /* Match the toolbar's height + padding */
+    margin: 15px 0;
+}
+
 .toolbar {
     display: flex;
     justify-content: space-between;
@@ -153,7 +159,6 @@ input
     background: linear-gradient(135deg, rgba(0, 0, 0, 0.6) 0%, rgba(80, 80, 80, 0.4) 51%, rgba(0, 0, 0, 0.6) 100%);
     border-radius: 20px;
     padding: 16px 20px;
-    margin: 15px 0;
     width: 100%;
     box-shadow: 
         0 8px 32px rgba(0, 0, 0, 0.3),
@@ -163,7 +168,7 @@ input
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     box-sizing: border-box;
-    position: relative; /* Allow positioning for dragging */
+    position: absolute; /* Changed from relative to absolute */
     cursor: grab; /* Indicate draggable */
     z-index: 100; /* Ensure it appears above other content */
 }
