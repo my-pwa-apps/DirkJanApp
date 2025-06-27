@@ -1133,113 +1133,89 @@ function makeMainToolbarDraggable(toolbar) {
   if (!toolbar) return;
 
   let isDragging = false;
+  let dragTimeout;
   let offsetX, offsetY;
-  let dragTimeout = null;
 
   // Restore saved position on load
   const savedPos = JSON.parse(localStorage.getItem('mainToolbarPosition'));
   if (savedPos && savedPos.top && savedPos.left) {
-    toolbar.style.position = 'absolute';
     toolbar.style.top = savedPos.top;
     toolbar.style.left = savedPos.left;
-    toolbar.style.transform = 'none';
   }
 
   const onDown = (e) => {
-    // Only allow dragging with the left mouse button, and not on interactive elements.
-    if ((e.type === 'mousedown' && e.button !== 0) || e.target.closest('button, input')) {
+    // Prevent dragging when interacting with buttons or inputs
+    if (e.target.closest('button, input')) {
       return;
     }
 
-    // Add listeners to track mouse/touch movement and release.
+    // For mouse events, only drag with the left button
+    if (e.type === 'mousedown' && e.button !== 0) {
+      return;
+    }
+
+    const event = e.touches ? e.touches[0] : e;
+    const rect = toolbar.getBoundingClientRect();
+    const parentRect = toolbar.parentElement.getBoundingClientRect();
+
+    offsetX = event.clientX - (rect.left - parentRect.left);
+    offsetY = event.clientY - (rect.top - parentRect.top);
+
+    // Set a timeout to initiate dragging after a short hold
+    dragTimeout = setTimeout(() => {
+      isDragging = true;
+      toolbar.style.cursor = 'grabbing';
+      toolbar.style.transition = 'none';
+    }, 200); // 200ms delay for hold-to-drag
+
     document.addEventListener('mousemove', onMove);
     document.addEventListener('touchmove', onMove, { passive: false });
     document.addEventListener('mouseup', onUp);
     document.addEventListener('touchend', onUp);
 
-    // Set a timeout to initiate dragging after a short hold.
-    dragTimeout = setTimeout(() => {
-      dragTimeout = null; // Clear the timeout reference
-      isDragging = true;
-      
-      toolbar.style.cursor = 'grabbing';
-      toolbar.style.transition = 'none'; // Disable transitions during drag
-      toolbar.style.position = 'absolute'; // Ensure absolute positioning
-
-      const event = e.touches ? e.touches[0] : e;
-      const rect = toolbar.getBoundingClientRect();
-      
-      // Calculate the pointer's offset from the toolbar's top-left corner.
-      offsetX = event.clientX - rect.left;
-      offsetY = event.clientY - rect.top;
-      
-      // Prevent default actions like text selection once dragging starts.
-      e.preventDefault();
-
-    }, 200); // 200ms delay for hold-to-drag
+    // Prevent default on touchmove only when dragging
+    if (e.type === 'touchstart') {
+        document.addEventListener('touchmove', (evt) => {
+            if(isDragging) evt.preventDefault();
+        }, { passive: false });
+    }
   };
 
   const onMove = (e) => {
-    // If the user moves before the timeout, it's a scroll/swipe, not a drag.
-    if (dragTimeout) {
-      clearTimeout(dragTimeout);
-      dragTimeout = null;
-      // Clean up listeners to allow normal page interaction.
-      removeListeners();
-      return;
-    }
-
     if (!isDragging) return;
-
-    // Prevent default scrolling/selection behavior while dragging.
-    e.preventDefault();
 
     const event = e.touches ? e.touches[0] : e;
     const parentRect = toolbar.parentElement.getBoundingClientRect();
 
-    // Calculate the new top/left position relative to the parent container.
     let newLeft = event.clientX - parentRect.left - offsetX;
     let newTop = event.clientY - parentRect.top - offsetY;
 
-    // Constrain the toolbar within the bounds of its parent container.
     const toolbarRect = toolbar.getBoundingClientRect();
     newLeft = Math.max(0, Math.min(newLeft, parentRect.width - toolbarRect.width));
     newTop = Math.max(0, Math.min(newTop, parentRect.height - toolbarRect.height));
 
     toolbar.style.left = `${newLeft}px`;
     toolbar.style.top = `${newTop}px`;
-    toolbar.style.transform = 'none'; // Avoid conflicts with left/top
   };
 
   const onUp = () => {
-    // If the timeout is still pending, it was a click, not a drag.
-    if (dragTimeout) {
-      clearTimeout(dragTimeout);
-      dragTimeout = null;
-    }
+    clearTimeout(dragTimeout); // Clear timeout if released before drag starts
 
     if (isDragging) {
       isDragging = false;
       toolbar.style.cursor = 'grab';
-      toolbar.style.transition = ''; // Restore transitions
+      toolbar.style.transition = '';
 
-      // Save the final position to localStorage.
       const pos = { top: toolbar.style.top, left: toolbar.style.left };
       localStorage.setItem('mainToolbarPosition', JSON.stringify(pos));
     }
 
-    // Always remove the listeners on mouse/touch up.
-    removeListeners();
-  };
-
-  const removeListeners = () => {
     document.removeEventListener('mousemove', onMove);
     document.removeEventListener('touchmove', onMove);
     document.removeEventListener('mouseup', onUp);
     document.removeEventListener('touchend', onUp);
   };
 
-  // Attach the initial event listeners to the toolbar.
   toolbar.addEventListener('mousedown', onDown);
   toolbar.addEventListener('touchstart', onDown, { passive: true });
 }
