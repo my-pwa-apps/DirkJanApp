@@ -851,6 +851,10 @@ document.addEventListener('DOMContentLoaded', function() {
       e.stopPropagation();
     }
   }, { capture: true });
+  
+  // Make the main toolbar draggable
+  const mainToolbar = document.querySelector('.toolbar:not(.fullscreen-toolbar)');
+  makeMainToolbarDraggable(mainToolbar);
 });
 
 setStatus = document.getElementById("swipe");
@@ -1122,4 +1126,83 @@ function positionFullscreenToolbar() {
   toolbar.style.width = '';
   toolbar.style.maxWidth = '';
   toolbar.style.height = '';
+}
+
+// Make the main toolbar draggable
+function makeMainToolbarDraggable(toolbar) {
+  if (!toolbar) return;
+
+  let isDragging = false;
+  let offsetX, offsetY;
+
+  const onDown = (e) => {
+    // Only drag with left mouse button, and not on buttons or datepicker
+    if (e.button !== 0 || e.target.closest('button, input')) {
+      return;
+    }
+
+    isDragging = true;
+    toolbar.style.cursor = 'grabbing';
+    toolbar.style.transition = 'none';
+
+    const event = e.touches ? e.touches[0] : e;
+    const rect = toolbar.getBoundingClientRect();
+
+    offsetX = event.clientX - rect.left;
+    offsetY = event.clientY - rect.top;
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('mouseup', onUp);
+    document.addEventListener('touchend', onUp);
+
+    e.preventDefault();
+  };
+
+  const onMove = (e) => {
+    if (!isDragging) return;
+    const event = e.touches ? e.touches[0] : e;
+
+    let newLeft = event.pageX - offsetX;
+    let newTop = event.pageY - offsetY;
+
+    // Constrain to parent (main element)
+    const parent = toolbar.parentElement;
+    const parentRect = parent.getBoundingClientRect();
+    const toolbarRect = toolbar.getBoundingClientRect();
+
+    newLeft = Math.max(parentRect.left, Math.min(newLeft, parentRect.right - toolbarRect.width));
+    newTop = Math.max(parentRect.top, Math.min(newTop, parentRect.bottom - toolbarRect.height));
+
+    toolbar.style.left = `${newLeft}px`;
+    toolbar.style.top = `${newTop}px`;
+    toolbar.style.transform = 'none';
+  };
+
+  const onUp = () => {
+    if (isDragging) {
+      isDragging = false;
+      toolbar.style.cursor = 'grab';
+      toolbar.style.transition = '';
+
+      const pos = { top: toolbar.style.top, left: toolbar.style.left };
+      localStorage.setItem('mainToolbarPosition', JSON.stringify(pos));
+    }
+
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('touchmove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    document.removeEventListener('touchend', onUp);
+  };
+
+  toolbar.addEventListener('mousedown', onDown);
+  toolbar.addEventListener('touchstart', onDown, { passive: false });
+
+  // Load saved position
+  const savedPos = JSON.parse(localStorage.getItem('mainToolbarPosition'));
+  if (savedPos && savedPos.top && savedPos.left) {
+    toolbar.style.top = savedPos.top;
+    toolbar.style.left = savedPos.left;
+    toolbar.style.transform = 'none';
+  }
 }

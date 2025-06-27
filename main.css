@@ -163,6 +163,9 @@ input
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     box-sizing: border-box;
+    position: relative; /* Allow positioning for dragging */
+    cursor: grab; /* Indicate draggable */
+    z-index: 100; /* Ensure it appears above other content */
 }
 
 .toolbar-button {
