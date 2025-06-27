@@ -160,7 +160,8 @@ input
     background: linear-gradient(135deg, rgba(0, 0, 0, 0.6) 0%, rgba(80, 80, 80, 0.4) 51%, rgba(0, 0, 0, 0.6) 100%);
     border-radius: 20px;
     padding: 16px 20px;
-    width: calc(100% - 40px); /* Account for padding */
+    width: calc(100vw - 40px); /* Use full viewport width minus padding */
+    max-width: 900px; /* Limit maximum width to match main content */
     box-shadow: 
         0 8px 32px rgba(0, 0, 0, 0.3),
         0 2px 8px rgba(0, 0, 0, 0.2),
@@ -169,9 +170,10 @@ input
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     box-sizing: border-box;
-    position: absolute;
-    top: 0;
-    left: 0;
+    position: fixed;
+    top: 120px; /* Default position below logo */
+    left: 50%;
+    transform: translateX(-50%); /* Center horizontally */
     cursor: grab;
     z-index: 100;
 }

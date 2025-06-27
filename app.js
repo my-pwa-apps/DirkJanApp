@@ -1141,10 +1141,9 @@ function makeMainToolbarDraggable(toolbar) {
   // Restore saved position on load
   const savedPos = JSON.parse(localStorage.getItem('mainToolbarPosition'));
   if (savedPos && savedPos.top && savedPos.left) {
-    // Ensure the toolbar is positioned absolutely within its container
-    toolbar.style.position = 'absolute';
     toolbar.style.top = savedPos.top;
     toolbar.style.left = savedPos.left;
+    toolbar.style.transform = 'none'; // Clear default centering transform
   }
 
   const onDown = (e) => {
@@ -1162,20 +1161,16 @@ function makeMainToolbarDraggable(toolbar) {
     isDragging = true;
     toolbar.style.cursor = 'grabbing';
     toolbar.style.transition = 'none'; // No transition during drag
-    
-    // Ensure absolute positioning
-    toolbar.style.position = 'absolute';
 
     const event = e.touches ? e.touches[0] : e;
-    const rect = toolbar.getBoundingClientRect();
-    const containerRect = toolbar.parentElement.getBoundingClientRect();
     
-    // Calculate offset from the mouse/touch position to toolbar's position relative to container
+    // Calculate offset from the top-left of the toolbar itself
+    const rect = toolbar.getBoundingClientRect();
     offsetX = event.clientX - rect.left;
     offsetY = event.clientY - rect.top;
 
     // Add move and up listeners
-    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mousemove', onMove, { passive: false });
     document.addEventListener('touchmove', onMove, { passive: false });
     document.addEventListener('mouseup', onUp);
     document.addEventListener('touchend', onUp);
@@ -1188,22 +1183,22 @@ function makeMainToolbarDraggable(toolbar) {
     if (!isDragging) return;
 
     const event = e.touches ? e.touches[0] : e;
-    const container = toolbar.parentElement;
-    const containerRect = container.getBoundingClientRect();
 
-    // Calculate new position relative to the container
-    let newLeft = event.clientX - containerRect.left - offsetX;
-    let newTop = event.clientY - containerRect.top - offsetY;
+    // Calculate new position relative to the viewport
+    let newLeft = event.clientX - offsetX;
+    let newTop = event.clientY - offsetY;
 
-    // Get toolbar dimensions
+    // Constrain within the viewport
     const toolbarRect = toolbar.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
     
-    // Constrain within the container
-    newLeft = Math.max(0, Math.min(newLeft, containerRect.width - toolbarRect.width));
-    newTop = Math.max(0, Math.min(newTop, containerRect.height - toolbarRect.height));
+    newLeft = Math.max(0, Math.min(newLeft, viewportWidth - toolbarRect.width));
+    newTop = Math.max(0, Math.min(newTop, viewportHeight - toolbarRect.height));
 
     toolbar.style.left = `${newLeft}px`;
     toolbar.style.top = `${newTop}px`;
+    toolbar.style.transform = 'none'; // Clear any transform when dragging
   };
 
   const onUp = () => {
