@@ -1135,74 +1135,90 @@ function makeMainToolbarDraggable(toolbar) {
   let isDragging = false;
   let offsetX, offsetY;
 
+  // Restore saved position on load
+  const savedPos = JSON.parse(localStorage.getItem('mainToolbarPosition'));
+  if (savedPos && savedPos.top && savedPos.left) {
+    toolbar.style.position = 'absolute';
+    toolbar.style.top = savedPos.top;
+    toolbar.style.left = savedPos.left;
+    toolbar.style.transform = 'none'; // Clear transform if any
+  }
+
   const onDown = (e) => {
-    // Only drag with left mouse button, and not on buttons or datepicker
-    if (e.button !== 0 || e.target.closest('button, input')) {
+    // For mouse events, only drag with the left button
+    if (e.type === 'mousedown' && e.button !== 0) {
+      return;
+    }
+    
+    // Prevent dragging when interacting with buttons or inputs
+    if (e.target.closest('button, input')) {
       return;
     }
 
     isDragging = true;
     toolbar.style.cursor = 'grabbing';
-    toolbar.style.transition = 'none';
+    toolbar.style.transition = 'none'; // No transition during drag
+
+    // Use absolute positioning for dragging
+    toolbar.style.position = 'absolute';
 
     const event = e.touches ? e.touches[0] : e;
     const rect = toolbar.getBoundingClientRect();
+    const parentRect = toolbar.parentElement.getBoundingClientRect();
 
-    offsetX = event.clientX - rect.left;
-    offsetY = event.clientY - rect.top;
+    // Calculate offset from the top-left of the parent container
+    offsetX = event.clientX - (rect.left - parentRect.left);
+    offsetY = event.clientY - (rect.top - parentRect.top);
 
+    // Add move and up listeners
     document.addEventListener('mousemove', onMove);
     document.addEventListener('touchmove', onMove, { passive: false });
     document.addEventListener('mouseup', onUp);
     document.addEventListener('touchend', onUp);
 
+    // Prevent default actions like text selection or page scrolling
     e.preventDefault();
   };
 
   const onMove = (e) => {
     if (!isDragging) return;
+
     const event = e.touches ? e.touches[0] : e;
+    const parentRect = toolbar.parentElement.getBoundingClientRect();
 
-    let newLeft = event.pageX - offsetX;
-    let newTop = event.pageY - offsetY;
+    // Calculate new position relative to the parent
+    let newLeft = event.clientX - parentRect.left - offsetX;
+    let newTop = event.clientY - parentRect.top - offsetY;
 
-    // Constrain to parent (main element)
-    const parent = toolbar.parentElement;
-    const parentRect = parent.getBoundingClientRect();
+    // Constrain within the parent element
     const toolbarRect = toolbar.getBoundingClientRect();
-
-    newLeft = Math.max(parentRect.left, Math.min(newLeft, parentRect.right - toolbarRect.width));
-    newTop = Math.max(parentRect.top, Math.min(newTop, parentRect.bottom - toolbarRect.height));
+    newLeft = Math.max(0, Math.min(newLeft, parentRect.width - toolbarRect.width));
+    newTop = Math.max(0, Math.min(newTop, parentRect.height - toolbarRect.height));
 
     toolbar.style.left = `${newLeft}px`;
     toolbar.style.top = `${newTop}px`;
-    toolbar.style.transform = 'none';
+    toolbar.style.transform = 'none'; // Clear transform
   };
 
   const onUp = () => {
     if (isDragging) {
       isDragging = false;
       toolbar.style.cursor = 'grab';
-      toolbar.style.transition = '';
+      toolbar.style.transition = ''; // Restore original transition
 
+      // Save the final position
       const pos = { top: toolbar.style.top, left: toolbar.style.left };
       localStorage.setItem('mainToolbarPosition', JSON.stringify(pos));
     }
 
+    // Remove listeners
     document.removeEventListener('mousemove', onMove);
     document.removeEventListener('touchmove', onMove);
     document.removeEventListener('mouseup', onUp);
     document.removeEventListener('touchend', onUp);
   };
 
+  // Attach initial listeners
   toolbar.addEventListener('mousedown', onDown);
   toolbar.addEventListener('touchstart', onDown, { passive: false });
-
-  // Load saved position
-  const savedPos = JSON.parse(localStorage.getItem('mainToolbarPosition'));
-  if (savedPos && savedPos.top && savedPos.left) {
-    toolbar.style.top = savedPos.top;
-    toolbar.style.left = savedPos.left;
-    toolbar.style.transform = 'none';
-  }
 }
