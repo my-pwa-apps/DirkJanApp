@@ -974,36 +974,27 @@ document.addEventListener('DOMContentLoaded', function() {
     if (e.target.closest('.toolbar:not(.fullscreen-toolbar) .toolbar-button, .toolbar:not(.fullscreen-toolbar) .toolbar-datepicker-btn')) {
       const button = e.target.closest('.toolbar-button, .toolbar-datepicker-btn');
       if (button) {
-        // Immediate reset
-        button.blur();
-        button.style.transform = '';
-        button.style.backgroundPosition = '';
-        
-        // Aggressive Android-specific handling
         const isAndroid = /Android/i.test(navigator.userAgent);
+        
         if (isAndroid) {
-          // Force multiple resets with different timings for Android
+          // Android-specific: gentler reset that preserves visual feedback
           setTimeout(() => {
             button.blur();
-            button.style.transform = 'none';
-            button.style.backgroundPosition = 'left center';
-            button.classList.remove('active', 'focus', 'hover');
-          }, 50);
-          
-          setTimeout(() => {
-            button.blur();
-            button.style.transform = '';
-            button.style.backgroundPosition = '';
-            // Force reflow
-            button.offsetHeight;
-          }, 100);
-          
-          setTimeout(() => {
-            button.blur();
-            // Final reset
-            button.removeAttribute('style');
-            button.offsetHeight; // Force reflow
+            // Only reset if button is not being interacted with
+            if (!button.matches(':active')) {
+              button.style.transform = '';
+              button.style.backgroundPosition = '';
+            }
           }, 200);
+          
+          // Final cleanup
+          setTimeout(() => {
+            if (!button.matches(':active:hover')) {
+              button.blur();
+              button.style.transform = '';
+              button.style.backgroundPosition = '';
+            }
+          }, 500);
         } else {
           // Standard handling for other devices
           setTimeout(() => {
@@ -1016,40 +1007,29 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
   
-  // Additional Android-specific event handling
+  // Lighter Android-specific event handling
   if (/Android/i.test(navigator.userAgent)) {
-    console.log('Android device detected - applying enhanced button state fixes');
+    console.log('Android device detected - applying button state fixes');
     
-    // Handle both touchend and click events for Android
-    document.addEventListener('click', function(e) {
-      if (e.target.closest('.toolbar-button, .toolbar-datepicker-btn')) {
-        const button = e.target.closest('.toolbar-button, .toolbar-datepicker-btn');
-        setTimeout(() => {
-          button.blur();
-          button.style.transform = 'none';
-          button.style.backgroundPosition = 'left center';
-          button.classList.remove('active');
-        }, 10);
-      }
-    });
-    
-    // Force reset any button that gains focus on Android
+    // Handle focus issues without breaking interaction feedback
     document.addEventListener('focusin', function(e) {
       if (e.target.closest('.toolbar-button, .toolbar-datepicker-btn')) {
+        // Only blur after a delay to allow visual feedback
         setTimeout(() => {
-          e.target.blur();
-        }, 10);
+          if (!e.target.matches(':active')) {
+            e.target.blur();
+          }
+        }, 300);
       }
     });
     
-    // Handle touchstart to prevent state issues
+    // Clean up any lingering focus when touching elsewhere
     document.addEventListener('touchstart', function(e) {
-      // Remove focus from any currently focused button
-      const focusedButton = document.querySelector('.toolbar-button:focus, .toolbar-datepicker-btn:focus');
-      if (focusedButton && !e.target.closest('.toolbar-button, .toolbar-datepicker-btn')) {
-        focusedButton.blur();
-        focusedButton.style.transform = '';
-        focusedButton.style.backgroundPosition = '';
+      if (!e.target.closest('.toolbar-button, .toolbar-datepicker-btn')) {
+        const focusedButton = document.querySelector('.toolbar-button:focus, .toolbar-datepicker-btn:focus');
+        if (focusedButton) {
+          focusedButton.blur();
+        }
       }
     });
   }
