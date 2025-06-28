@@ -567,7 +567,7 @@ function setButtonDisabled(id, disabled) {
 		setButtonDisabled("Current", false);
 	}
 
-  if((currentselectedDate.getDate() == new Date().getDate()) && showfavs.checked == false)
+  if((currentselectedDate.getTime() === new Date().setHours(0, 0, 0, 0)) && showfavs.checked == false)
   {
     setButtonDisabled("Current", true);
   }
@@ -576,9 +576,12 @@ function setButtonDisabled(id, disabled) {
     setButtonDisabled("Current", false);
   }
 
-  if (showfavs.checked && (currentselectedDate.getDate() == new Date (favs[favs.length - 1 ]).getDate()))
-  {
-    setButtonDisabled("Current", true);
+  if (showfavs.checked) {
+    const lastFavDate = new Date(favs[favs.length - 1]).setHours(0, 0, 0, 0);
+    const today = new Date().setHours(0, 0, 0, 0);
+    if (currentselectedDate.getTime() === lastFavDate && lastFavDate === today) {
+      setButtonDisabled("Current", true);
+    }
   }
 	if(document.getElementById("showfavs").checked) {
 		//document.getElementById("Current").disabled = true;
@@ -914,7 +917,29 @@ document.addEventListener('DOMContentLoaded', function() {
       // If touch ends on toolbar or its children, don't trigger swipe
       e.stopPropagation();
     }
+    
+    // Fix mobile button state issues - force reset of button states
+    if (e.target.closest('.toolbar-button, .toolbar-datepicker-btn')) {
+      setTimeout(() => {
+        e.target.closest('.toolbar-button, .toolbar-datepicker-btn').blur();
+      }, 100);
+    }
   }, { capture: true });
+  
+  // Fix mobile button state for main toolbar buttons
+  document.addEventListener('touchend', function(e) {
+    if (e.target.closest('.toolbar:not(.fullscreen-toolbar) .toolbar-button, .toolbar:not(.fullscreen-toolbar) .toolbar-datepicker-btn')) {
+      setTimeout(() => {
+        const button = e.target.closest('.toolbar-button, .toolbar-datepicker-btn');
+        if (button) {
+          button.blur();
+          // Force style reset
+          button.style.transform = '';
+          button.style.backgroundPosition = '';
+        }
+      }, 150);
+    }
+  });
   
   // Make the main toolbar draggable
   const mainToolbar = document.querySelector('.toolbar:not(.fullscreen-toolbar)');
