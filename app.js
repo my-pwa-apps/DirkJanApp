@@ -60,6 +60,10 @@ async function Share()
 	
 	console.log('Attempting to share:', shareText, shareUrl, 'Image:', pictureUrl);
 
+	// Detect Android for special handling
+	const isAndroid = /Android/i.test(navigator.userAgent);
+	console.log('Device detected:', isAndroid ? 'Android' : 'Other', navigator.userAgent);
+
 	// Check if Web Share API is supported
 	if(!navigator.share) {
 		console.log('Web Share API not supported, using clipboard fallback');
@@ -79,20 +83,36 @@ async function Share()
 		await shareWithImage(shareText, shareUrl);
 		console.log('Comic with image shared successfully');
 	} catch (error) {
-		console.log('Image sharing failed, falling back to text with image URL:', error);
+		console.log('Image sharing failed, trying enhanced fallback:', error);
 		
-		// Enhanced text fallback - include image URL
-		try {
-			await navigator.share({
-				title: 'DirkJan Comic',
-				text: `${shareText}\n\nView comic image: ${pictureUrl}`,
-				url: shareUrl
-			});
-			console.log('Comic shared successfully via Web Share API (text + image URL)');
-		} catch (textError) {
-			console.error('Web Share API failed completely:', textError);
-			// Final fallback to clipboard
-			fallbackShare(shareText, shareUrl);
+		// Enhanced fallback for Android - try different approaches
+		if (isAndroid) {
+			try {
+				// Android-specific: Try sharing without URL to prioritize image
+				console.log('Trying Android-specific text + image URL sharing...');
+				await navigator.share({
+					title: 'DirkJan Comic',
+					text: `${shareText}\n\n📸 Comic image: ${pictureUrl}\n\n🌐 App: ${shareUrl}`
+				});
+				console.log('Comic shared successfully via Android text sharing');
+			} catch (androidError) {
+				console.error('Android text sharing also failed:', androidError);
+				fallbackShare(shareText, shareUrl);
+			}
+		} else {
+			// Enhanced text fallback for other devices
+			try {
+				await navigator.share({
+					title: 'DirkJan Comic',
+					text: `${shareText}\n\nView comic image: ${pictureUrl}`,
+					url: shareUrl
+				});
+				console.log('Comic shared successfully via Web Share API (text + image URL)');
+			} catch (textError) {
+				console.error('Web Share API failed completely:', textError);
+				// Final fallback to clipboard
+				fallbackShare(shareText, shareUrl);
+			}
 		}
 	} finally {
 		// Restore share button
@@ -129,6 +149,25 @@ async function shareWithImage(shareText, shareUrl) {
 		}
 	};
 
+	// Function to create properly formatted image file for Android
+	const createImageFile = (blob, filename) => {
+		// Ensure proper MIME type for Android compatibility
+		let mimeType = blob.type;
+		if (!mimeType || !mimeType.startsWith('image/')) {
+			// Default to JPEG for maximum compatibility
+			mimeType = 'image/jpeg';
+		}
+		
+		// Create file with Android-friendly naming and MIME type
+		const file = new File([blob], filename, {
+			type: mimeType,
+			lastModified: new Date().getTime()
+		});
+		
+		console.log(`Created file: ${file.name}, type: ${file.type}, size: ${file.size} bytes`);
+		return file;
+	};
+
 	// Try Garfield proxy first (prioritized and fastest)
 	try {
 		const garfieldProxyUrl = `${CORS_PROXIES[0]}${encodeURIComponent(pictureUrl)}`;
@@ -143,25 +182,27 @@ async function shareWithImage(shareText, shareUrl) {
 			const blob = await response.blob();
 			
 			// Validate image content
-			if (blob.type.startsWith('image/') && blob.size > 1000) {
+			if (blob.size > 1000) {
 				console.log(`Garfield proxy success! Size: ${blob.size} bytes, type: ${blob.type}`);
 				
-				const file = new File([blob], `dirkjan-${formattedDate}.jpg`, {
-					type: blob.type || 'image/jpeg',
-					lastModified: new Date().getTime()
-				});
+				const file = createImageFile(blob, `dirkjan-comic-${formattedDate}.jpg`);
+
+				// Test if we can share this file type first
+				const canShareFile = navigator.canShare({ files: [file] });
+				if (!canShareFile) {
+					throw new Error('Cannot share this file type on this device');
+				}
 
 				await navigator.share({
 					title: 'DirkJan Comic',
 					text: shareText,
-					url: shareUrl,
 					files: [file]
 				});
 				
 				console.log('Successfully shared comic with image via Garfield proxy');
 				return;
 			} else {
-				throw new Error(`Invalid image from Garfield proxy: ${blob.type}, size: ${blob.size}`);
+				throw new Error(`Invalid image from Garfield proxy: size: ${blob.size}`);
 			}
 		} else {
 			throw new Error(`Garfield proxy HTTP error: ${response.status}`);
@@ -181,18 +222,20 @@ async function shareWithImage(shareText, shareUrl) {
 		if (response.ok) {
 			const blob = await response.blob();
 			
-			if (blob.type.startsWith('image/') && blob.size > 1000) {
+			if (blob.size > 1000) {
 				console.log(`Direct fetch success! Size: ${blob.size} bytes, type: ${blob.type}`);
 				
-				const file = new File([blob], `dirkjan-${formattedDate}.jpg`, {
-					type: blob.type || 'image/jpeg',
-					lastModified: new Date().getTime()
-				});
+				const file = createImageFile(blob, `dirkjan-comic-${formattedDate}.jpg`);
+
+				// Test if we can share this file type first
+				const canShareFile = navigator.canShare({ files: [file] });
+				if (!canShareFile) {
+					throw new Error('Cannot share this file type on this device');
+				}
 
 				await navigator.share({
 					title: 'DirkJan Comic',
 					text: shareText,
-					url: shareUrl,
 					files: [file]
 				});
 				
@@ -929,17 +972,87 @@ document.addEventListener('DOMContentLoaded', function() {
   // Fix mobile button state for main toolbar buttons
   document.addEventListener('touchend', function(e) {
     if (e.target.closest('.toolbar:not(.fullscreen-toolbar) .toolbar-button, .toolbar:not(.fullscreen-toolbar) .toolbar-datepicker-btn')) {
-      setTimeout(() => {
-        const button = e.target.closest('.toolbar-button, .toolbar-datepicker-btn');
-        if (button) {
-          button.blur();
-          // Force style reset
-          button.style.transform = '';
-          button.style.backgroundPosition = '';
+      const button = e.target.closest('.toolbar-button, .toolbar-datepicker-btn');
+      if (button) {
+        // Immediate reset
+        button.blur();
+        button.style.transform = '';
+        button.style.backgroundPosition = '';
+        
+        // Aggressive Android-specific handling
+        const isAndroid = /Android/i.test(navigator.userAgent);
+        if (isAndroid) {
+          // Force multiple resets with different timings for Android
+          setTimeout(() => {
+            button.blur();
+            button.style.transform = 'none';
+            button.style.backgroundPosition = 'left center';
+            button.classList.remove('active', 'focus', 'hover');
+          }, 50);
+          
+          setTimeout(() => {
+            button.blur();
+            button.style.transform = '';
+            button.style.backgroundPosition = '';
+            // Force reflow
+            button.offsetHeight;
+          }, 100);
+          
+          setTimeout(() => {
+            button.blur();
+            // Final reset
+            button.removeAttribute('style');
+            button.offsetHeight; // Force reflow
+          }, 200);
+        } else {
+          // Standard handling for other devices
+          setTimeout(() => {
+            button.blur();
+            button.style.transform = '';
+            button.style.backgroundPosition = '';
+          }, 150);
         }
-      }, 150);
+      }
     }
   });
+  
+  // Additional Android-specific event handling
+  if (/Android/i.test(navigator.userAgent)) {
+    console.log('Android device detected - applying enhanced button state fixes');
+    
+    // Handle both touchend and click events for Android
+    document.addEventListener('click', function(e) {
+      if (e.target.closest('.toolbar-button, .toolbar-datepicker-btn')) {
+        const button = e.target.closest('.toolbar-button, .toolbar-datepicker-btn');
+        setTimeout(() => {
+          button.blur();
+          button.style.transform = 'none';
+          button.style.backgroundPosition = 'left center';
+          button.classList.remove('active');
+        }, 10);
+      }
+    });
+    
+    // Force reset any button that gains focus on Android
+    document.addEventListener('focusin', function(e) {
+      if (e.target.closest('.toolbar-button, .toolbar-datepicker-btn')) {
+        setTimeout(() => {
+          e.target.blur();
+        }, 10);
+      }
+    });
+    
+    // Handle touchstart to prevent state issues
+    document.addEventListener('touchstart', function(e) {
+      // Remove focus from any currently focused button
+      const focusedButton = document.querySelector('.toolbar-button:focus, .toolbar-datepicker-btn:focus');
+      if (focusedButton && !e.target.closest('.toolbar-button, .toolbar-datepicker-btn')) {
+        focusedButton.blur();
+        focusedButton.style.transform = '';
+        focusedButton.style.backgroundPosition = '';
+      }
+    });
+  }
   
   // Make the main toolbar draggable
   const mainToolbar = document.querySelector('.toolbar:not(.fullscreen-toolbar)');
