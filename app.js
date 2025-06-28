@@ -917,9 +917,43 @@ document.addEventListener('DOMContentLoaded', function() {
   }, { capture: true });
   
   // Make the main toolbar draggable
-  const mainToolbar = document.querySelector('.toolbar-container .toolbar');
+  const mainToolbar = document.querySelector('.toolbar:not(.fullscreen-toolbar)');
   makeMainToolbarDraggable(mainToolbar);
+  
+  // Add mobile button state reset functionality
+  addMobileButtonStateReset();
 });
+
+// Function to handle mobile button state issues
+function addMobileButtonStateReset() {
+  // Add event listeners to all toolbar buttons to reset their state after click
+  const toolbarButtons = document.querySelectorAll('.toolbar-button, .toolbar-datepicker-btn');
+  
+  toolbarButtons.forEach(button => {
+    // Handle touchend to reset button state
+    button.addEventListener('touchend', function() {
+      // Small delay to allow the click event to fire first
+      setTimeout(() => {
+        this.blur(); // Remove focus
+        this.style.transform = ''; // Reset any transform
+      }, 100);
+    }, { passive: true });
+    
+    // Handle click to reset button state (for both mouse and touch)
+    button.addEventListener('click', function() {
+      // Small delay to allow the action to complete
+      setTimeout(() => {
+        this.blur(); // Remove focus
+        this.style.transform = ''; // Reset any transform
+      }, 150);
+    });
+    
+    // Handle focus loss
+    button.addEventListener('blur', function() {
+      this.style.transform = ''; // Reset any transform when losing focus
+    });
+  });
+}
 
 setStatus = document.getElementById("swipe");
 setStatus.onclick = function()

@@ -195,17 +195,49 @@ input
         height: 44px;
         min-width: 44px; /* Ensure minimum size */
         border-radius: 12px;
+        /* Fix for mobile button stuck in active state */
+        -webkit-tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        user-select: none;
+    }
+    
+    /* Ensure mobile buttons return to normal state quickly */
+    .toolbar-button:active {
+        transform: translateY(-1px) scale(0.98);
+        transition: transform 0.1s ease;
+    }
+    
+    /* Force reset of button state after touch */
+    .toolbar-button:focus {
+        outline: none;
+        transform: none;
     }
     
     .toolbar-datepicker-btn {
         width: 44px;
         height: 44px;
         border-radius: 12px;
+        -webkit-tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        user-select: none;
+    }
+    
+    .toolbar-datepicker-btn:active {
+        transform: translateY(-1px) scale(0.98);
+        transition: transform 0.1s ease;
+    }
+    
+    .toolbar-datepicker-btn:focus {
+        outline: none;
+        transform: none;
     }
     
     .toolbar-svg {
         width: 22px;
         height: 22px;
+        pointer-events: none; /* Prevent SVG from capturing touch events */
     }
 }
 
@@ -222,17 +254,47 @@ input
         height: 40px;
         min-width: 40px;
         border-radius: 10px;
+        /* Enhanced mobile touch handling */
+        -webkit-tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        user-select: none;
+    }
+    
+    .toolbar-button:active {
+        transform: translateY(-1px) scale(0.98);
+        transition: transform 0.1s ease;
+    }
+    
+    .toolbar-button:focus {
+        outline: none;
+        transform: none;
     }
     
     .toolbar-datepicker-btn {
         width: 40px;
         height: 40px;
         border-radius: 10px;
+        -webkit-tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        user-select: none;
+    }
+    
+    .toolbar-datepicker-btn:active {
+        transform: translateY(-1px) scale(0.98);
+        transition: transform 0.1s ease;
+    }
+    
+    .toolbar-datepicker-btn:focus {
+        outline: none;
+        transform: none;
     }
     
     .toolbar-svg {
         width: 20px;
         height: 20px;
+        pointer-events: none; /* Prevent SVG from capturing touch events */
     }
 }
 
