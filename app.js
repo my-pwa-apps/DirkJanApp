@@ -60,35 +60,47 @@ async function Share()
 	
 	console.log('Attempting to share:', shareText, shareUrl, 'Image:', pictureUrl);
 
-	if(navigator.share) {
-		// Try to share with the comic image - be more persistent
+	// Check if Web Share API is supported
+	if(!navigator.share) {
+		console.log('Web Share API not supported, using clipboard fallback');
+		fallbackShare(shareText, shareUrl);
+		return;
+	}
+
+	// Show immediate feedback to user
+	const originalShareButton = document.getElementById('share');
+	if (originalShareButton) {
+		originalShareButton.style.opacity = '0.6';
+		originalShareButton.style.pointerEvents = 'none';
+	}
+
+	try {
+		console.log('Trying optimized image sharing...');
+		await shareWithImage(shareText, shareUrl);
+		console.log('Comic with image shared successfully');
+	} catch (error) {
+		console.log('Image sharing failed, falling back to text with image URL:', error);
+		
+		// Enhanced text fallback - include image URL
 		try {
-			console.log('Trying to share with image...');
-			await shareWithImage(shareText, shareUrl);
-			console.log('Comic with image shared successfully');
-			return;
-		} catch (error) {
-			console.error('Image sharing failed after all attempts:', error);
-			
-			// Only fall back to text-only if image sharing definitively failed
-			console.log('Falling back to text-only share...');
-			try {
-				await navigator.share({
-					title: 'DirkJan Comic',
-					text: `${shareText}\n\nComic image: ${pictureUrl}`,
-					url: shareUrl
-				});
-				console.log('Comic shared successfully via Web Share API (text + image URL)');
-				return;
-			} catch (textError) {
-				console.error('Text-only Web Share API also failed:', textError);
-			}
+			await navigator.share({
+				title: 'DirkJan Comic',
+				text: `${shareText}\n\nView comic image: ${pictureUrl}`,
+				url: shareUrl
+			});
+			console.log('Comic shared successfully via Web Share API (text + image URL)');
+		} catch (textError) {
+			console.error('Web Share API failed completely:', textError);
+			// Final fallback to clipboard
+			fallbackShare(shareText, shareUrl);
+		}
+	} finally {
+		// Restore share button
+		if (originalShareButton) {
+			originalShareButton.style.opacity = '';
+			originalShareButton.style.pointerEvents = '';
 		}
 	}
-	
-	console.log('Web Share API not supported or failed, using clipboard fallback');
-	// Fallback for browsers without Web Share API or when sharing fails
-	fallbackShare(shareText, shareUrl);
 }
 
 async function shareWithImage(shareText, shareUrl) {
@@ -99,107 +111,101 @@ async function shareWithImage(shareText, shareUrl) {
 
 	console.log('Attempting to share image:', pictureUrl);
 	
-	// Try multiple methods to get the image, prioritizing Garfield proxy
-	const imageFetchMethods = [
-		// Method 1: Try Garfield proxy first
-		async () => {
-			const proxyUrl = `${CORS_PROXIES[0]}${encodeURIComponent(pictureUrl)}`;
-			console.log('Trying Garfield proxy:', proxyUrl);
-			const response = await fetch(proxyUrl, { 
-				mode: 'cors',
-				headers: { 'Accept': 'image/*' }
-			});
-			if (!response.ok) throw new Error(`Garfield proxy failed: ${response.status}`);
-			return response;
-		},
+	// Prioritize Garfield proxy with timeout for faster response
+	const fetchWithTimeout = async (url, options = {}, timeout = 8000) => {
+		const controller = new AbortController();
+		const timeoutId = setTimeout(() => controller.abort(), timeout);
 		
-		// Method 2: Try direct fetch with CORS
-		async () => {
-			console.log('Trying direct fetch with CORS:', pictureUrl);
-			const response = await fetch(pictureUrl, { 
-				mode: 'cors',
-				headers: { 'Accept': 'image/*' }
-			});
-			if (!response.ok) throw new Error(`Direct fetch failed: ${response.status}`);
-			return response;
-		},
-		
-		// Method 3: Try other CORS proxies
-		async () => {
-			for (let i = 1; i < CORS_PROXIES.length; i++) {
-				const proxy = CORS_PROXIES[i];
-				const proxyUrl = `${proxy}${encodeURIComponent(pictureUrl)}`;
-				console.log(`Trying proxy ${i}:`, proxyUrl);
-				try {
-					const response = await fetch(proxyUrl, { 
-						mode: 'cors',
-						headers: { 'Accept': 'image/*' }
-					});
-					if (response.ok) return response;
-				} catch (error) {
-					console.warn(`Proxy ${i} failed:`, error);
-					continue;
-				}
-			}
-			throw new Error('All proxy methods failed');
-		},
-		
-		// Method 4: Try fetchWithFallback as last resort
-		async () => {
-			console.log('Trying fetchWithFallback as last resort');
-			return await fetchWithFallback(pictureUrl);
-		}
-	];
-
-	let lastError;
-	
-	// Try each method sequentially
-	for (let i = 0; i < imageFetchMethods.length; i++) {
 		try {
-			console.log(`Attempting image fetch method ${i + 1}/${imageFetchMethods.length}`);
-			const response = await imageFetchMethods[i]();
-			
-			if (!response.ok) {
-				throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-			}
-			
+			const response = await fetch(url, {
+				...options,
+				signal: controller.signal
+			});
+			clearTimeout(timeoutId);
+			return response;
+		} catch (error) {
+			clearTimeout(timeoutId);
+			throw error;
+		}
+	};
+
+	// Try Garfield proxy first (prioritized and fastest)
+	try {
+		const garfieldProxyUrl = `${CORS_PROXIES[0]}${encodeURIComponent(pictureUrl)}`;
+		console.log('Trying Garfield proxy (prioritized):', garfieldProxyUrl);
+		
+		const response = await fetchWithTimeout(garfieldProxyUrl, { 
+			mode: 'cors',
+			headers: { 'Accept': 'image/*' }
+		}, 5000); // 5 second timeout for faster response
+		
+		if (response.ok) {
 			const blob = await response.blob();
 			
-			// Validate that we got an image
-			if (!blob.type.startsWith('image/')) {
-				console.warn('Response is not an image:', blob.type);
-				throw new Error(`Invalid content type: ${blob.type}`);
-			}
-			
-			console.log(`Successfully fetched image via method ${i + 1}, size: ${blob.size} bytes, type: ${blob.type}`);
-			
-			// Create a file from the blob
-			const file = new File([blob], `dirkjan-${formattedDate}.jpg`, {
-				type: blob.type || 'image/jpeg',
-				lastModified: new Date().getTime()
-			});
+			// Validate image content
+			if (blob.type.startsWith('image/') && blob.size > 1000) {
+				console.log(`Garfield proxy success! Size: ${blob.size} bytes, type: ${blob.type}`);
+				
+				const file = new File([blob], `dirkjan-${formattedDate}.jpg`, {
+					type: blob.type || 'image/jpeg',
+					lastModified: new Date().getTime()
+				});
 
-			// Attempt to share with the image file
-			await navigator.share({
-				title: 'DirkJan Comic',
-				text: shareText,
-				url: shareUrl,
-				files: [file]
-			});
-			
-			console.log('Successfully shared comic with image');
-			return; // Success, exit function
-			
-		} catch (error) {
-			console.warn(`Image fetch method ${i + 1} failed:`, error);
-			lastError = error;
-			continue; // Try next method
+				await navigator.share({
+					title: 'DirkJan Comic',
+					text: shareText,
+					url: shareUrl,
+					files: [file]
+				});
+				
+				console.log('Successfully shared comic with image via Garfield proxy');
+				return;
+			} else {
+				throw new Error(`Invalid image from Garfield proxy: ${blob.type}, size: ${blob.size}`);
+			}
+		} else {
+			throw new Error(`Garfield proxy HTTP error: ${response.status}`);
 		}
+	} catch (error) {
+		console.warn('Garfield proxy failed:', error);
 	}
-	
-	// If we get here, all methods failed
-	console.error('All image sharing methods failed, last error:', lastError);
-	throw lastError || new Error('Failed to fetch comic image for sharing');
+
+	// Quick fallback: try direct fetch (shorter timeout)
+	try {
+		console.log('Trying direct fetch as quick fallback');
+		const response = await fetchWithTimeout(pictureUrl, { 
+			mode: 'cors',
+			headers: { 'Accept': 'image/*' }
+		}, 3000); // 3 second timeout
+		
+		if (response.ok) {
+			const blob = await response.blob();
+			
+			if (blob.type.startsWith('image/') && blob.size > 1000) {
+				console.log(`Direct fetch success! Size: ${blob.size} bytes, type: ${blob.type}`);
+				
+				const file = new File([blob], `dirkjan-${formattedDate}.jpg`, {
+					type: blob.type || 'image/jpeg',
+					lastModified: new Date().getTime()
+				});
+
+				await navigator.share({
+					title: 'DirkJan Comic',
+					text: shareText,
+					url: shareUrl,
+					files: [file]
+				});
+				
+				console.log('Successfully shared comic with image via direct fetch');
+				return;
+			}
+		}
+	} catch (error) {
+		console.warn('Direct fetch failed:', error);
+	}
+
+	// If both quick methods fail, throw error to fall back to text sharing
+	throw new Error('Both Garfield proxy and direct fetch failed within timeout');
 }
 
 function fallbackShare(text, url) {
