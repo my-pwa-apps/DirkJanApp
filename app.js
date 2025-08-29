@@ -43,8 +43,103 @@ async function fetchWithFallback(url) {
   throw lastError || new Error('All fetch attempts failed');
 }
 
-let pictureUrl = ''; // Make pictureUrl global so it's accessible by Share()
-let formattedDate = ''; // Make formattedDate global for sharing
+let pictureUrl = ''; // Global comic image URL
+let formattedDate = ''; // Global formatted date for sharing
+// Explicitly declare other global state variables to avoid accidental implicit globals
+let comicstartDate, currentselectedDate, maxDate, nextclicked, siteBody, notFound, picturePosition, endPosition, formattedComicDate, startDate, endDate, formattedmaxDate, year, month, day;
+nextclicked = false;
+
+// === Central constants & storage keys ===
+const STORAGE_KEYS = Object.freeze({
+  FAVS: 'favs',
+  LAST_COMIC: 'lastcomic',
+  TOOLBAR_POS: 'mainToolbarPosition',
+  SWIPE: 'stat',
+  SHOW_FAVS: 'showfavs',
+  LAST_DATE: 'lastdate',
+  SETTINGS_VISIBLE: 'settings'
+});
+
+// Swipe thresholds (could be tuned)
+const SWIPE_MIN_DISTANCE = 50;   // px
+const SWIPE_MAX_TIME = 500;      // ms
+
+// === Favorites caching helpers ===
+let _cachedFavs = null;
+function loadFavs() {
+  if (Array.isArray(_cachedFavs)) return _cachedFavs;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.FAVS);
+    if (!raw) return (_cachedFavs = []);
+    const parsed = JSON.parse(raw);
+    return (_cachedFavs = Array.isArray(parsed) ? parsed : []);
+  } catch (e) {
+    console.warn('Failed to parse favs from storage', e);
+    return (_cachedFavs = []);
+  }
+}
+function saveFavs(arr) {
+  if (!Array.isArray(arr)) return;
+  const deduped = Array.from(new Set(arr)).sort();
+  _cachedFavs = deduped;
+  try { localStorage.setItem(STORAGE_KEYS.FAVS, JSON.stringify(deduped)); } catch (e) { console.warn('Failed saving favs', e); }
+}
+function invalidateFavsCache() { _cachedFavs = null; }
+
+// Generic safe JSON parse helper
+function safeJSONParse(str, fallback) {
+  try { return JSON.parse(str); } catch (_) { return fallback; }
+}
+
+// Toolbar reset logic
+function resetToolbarPosition() {
+  const toolbar = document.querySelector('.toolbar:not(.fullscreen-toolbar)');
+  if (!toolbar) return;
+  // Remove stored position
+  try { localStorage.removeItem(STORAGE_KEYS.TOOLBAR_POS); } catch(e) { /* ignore */ }
+  // Re-center horizontally, top at 0
+  const viewportWidth = window.innerWidth;
+  const rect = toolbar.getBoundingClientRect();
+  const centeredLeft = Math.max(0, (viewportWidth - rect.width) / 2);
+  toolbar.style.top = '0px';
+  toolbar.style.left = centeredLeft + 'px';
+  toolbar.style.transform = 'none';
+  const resetBtn = document.getElementById('reset-toolbar');
+  if (resetBtn) resetBtn.style.display = 'none';
+}
+
+function showResetButtonIfMoved() {
+  const resetBtn = document.getElementById('reset-toolbar');
+  if (!resetBtn) return;
+  const raw = localStorage.getItem(STORAGE_KEYS.TOOLBAR_POS) || localStorage.getItem('mainToolbarPosition');
+  const savedPos = safeJSONParse(raw, null);
+  if (savedPos && !localStorage.getItem(STORAGE_KEYS.TOOLBAR_POS)) {
+    try { localStorage.setItem(STORAGE_KEYS.TOOLBAR_POS, JSON.stringify(savedPos)); localStorage.removeItem('mainToolbarPosition'); } catch(_) {}
+  }
+  resetBtn.style.display = savedPos ? 'inline-block' : 'none';
+}
+
+// Keep toolbar within viewport on resize/orientation changes
+function clampMainToolbarInView() {
+  const toolbar = document.querySelector('.toolbar:not(.fullscreen-toolbar)');
+  if (!toolbar) return;
+  const rect = toolbar.getBoundingClientRect();
+  let top = parseFloat(toolbar.style.top) || rect.top + window.scrollY;
+  let left = parseFloat(toolbar.style.left) || rect.left + window.scrollX;
+  const maxLeft = document.documentElement.scrollWidth - rect.width;
+  const maxTop = document.documentElement.scrollHeight - rect.height;
+  let changed = false;
+  if (left < 0) { left = 0; changed = true; }
+  if (top < 0) { top = 0; changed = true; }
+  if (left > maxLeft) { left = Math.max(0, maxLeft); changed = true; }
+  if (top > maxTop) { top = Math.max(0, maxTop); changed = true; }
+  if (changed) {
+    toolbar.style.left = left + 'px';
+    toolbar.style.top = top + 'px';
+    try { localStorage.setItem(STORAGE_KEYS.TOOLBAR_POS, JSON.stringify({ top, left })); } catch(_) {}
+  }
+  showResetButtonIfMoved();
+}
 
 async function Share() 
 {
@@ -88,15 +183,44 @@ async function Share()
 		// Enhanced fallback for Android - try different approaches
 		if (isAndroid) {
 			try {
-				// Android-specific: Try sharing without URL to prioritize image
-				console.log('Trying Android-specific text + image URL sharing...');
+				console.log('Trying Android-specific aggressive image URL sharing...');
+				
+				// Android-specific: Try sharing with the image URL prominently featured
+				const androidShareText = `📸 DirkJan Comic from ${formattedDate}\n\n🖼️ Image: ${pictureUrl}\n\n📱 Get the app: ${shareUrl}`;
+				
+				// First try: Image URL as main content
+				try {
+					await navigator.share({
+						title: 'DirkJan Comic Image',
+						text: androidShareText
+					});
+					console.log('Comic shared successfully via Android aggressive text sharing');
+					return;
+				} catch (error) {
+					console.warn('Android aggressive text sharing failed:', error);
+				}
+				
+				// Second try: Just the image URL with minimal text
+				try {
+					await navigator.share({
+						title: 'DirkJan Comic',
+						text: `Comic image: ${pictureUrl}`,
+						url: shareUrl
+					});
+					console.log('Comic shared successfully via Android minimal sharing');
+					return;
+				} catch (error) {
+					console.warn('Android minimal sharing failed:', error);
+				}
+				
+				// Third try: Original approach
 				await navigator.share({
 					title: 'DirkJan Comic',
 					text: `${shareText}\n\n📸 Comic image: ${pictureUrl}\n\n🌐 App: ${shareUrl}`
 				});
-				console.log('Comic shared successfully via Android text sharing');
+				console.log('Comic shared successfully via Android fallback text sharing');
 			} catch (androidError) {
-				console.error('Android text sharing also failed:', androidError);
+				console.error('All Android text sharing methods failed:', androidError);
 				fallbackShare(shareText, shareUrl);
 			}
 		} else {
@@ -124,131 +248,91 @@ async function Share()
 }
 
 async function shareWithImage(shareText, shareUrl) {
-	// Check if the browser supports file sharing
-	if (!navigator.canShare || !navigator.canShare({ files: [new File([], 'test')] })) {
-		throw new Error('File sharing not supported');
-	}
+  console.log('Attempting to acquire image blob for sharing');
+  // Safe feature detection since some browsers throw for canShare with files param
+  const fileShareSupported = (() => {
+    try {
+      return !!navigator.canShare && navigator.canShare({ files: [new File([], 't')] });
+    } catch (_) { return false; }
+  })();
+  if (!fileShareSupported) throw new Error('File sharing not supported');
 
-	console.log('Attempting to share image:', pictureUrl);
-	
-	// Prioritize Garfield proxy with timeout for faster response
-	const fetchWithTimeout = async (url, options = {}, timeout = 8000) => {
-		const controller = new AbortController();
-		const timeoutId = setTimeout(() => controller.abort(), timeout);
-		
-		try {
-			const response = await fetch(url, {
-				...options,
-				signal: controller.signal
-			});
-			clearTimeout(timeoutId);
-			return response;
-		} catch (error) {
-			clearTimeout(timeoutId);
-			throw error;
-		}
-	};
+  const tryFetch = async (baseUrl, timeoutMs) => {
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const resp = await fetch(baseUrl, { mode: 'cors', headers: { Accept: 'image/*' }, signal: controller.signal });
+      return resp;
+    } finally { clearTimeout(t); }
+  };
 
-	// Function to create properly formatted image file for Android
-	const createImageFile = (blob, filename) => {
-		// Ensure proper MIME type for Android compatibility
-		let mimeType = blob.type;
-		if (!mimeType || !mimeType.startsWith('image/')) {
-			// Default to JPEG for maximum compatibility
-			mimeType = 'image/jpeg';
-		}
-		
-		// Create file with Android-friendly naming and MIME type
-		const file = new File([blob], filename, {
-			type: mimeType,
-			lastModified: new Date().getTime()
-		});
-		
-		console.log(`Created file: ${file.name}, type: ${file.type}, size: ${file.size} bytes`);
-		return file;
-	};
+  // Build URL attempts (proxies + direct)
+  const attempts = [
+    `${CORS_PROXIES[0]}${encodeURIComponent(pictureUrl)}`,
+    pictureUrl,
+    `${CORS_PROXIES[1]}${encodeURIComponent(pictureUrl)}`,
+    `${CORS_PROXIES[2]}${encodeURIComponent(pictureUrl)}`
+  ];
 
-	// Try Garfield proxy first (prioritized and fastest)
-	try {
-		const garfieldProxyUrl = `${CORS_PROXIES[0]}${encodeURIComponent(pictureUrl)}`;
-		console.log('Trying Garfield proxy (prioritized):', garfieldProxyUrl);
-		
-		const response = await fetchWithTimeout(garfieldProxyUrl, { 
-			mode: 'cors',
-			headers: { 'Accept': 'image/*' }
-		}, 5000); // 5 second timeout for faster response
-		
-		if (response.ok) {
-			const blob = await response.blob();
-			
-			// Validate image content
-			if (blob.size > 1000) {
-				console.log(`Garfield proxy success! Size: ${blob.size} bytes, type: ${blob.type}`);
-				
-				const file = createImageFile(blob, `dirkjan-comic-${formattedDate}.jpg`);
+  let blob = null;
+  for (const url of attempts) {
+    try {
+      console.log('Image fetch attempt:', url);
+      const r = await tryFetch(url, 8000);
+      if (!r.ok) { console.warn('Non-OK response', r.status); continue; }
+      const b = await r.blob();
+      if (b.size < 400) { console.warn('Blob too small', b.size); continue; }
+      blob = b; break;
+    } catch (err) { console.warn('Fetch attempt failed:', url, err); }
+  }
+  if (!blob) throw new Error('Failed to fetch image blob');
 
-				// Test if we can share this file type first
-				const canShareFile = navigator.canShare({ files: [file] });
-				if (!canShareFile) {
-					throw new Error('Cannot share this file type on this device');
-				}
+  // Ensure JPEG for widest support
+  let finalFile;
+  if (!/jpe?g/i.test(blob.type)) {
+    console.log('Converting image to JPEG');
+    finalFile = await new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width; canvas.height = img.height;
+        canvas.getContext('2d').drawImage(img, 0, 0);
+        canvas.toBlob(jBlob => {
+          if (!jBlob) return reject(new Error('JPEG conversion failed'));
+          resolve(new File([jBlob], `dirkjan-comic-${formattedDate}.jpg`, { type: 'image/jpeg' }));
+        }, 'image/jpeg', 0.9);
+      };
+      img.onerror = () => reject(new Error('Image load for conversion failed'));
+      img.src = URL.createObjectURL(blob);
+    });
+  } else {
+    finalFile = new File([blob], `dirkjan-comic-${formattedDate}.jpg`, { type: 'image/jpeg' });
+  }
 
-				await navigator.share({
-					title: 'DirkJan Comic',
-					text: shareText,
-					files: [file]
-				});
-				
-				console.log('Successfully shared comic with image via Garfield proxy');
-				return;
-			} else {
-				throw new Error(`Invalid image from Garfield proxy: size: ${blob.size}`);
-			}
-		} else {
-			throw new Error(`Garfield proxy HTTP error: ${response.status}`);
-		}
-	} catch (error) {
-		console.warn('Garfield proxy failed:', error);
-	}
+  // Share prioritizing file only (best chance some Android shells actually attach the image)
+  const isAndroid = /Android/i.test(navigator.userAgent);
+  const shareVariants = isAndroid ? [
+    { files: [finalFile] },
+    { title: 'DirkJan Comic', files: [finalFile] },
+    { title: 'DirkJan Comic', text: shareText, files: [finalFile] }
+  ] : [
+    { title: 'DirkJan Comic', text: shareText, files: [finalFile] }
+  ];
 
-	// Quick fallback: try direct fetch (shorter timeout)
-	try {
-		console.log('Trying direct fetch as quick fallback');
-		const response = await fetchWithTimeout(pictureUrl, { 
-			mode: 'cors',
-			headers: { 'Accept': 'image/*' }
-		}, 3000); // 3 second timeout
-		
-		if (response.ok) {
-			const blob = await response.blob();
-			
-			if (blob.size > 1000) {
-				console.log(`Direct fetch success! Size: ${blob.size} bytes, type: ${blob.type}`);
-				
-				const file = createImageFile(blob, `dirkjan-comic-${formattedDate}.jpg`);
-
-				// Test if we can share this file type first
-				const canShareFile = navigator.canShare({ files: [file] });
-				if (!canShareFile) {
-					throw new Error('Cannot share this file type on this device');
-				}
-
-				await navigator.share({
-					title: 'DirkJan Comic',
-					text: shareText,
-					files: [file]
-				});
-				
-				console.log('Successfully shared comic with image via direct fetch');
-				return;
-			}
-		}
-	} catch (error) {
-		console.warn('Direct fetch failed:', error);
-	}
-
-	// If both quick methods fail, throw error to fall back to text sharing
-	throw new Error('Both Garfield proxy and direct fetch failed within timeout');
+  for (const payload of shareVariants) {
+    try {
+      if (navigator.canShare && !navigator.canShare({ files: payload.files })) {
+        console.warn('canShare returned false for variant');
+        continue;
+      }
+      await navigator.share(payload);
+      console.log('Image shared successfully using variant:', payload);
+      return;
+    } catch (err) {
+      console.warn('Share variant failed, trying next:', err);
+    }
+  }
+  throw new Error('All image share variants failed');
 }
 
 function fallbackShare(text, url) {
@@ -283,7 +367,7 @@ function onLoad()
   comicstartDate = "2015/05/04";   
  currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
  
- var favs = JSON.parse(localStorage.getItem('favs'));
+ let favs = loadFavs();
 
  if(favs == null)
 	{
@@ -359,87 +443,78 @@ function onLoad()
 
 function PreviousClick()
 {
-  if(document.getElementById("showfavs").checked) {
-		var favs = JSON.parse(localStorage.getItem('favs'));
-		if(favs.indexOf(formattedDate) > 0){
-			currentselectedDate = new Date(favs[favs.indexOf(formattedDate) - 1]);} }
-	else{
-		currentselectedDate.setDate(currentselectedDate.getDate() - 1);
-	}
-  
+  if (document.getElementById("showfavs").checked) {
+    const favs = loadFavs();
+    const idx = favs.indexOf(formattedDate);
+    if (idx > 0) {
+      currentselectedDate = new Date(favs[idx - 1]);
+    }
+  } else {
+    currentselectedDate.setDate(currentselectedDate.getDate() - 1);
+  }
   nextclicked = false;
   CompareDates();
-
   DisplayComic();
-  
-
 } 
 
 function NextClick()
 {
   nextclicked = true;
-  if(document.getElementById("showfavs").checked) {
-		var favs = JSON.parse(localStorage.getItem('favs'));
-		if(favs.indexOf(formattedDate) < favs.length - 1){
-			currentselectedDate = new Date(favs[favs.indexOf(formattedDate) + 1]);} }
-	else{
-		currentselectedDate.setDate(currentselectedDate.getDate() + 1);
-	}
-  
+  if (document.getElementById("showfavs").checked) {
+    const favs = loadFavs();
+    const idx = favs.indexOf(formattedDate);
+    if (idx > -1 && idx < favs.length - 1) {
+      currentselectedDate = new Date(favs[idx + 1]);
+    }
+  } else {
+    currentselectedDate.setDate(currentselectedDate.getDate() + 1);
+  }
   CompareDates();
-
   DisplayComic();
-
 }
 
 function FirstClick()
 {
-  if(document.getElementById("showfavs").checked) {
-		var favs = JSON.parse(localStorage.getItem('favs'));
-    currentselectedDate = new Date(JSON.parse(localStorage.getItem('favs'))[0]);}
-	else{
-	currentselectedDate = new Date(Date.UTC(1978, 5, 19,12));
-	}
+  if (document.getElementById("showfavs").checked) {
+    const favs = loadFavs();
+    if (favs.length) currentselectedDate = new Date(favs[0]);
+  } else {
+    currentselectedDate = new Date(Date.UTC(1978, 5, 19,12));
+  }
   CompareDates();
-  
   DisplayComic();
-
 }
 
 function CurrentClick()
 {
-  if(document.getElementById("showfavs").checked) {
-		var favs = JSON.parse(localStorage.getItem('favs'));
-    favslength = favs.length - 1;
-    currentselectedDate = new Date(JSON.parse(localStorage.getItem('favs'))[favslength]);}
-	else{
-  currentselectedDate = new Date();
-  if (currentselectedDate.getDay() == 0) 
-    {
+  if (document.getElementById("showfavs").checked) {
+    const favs = loadFavs();
+    const favslength = favs.length - 1;
+    if (favslength >= 0) currentselectedDate = new Date(favs[favslength]);
+  } else {
+    currentselectedDate = new Date();
+    if (currentselectedDate.getDay() == 0) {
       currentselectedDate.setDate(currentselectedDate.getDate()-1);
     }
   }
-  
   CompareDates();
-
   DisplayComic();
- 
 }
 
 function RandomClick()
 {
-  if(document.getElementById("showfavs").checked) {
-		currentselectedDate = new Date(JSON.parse(localStorage.getItem('favs'))[Math.floor(Math.random() * JSON.parse(localStorage.getItem('favs')).length)]); }
-	else{
-		var start = new Date(comicstartDate);
-		var end = new Date();
-		currentselectedDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
-	}
-
+  if (document.getElementById("showfavs").checked) {
+    const favs = loadFavs();
+    if (favs.length) {
+      currentselectedDate = new Date(favs[Math.floor(Math.random() * favs.length)]);
+    }
+  } else {
+    const start = new Date(comicstartDate);
+    const end = new Date();
+    currentselectedDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+  }
   CompareDates();
-
   DisplayComic();
- 
 }
 
 function DateChange()
@@ -533,7 +608,7 @@ function DisplayComic()
       document.getElementById("comic").alt = "Failed to load comic. Please try again later.";
     });
     
-    var favs = JSON.parse(localStorage.getItem('favs'));
+  var favs = loadFavs();
 	  if(favs == null)
 	  {
 		  favs = [];
@@ -564,7 +639,7 @@ function setButtonDisabled(id, disabled) {
 }
 
  function CompareDates() {
-	var favs = JSON.parse(localStorage.getItem('favs'));
+  var favs = loadFavs();
 	const rotatedDatePicker = document.getElementById('rotated-DatePicker');
 	if(document.getElementById("showfavs").checked)
 	{
@@ -610,7 +685,7 @@ function setButtonDisabled(id, disabled) {
 		setButtonDisabled("Current", false);
 	}
 
-  if((currentselectedDate.getTime() === new Date().setHours(0, 0, 0, 0)) && showfavs.checked == false)
+  if((currentselectedDate.getTime() === new Date().setHours(0, 0, 0, 0)) && document.getElementById('showfavs').checked == false)
   {
     setButtonDisabled("Current", true);
   }
@@ -819,10 +894,7 @@ let touchEndX = 0;
 let touchEndY = 0;
 let touchStartTime = 0;
 
-// Minimum distance for a swipe (in pixels)
-const MIN_SWIPE_DISTANCE = 50;
-// Maximum time for a swipe (in milliseconds)
-const MAX_SWIPE_TIME = 500;
+// (Duplicate swipe constants removed; using SWIPE_MIN_DISTANCE and SWIPE_MAX_TIME defined earlier)
 
 function handleTouchStart(e) {
 	if (!document.getElementById("swipe").checked) return;
@@ -859,7 +931,7 @@ function handleTouchEnd(e) {
 	const deltaTime = Date.now() - touchStartTime;
 	
 	// Check if the swipe is valid (meets distance and time requirements)
-	if (deltaTime > MAX_SWIPE_TIME) return;
+  if (deltaTime > SWIPE_MAX_TIME) return;
 	
 	const absX = Math.abs(deltaX);
 	const absY = Math.abs(deltaY);
@@ -870,7 +942,7 @@ function handleTouchEnd(e) {
 	// Determine swipe direction based on mode
 	if (isInFullscreen) {
     // Rotated mode: Vertical for Next/Prev, Horizontal for Random/Today
-    if (absY > absX && absY > MIN_SWIPE_DISTANCE) {
+    if (absY > absX && absY > SWIPE_MIN_DISTANCE) {
       // Vertical swipe
       if (deltaY < 0) {
         // Swipe Up -> Previous
@@ -881,7 +953,7 @@ function handleTouchEnd(e) {
         console.log('Swipe down detected in rotated view');
         NextClick();
       }
-    } else if (absX > absY && absX > MIN_SWIPE_DISTANCE) {
+    } else if (absX > absY && absX > SWIPE_MIN_DISTANCE) {
       // Horizontal swipe
       if (deltaX < 0) {
         // Swipe Left -> Random
@@ -895,7 +967,7 @@ function handleTouchEnd(e) {
     }
   } else {
     // Normal mode: Horizontal for Next/Prev, Vertical for Random/Today
-    if (absX > absY && absX > MIN_SWIPE_DISTANCE) {
+    if (absX > absY && absX > SWIPE_MIN_DISTANCE) {
       // Horizontal swipe
       if (deltaX > 0) {
         // Swipe right
@@ -906,7 +978,7 @@ function handleTouchEnd(e) {
         console.log('Swipe left detected');
         NextClick();
       }
-    } else if (absY > absX && absY > MIN_SWIPE_DISTANCE) {
+    } else if (absY > absX && absY > SWIPE_MIN_DISTANCE) {
       // Vertical swipe
       if (deltaY > 0) {
         // Swipe down
@@ -1037,6 +1109,31 @@ document.addEventListener('DOMContentLoaded', function() {
   // Make the main toolbar draggable
   const mainToolbar = document.querySelector('.toolbar:not(.fullscreen-toolbar)');
   makeMainToolbarDraggable(mainToolbar);
+
+  const savedPosRaw = localStorage.getItem(STORAGE_KEYS.TOOLBAR_POS) || localStorage.getItem('mainToolbarPosition');
+  const savedPos = safeJSONParse(savedPosRaw, null);
+  if (!savedPos && mainToolbar) {
+    window.addEventListener('load', () => {
+      const viewportWidth = window.innerWidth;
+      const rect = mainToolbar.getBoundingClientRect();
+      const centeredLeft = (viewportWidth - rect.width) / 2;
+      mainToolbar.style.left = centeredLeft + 'px';
+      clampMainToolbarInView();
+      showResetButtonIfMoved();
+    });
+  } else {
+    clampMainToolbarInView();
+    showResetButtonIfMoved();
+  }
+
+  // Reset button wiring
+  const resetBtn = document.getElementById('reset-toolbar');
+  if (resetBtn) {
+    resetBtn.addEventListener('click', (e) => { e.preventDefault(); resetToolbarPosition(); });
+  }
+
+  window.addEventListener('resize', clampMainToolbarInView);
+  window.addEventListener('orientationchange', clampMainToolbarInView);
   
   // Add mobile button state reset functionality
   addMobileButtonStateReset();
@@ -1073,6 +1170,104 @@ function addMobileButtonStateReset() {
   });
 }
 
+// Mobile button state management to fix "popped out" buttons on touch devices
+function initializeMobileButtonStates() {
+  const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  
+  if (!isMobile && !isTouch) return;
+  
+  console.log('Initializing mobile button state management');
+  
+  // Get all toolbar buttons
+  const toolbarButtons = document.querySelectorAll('.toolbar-button, .toolbar-datepicker-btn');
+  
+  toolbarButtons.forEach(button => {
+    let touchStartTime = 0;
+    let isPressed = false;
+    
+    // Handle touch start
+    button.addEventListener('touchstart', (e) => {
+      touchStartTime = Date.now();
+      isPressed = true;
+      button.style.transition = 'all 0.1s ease';
+      console.log('Touch start on button:', button.id || button.className);
+    }, { passive: true });
+    
+    // Handle touch end - reset button state
+    button.addEventListener('touchend', (e) => {
+      if (isPressed) {
+        console.log('Touch end on button:', button.id || button.className);
+        
+        // Small delay to allow the visual feedback, then reset
+        setTimeout(() => {
+          button.style.transform = '';
+          button.style.transition = '';
+          button.blur(); // Remove focus
+          isPressed = false;
+        }, 150);
+      }
+    }, { passive: true });
+    
+    // Handle touch cancel
+    button.addEventListener('touchcancel', (e) => {
+      console.log('Touch cancel on button:', button.id || button.className);
+      button.style.transform = '';
+      button.style.transition = '';
+      button.blur();
+      isPressed = false;
+    }, { passive: true });
+    
+    // Handle focus loss
+    button.addEventListener('blur', (e) => {
+      if (isPressed) {
+        console.log('Blur on button:', button.id || button.className);
+        button.style.transform = '';
+        button.style.transition = '';
+        isPressed = false;
+      }
+    });
+    
+    // Handle focus gain - make sure state is clean
+    button.addEventListener('focus', (e) => {
+      if (!isPressed) {
+        button.style.transform = '';
+        button.style.transition = '';
+      }
+    });
+    
+    // Additional safeguard: reset on mouse leave (for devices that support both touch and mouse)
+    button.addEventListener('mouseleave', (e) => {
+      if (isPressed) {
+        console.log('Mouse leave on button:', button.id || button.className);
+        button.style.transform = '';
+        button.style.transition = '';
+        isPressed = false;
+      }
+    });
+  });
+  
+  // Global touch end handler as additional safeguard
+  document.addEventListener('touchend', () => {
+    toolbarButtons.forEach(button => {
+      // Reset any stuck buttons
+      setTimeout(() => {
+        button.style.transform = '';
+        button.blur();
+      }, 200);
+    });
+  }, { passive: true });
+  
+  console.log(`Mobile button state management initialized for ${toolbarButtons.length} buttons`);
+}
+
+// Initialize mobile button states when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeMobileButtonStates);
+} else {
+  initializeMobileButtonStates();
+}
+
 setStatus = document.getElementById("swipe");
 setStatus.onclick = function()
 {    
@@ -1102,26 +1297,17 @@ setStatus.onclick = function()
 setStatus = document.getElementById('showfavs');
 setStatus.onclick = function()
 {
-	var favs = JSON.parse(localStorage.getItem('favs'));
-  if(document.getElementById('showfavs').checked)
-	{
-		localStorage.setItem('showfavs', "true");
-		if(favs.indexOf(formattedDate) !== -1)
-		{
-		}
-		else
-		{
-		  currentselectedDate = new Date(favs[0]);	
-		}
-	} 
-	else
-	{
-		localStorage.setItem('showfavs', "false");
-	}
-
-	CompareDates();
-	DisplayComic();
-
+  const favs = loadFavs();
+  if (document.getElementById('showfavs').checked) {
+    localStorage.setItem('showfavs', "true");
+    if (favs.indexOf(formattedDate) === -1 && favs.length) {
+      currentselectedDate = new Date(favs[0]);
+    }
+  } else {
+    localStorage.setItem('showfavs', "false");
+  }
+  CompareDates();
+  DisplayComic();
 }
 
 getStatus = localStorage.getItem('stat');
@@ -1167,31 +1353,20 @@ getStatus = localStorage.getItem('settings');
 	
 function Addfav()
 {
-  var favs = JSON.parse(localStorage.getItem('favs'));
-  if(favs == null)
-  {
-  favs = [];
-  }
-  if(favs.indexOf(formattedDate) == -1)
-  {
+  let favs = loadFavs();
+  if (!favs.includes(formattedDate)) {
     favs.push(formattedDate);
-    //$(".favicon").css({"color": "red"}).removeClass('fa-heart').addClass('fa-heart');
     document.getElementById("favheart").src = "./heart.svg";
     document.getElementById("showfavs").disabled = false;
-  }
-  else
-  {
-    favs.splice(favs.indexOf(formattedDate), 1);
-    //$(".favicon").css({"color": "red"}).removeClass('fa-heart-o').addClass('fa-heart');    document.getElementById("favheart").src = "./heartborder.svg";
-    if(favs.length === 0)
-    {
+  } else {
+    favs = favs.filter(f => f !== formattedDate);
+    document.getElementById("favheart").src = "./heartborder.svg";
+    if (favs.length === 0) {
       document.getElementById("showfavs").checked = false;
       document.getElementById("showfavs").disabled = true;
-      // Keep SVG icon, don't change to text
     }
   }
-  favs.sort();
-  localStorage.setItem('favs', JSON.stringify(favs));
+  saveFavs(favs);
   CompareDates();
   DisplayComic();
 }
@@ -1354,12 +1529,16 @@ function makeMainToolbarDraggable(toolbar) {
   let isDragging = false;
   let offsetX, offsetY;
 
-  // Restore saved position on load
-  const savedPos = JSON.parse(localStorage.getItem('mainToolbarPosition'));
-  if (savedPos && savedPos.top && savedPos.left) {
-    toolbar.style.top = savedPos.top;
-    toolbar.style.left = savedPos.left;
-    toolbar.style.transform = 'none'; // Clear default centering transform
+  // Restore saved absolute position on load (document coordinates)
+  const savedPosRaw = localStorage.getItem(STORAGE_KEYS.TOOLBAR_POS) || localStorage.getItem('mainToolbarPosition');
+  const savedPos = safeJSONParse(savedPosRaw, null);
+  if (savedPos && typeof savedPos.top === 'number' && typeof savedPos.left === 'number') {
+    toolbar.style.top = savedPos.top + 'px';
+    toolbar.style.left = savedPos.left + 'px';
+    toolbar.style.transform = 'none';
+    if (!localStorage.getItem(STORAGE_KEYS.TOOLBAR_POS)) {
+      try { localStorage.setItem(STORAGE_KEYS.TOOLBAR_POS, JSON.stringify(savedPos)); localStorage.removeItem('mainToolbarPosition'); } catch(_) {}
+    }
   }
 
   const onDown = (e) => {
@@ -1382,6 +1561,7 @@ function makeMainToolbarDraggable(toolbar) {
     
     // Calculate offset from the top-left of the toolbar itself
     const rect = toolbar.getBoundingClientRect();
+    // Account for scroll position since we're using absolute positioning
     offsetX = event.clientX - rect.left;
     offsetY = event.clientY - rect.top;
 
@@ -1400,21 +1580,28 @@ function makeMainToolbarDraggable(toolbar) {
 
     const event = e.touches ? e.touches[0] : e;
 
-    // Calculate new position relative to the viewport
-    let newLeft = event.clientX - offsetX;
-    let newTop = event.clientY - offsetY;
+    // New intended absolute position in the document coordinate space
+    let newLeft = event.clientX - offsetX + window.scrollX;
+    let newTop = event.clientY - offsetY + window.scrollY;
 
-    // Constrain within the viewport
     const toolbarRect = toolbar.getBoundingClientRect();
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    
-    newLeft = Math.max(0, Math.min(newLeft, viewportWidth - toolbarRect.width));
-    newTop = Math.max(0, Math.min(newTop, viewportHeight - toolbarRect.height));
 
+    // Constrain within document/body dimensions (allow some horizontal freedom but keep fully visible)
+    const docWidth = Math.max(document.documentElement.scrollWidth, document.body.scrollWidth, window.innerWidth);
+    const docHeight = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight, window.innerHeight);
+
+    const minLeft = 0;
+    const maxLeft = docWidth - toolbarRect.width;
+    const minTop = 0; // Allow placement at the very top
+    const maxTop = docHeight - toolbarRect.height; // Prevent going below bottom content
+
+    newLeft = Math.max(minLeft, Math.min(newLeft, maxLeft));
+    newTop = Math.max(minTop, Math.min(newTop, maxTop));
+
+    // Apply directly (absolute relative to document). We remove initial centering transform once user drags.
     toolbar.style.left = `${newLeft}px`;
     toolbar.style.top = `${newTop}px`;
-    toolbar.style.transform = 'none'; // Clear any transform when dragging
+    toolbar.style.transform = 'none';
   };
 
   const onUp = () => {
@@ -1423,10 +1610,11 @@ function makeMainToolbarDraggable(toolbar) {
       isDragging = false;
       toolbar.style.cursor = 'grab';
       toolbar.style.transition = ''; // Restore original transition
-
-      // Save the final position
-      const pos = { top: toolbar.style.top, left: toolbar.style.left };
-      localStorage.setItem('mainToolbarPosition', JSON.stringify(pos));
+      const numericTop = parseFloat(toolbar.style.top) || 0;
+      const numericLeft = parseFloat(toolbar.style.left) || 0;
+      try { localStorage.setItem(STORAGE_KEYS.TOOLBAR_POS, JSON.stringify({ top: numericTop, left: numericLeft })); } catch(_) {}
+      showResetButtonIfMoved();
+      clampMainToolbarInView();
     }
 
     // Remove listeners
@@ -1441,4 +1629,5 @@ function makeMainToolbarDraggable(toolbar) {
   toolbar.addEventListener('touchstart', onDown, { passive: false });
   
   console.log('Toolbar drag functionality attached');
+  showResetButtonIfMoved();
 }

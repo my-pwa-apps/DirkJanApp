@@ -21,18 +21,20 @@
   </head>
 
 <body onload="onLoad()">
-  
-  <h1 hidden>Daily DirkJan Comics</h1>  <div class="logo">
+  <h1 hidden>Daily DirkJan Comics</h1>
+  <a class="skip-link" href="#comic" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;">Skip to comic</a>
+  <div class="logo" role="banner">
     <a href="https://dirkjan.nl" target="_blank" rel="noopener"><img src="./dirk-jan-tekst.svg" class="logo-img" alt="Daily DirkJan Title"/></a>
   </div>
     
   <!-- Modern Toolbar -->
-  <div class="toolbar-container">
-    <div class="toolbar">
-      <button class="toolbar-button" id="First" onclick="FirstClick()" title="Eerste comic">
+  <main id="main" role="main">
+  <div class="toolbar-container" aria-label="Strip navigatie">
+    <div class="toolbar" role="toolbar" aria-label="Navigatie knoppen">
+      <button class="toolbar-button" id="First" onclick="FirstClick()" title="Eerste comic" aria-label="Eerste">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
       </button>
-      <button class="toolbar-button" id="Previous" onclick="PreviousClick()" title="Vorige comic">
+      <button class="toolbar-button" id="Previous" onclick="PreviousClick()" title="Vorige comic" aria-label="Vorige">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><polyline points="15 18 9 12 15 6"/></svg>
       </button>    <button class="toolbar-button" id="Random" onclick="RandomClick()" title="Willekeurige comic">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg">
@@ -43,15 +45,18 @@
           <circle cx="8.5" cy="15.5" r="1.5" fill="currentColor"/>
         </svg>
       </button>
-      <button class="toolbar-button toolbar-datepicker-btn" title="Selecteer datum">
+      <button class="toolbar-button toolbar-datepicker-btn" title="Selecteer datum" aria-label="Datum kiezen">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        <input id="DatePicker" class="toolbar-datepicker" oninput="DateChange()" type="date" min="2015-05-04" title="Selecteer datum">
+        <input id="DatePicker" class="toolbar-datepicker" oninput="DateChange()" type="date" min="2015-05-04" title="Selecteer datum" aria-label="Datum" />
       </button>
-      <button class="toolbar-button" id="Next" onclick="NextClick()" title="Volgende comic">
+      <button class="toolbar-button" id="Next" onclick="NextClick()" title="Volgende comic" aria-label="Volgende">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
-      <button class="toolbar-button" id="Current" onclick="CurrentClick()" title="Vandaag">
+      <button class="toolbar-button" id="Current" onclick="CurrentClick()" title="Vandaag" aria-label="Vandaag">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><circle cx="12" cy="16" r="2"/></svg>
+      </button>
+      <button id="reset-toolbar" class="toolbar-button" onclick="resetToolbarPosition()" title="Toolbar resetten" aria-label="Toolbar resetten" style="display:none">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 .49-5" /></svg>
       </button>
     </div>
   </div>
@@ -67,17 +72,17 @@
   </div>
   <br>
   <br>
-  <img id="comic" onclick=Rotate() class="normal" alt="Loading comic from https://dirkjan.nl..." >
+  <img id="comic" onclick="Rotate()" class="normal" alt="Loading DirkJan comic..." loading="lazy" />
   <br>
   <br>
-  <div class="settings-icons-container">
-    <img id="settings" onclick="HideSettings()" src="./tune.svg" alt="Settings" style="font-size:25px; right:125px; position:absolute" >
-    <img id="favheart" onclick="Addfav()" src="./heartborder.svg" alt="Favoriet" style="font-size:25px; right:70px; position:absolute" >
-    <img id="share" onclick="Share()" src="./share.svg" alt="Delen" style="font-size:25px; right:20px; position:absolute" >
+  <div class="settings-icons-container" role="group" aria-label="Acties">
+    <img id="settings" onclick="HideSettings()" src="./tune.svg" alt="Instellingen" style="font-size:25px; right:125px; position:absolute" role="button" tabindex="0" >
+    <img id="favheart" onclick="Addfav()" src="./heartborder.svg" alt="Favoriet toevoegen" style="font-size:25px; right:70px; position:absolute" role="button" tabindex="0" >
+    <img id="share" onclick="Share()" src="./share.svg" alt="Delen" style="font-size:25px; right:20px; position:absolute" role="button" tabindex="0" >
   </div>
   <br>
 	<br>
-  <div id="settingsDIV">
+  <div id="settingsDIV" aria-label="Instellingen" role="region">
     <input type="checkbox" id="swipe" checked cursor="pointer">
     <label for="swipe" class="labels" cursor="pointer">Swipen ingeschakeld</label>	
   <br>
@@ -89,6 +94,7 @@
 	  <input type="checkbox" id="lastdate" checked cursor="pointer">
     <label for="lastdate" class="labels" cursor="pointer">Onthou laatste comic bij exit/refresh</label>
   </div>
+  </main>
   <script src="./app.js"></script>
 
   <!-- Cloudflare Web Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "e1b02b3fe1fe45f2addaf5622cf2fcb3"}'></script><!-- End Cloudflare Web Analytics -->

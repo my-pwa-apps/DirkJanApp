@@ -146,11 +146,12 @@ input
 }
 
 /* Modern toolbar design with Fluent Design */
+/* Toolbar container now only provides initial vertical space; positioning handled on the toolbar itself */
 .toolbar-container {
-    position: relative;
-    height: 120px; /* Increased height to allow more movement */
-    margin: 15px 0;
-    width: 100%;
+  position: static; /* Allow toolbar (absolute) to position relative to the document */
+  height: 120px; /* Initial space so content below doesn't jump under toolbar */
+  margin: 15px 0;
+  width: 100%;
 }
 
 .toolbar {
@@ -170,10 +171,10 @@ input
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     box-sizing: border-box;
-    position: fixed;
-    top: 120px; /* Default position below logo */
-    left: 50%;
-    transform: translateX(-50%); /* Center horizontally */
+  position: absolute; /* Positioned relative to the document now */
+  top: 0; /* Default start position */
+  left: 50%;
+  transform: translateX(-50%); /* Initial centering before user moves it */
     cursor: grab;
     z-index: 100;
     gap: 8px; /* Add default gap between buttons */
@@ -902,6 +903,58 @@ input[type="date"]#DatePicker:disabled {
         width: 18px; /* Smaller icons */
         height: 18px;
     }
+}
+
+/* Mobile-specific button state improvements */
+@media (max-width: 768px) {
+  /* Ensure buttons reset properly on mobile */
+  .toolbar-button:active {
+    transform: translateY(-1px) scale(1.02) !important;
+    transition: all 0.1s ease !important;
+  }
+  
+  /* Prevent sticky hover states on mobile */
+  .toolbar-button:hover {
+    transform: translateY(-2px) scale(1.03);
+  }
+  
+  /* Reset focus styles for mobile */
+  .toolbar-button:focus {
+    outline: none;
+  }
+  
+  .toolbar-button:focus-visible {
+    outline: 2px solid rgba(240, 152, 25, 0.6);
+    outline-offset: 2px;
+  }
+}
+
+/* Touch device specific improvements */
+@media (pointer: coarse) {
+  .toolbar-button {
+    /* Slightly faster transitions for touch */
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .toolbar-button:active {
+    /* More pronounced press effect for touch feedback */
+    transform: translateY(0px) scale(0.98);
+    transition: all 0.1s ease;
+  }
+  
+  /* Prevent hover effects on touch devices */
+  .toolbar-button:hover {
+    transform: none;
+    background-position: left center;
+    box-shadow: 
+      0 4px 16px rgba(240, 152, 25, 0.3),
+      0 2px 4px rgba(0, 0, 0, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+  
+  .toolbar-button:hover::before {
+    left: -100%;
+  }
 }
 
 
