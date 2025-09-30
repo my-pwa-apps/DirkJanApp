@@ -21,7 +21,7 @@ main
 {
     max-width: 900px;
     margin: auto;
-    padding: 0.5rem;
+    padding: 0;
     text-align: center;
 }
 
@@ -627,11 +627,12 @@ input
     -ms-transform: rotate(0deg);
     -webkit-transform: rotate(0deg);
     transform: rotate(0deg);
+    width: 100%;
     max-width: 100%;
-    width: auto;
     height: auto;
     display: block;
-    margin: 0 auto;
+    margin: 0;
+    padding: 0;
     cursor: pointer;
 }
 
