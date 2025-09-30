@@ -1715,9 +1715,17 @@ function preloadComic(date) {
 // We'll call preloadAdjacentComics() directly from within DisplayComic instead of wrapping it
 
 // ========================================
-// VISUAL FEEDBACK - Show keyboard shortcuts hint on first load
+// VISUAL FEEDBACK - Show keyboard shortcuts hint on first load (desktop only)
 // ========================================
 function showKeyboardShortcutsHint() {
+  // Don't show on mobile/touch devices
+  const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  
+  if (isMobile || isTouch) {
+    return; // Skip showing hint on mobile/touch devices
+  }
+  
   const hasSeenHint = localStorage.getItem('keyboardHintSeen');
   
   if (!hasSeenHint) {
@@ -1756,7 +1764,7 @@ function showKeyboardShortcutsHint() {
   }
 }
 
-// Show hint on page load
+// Show hint on page load (desktop only)
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', showKeyboardShortcutsHint);
 } else {
