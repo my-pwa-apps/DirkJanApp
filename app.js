@@ -23,20 +23,15 @@ async function fetchWithFallback(url) {
       }
     } catch (error) {
       lastError = error;
-      console.warn(`Failed to fetch using proxy ${proxy}:`, error);
       continue;
     }
   }
   
   // If all proxies failed with regular mode, try with no-cors as last resort
   try {
-    console.log("Trying direct fetch with no-cors mode as last resort");
     const response = await fetch(url, { mode: 'no-cors' });
-    // Note: with no-cors, we cannot read the response content in JavaScript
-    // but the browser can still use the response for things like displaying images
     return response;
   } catch (error) {
-    console.error("Even no-cors mode failed:", error);
     lastError = error;
   }
   
@@ -49,43 +44,31 @@ let formattedDate = ''; // Make formattedDate global for sharing
 async function Share() 
 {
 	if(!pictureUrl) {
-		console.error('No image URL available to share');
 		alert('Sorry, no comic is available to share at this moment.');
 		return;
 	}
 
-	// Create share text with current date
 	const shareText = `Check out this DirkJan comic from ${formattedDate}!`;
 	const shareUrl = 'https://dirkjanapp.pages.dev';
-	
-	console.log('Attempting to share:', shareText, shareUrl, 'Image:', pictureUrl);
 
 	if(navigator.share) {
-		// First try to share with the comic image
 		try {
 			await shareWithImage(shareText, shareUrl);
-			console.log('Comic with image shared successfully');
 			return;
 		} catch (error) {
-			console.log('Image sharing failed, trying text-only share:', error);
-			
-			// Try text-only share as fallback
 			try {
 				await navigator.share({
 					title: 'DirkJan Comic',
 					text: shareText,
 					url: shareUrl
 				});
-				console.log('Comic shared successfully via Web Share API (text-only)');
 				return;
 			} catch (textError) {
-				console.error('Text-only Web Share API also failed:', textError);
+				// Silent fallthrough
 			}
 		}
 	}
 	
-	console.log('Web Share API not supported or failed, using clipboard fallback');
-	// Fallback for browsers without Web Share API or when sharing fails
 	fallbackShare(shareText, shareUrl);
 }
 
@@ -124,7 +107,7 @@ async function shareWithImage(shareText, shareUrl) {
 			files: [file]
 		});
 	} catch (fetchError) {
-		console.log('Direct image fetch failed, trying proxy:', fetchError);
+		// Try proxy fallback
 		
 		// Try with CORS proxy as fallback
 		const response = await fetchWithFallback(pictureUrl);
@@ -176,30 +159,26 @@ function onLoad()
   comicstartDate = "2015/05/04";   
  currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
  
- var favs = JSON.parse(localStorage.getItem('favs'));
+ let favs = JSON.parse(localStorage.getItem('favs'));
 
- if(favs == null)
-	{
-		favs = [];
-	}
-	if(document.getElementById("showfavs").checked) {
-		currentselectedDate = new Date(favs[0]);
-		if(favs.length === 0)
-		{			document.getElementById("showfavs").checked = false;
-			document.getElementById("showfavs").disabled = true;
-			// Keep SVG icon, don't change to text
-			currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
-		}
-	}
-	else{
-		if(favs.length === 0)
-		{
-			document.getElementById("showfavs").checked = false;
-			document.getElementById("showfavs").disabled = true;
-			currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
-	    }
-		currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
-	}
+ if(favs == null) {
+   favs = [];
+ }
+ if(document.getElementById("showfavs").checked) {
+   currentselectedDate = new Date(favs[0]);
+   if(favs.length === 0) {
+     document.getElementById("showfavs").checked = false;
+     document.getElementById("showfavs").disabled = true;
+     currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
+   }
+ } else {
+   if(favs.length === 0) {
+     document.getElementById("showfavs").checked = false;
+     document.getElementById("showfavs").disabled = true;
+     currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
+   }
+   currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
+ }
  
  maxDate = new Date();
  nextclicked = true;
@@ -253,86 +232,81 @@ function onLoad()
 function PreviousClick()
 {
   if(document.getElementById("showfavs").checked) {
-		var favs = JSON.parse(localStorage.getItem('favs'));
-		if(favs.indexOf(formattedDate) > 0){
-			currentselectedDate = new Date(favs[favs.indexOf(formattedDate) - 1]);} }
-	else{
-		currentselectedDate.setDate(currentselectedDate.getDate() - 1);
-	}
+    const favs = JSON.parse(localStorage.getItem('favs')) || [];
+    const idx = favs.indexOf(formattedDate);
+    if(idx > 0){
+      currentselectedDate = new Date(favs[idx - 1]);
+    }
+  } else {
+    currentselectedDate.setDate(currentselectedDate.getDate() - 1);
+  }
   
   nextclicked = false;
   CompareDates();
-
   DisplayComic();
-  
-
 } 
 
 function NextClick()
 {
   nextclicked = true;
   if(document.getElementById("showfavs").checked) {
-		var favs = JSON.parse(localStorage.getItem('favs'));
-		if(favs.indexOf(formattedDate) < favs.length - 1){
-			currentselectedDate = new Date(favs[favs.indexOf(formattedDate) + 1]);} }
-	else{
-		currentselectedDate.setDate(currentselectedDate.getDate() + 1);
-	}
+    const favs = JSON.parse(localStorage.getItem('favs')) || [];
+    const idx = favs.indexOf(formattedDate);
+    if(idx > -1 && idx < favs.length - 1){
+      currentselectedDate = new Date(favs[idx + 1]);
+    }
+  } else {
+    currentselectedDate.setDate(currentselectedDate.getDate() + 1);
+  }
   
   CompareDates();
-
   DisplayComic();
-
 }
 
 function FirstClick()
 {
   if(document.getElementById("showfavs").checked) {
-		var favs = JSON.parse(localStorage.getItem('favs'));
-    currentselectedDate = new Date(JSON.parse(localStorage.getItem('favs'))[0]);}
-	else{
-	currentselectedDate = new Date(Date.UTC(1978, 5, 19,12));
-	}
+    const favs = JSON.parse(localStorage.getItem('favs')) || [];
+    if (favs.length) currentselectedDate = new Date(favs[0]);
+  } else {
+    currentselectedDate = new Date(Date.UTC(1978, 5, 19,12));
+  }
   CompareDates();
-  
   DisplayComic();
-
 }
 
 function CurrentClick()
 {
   if(document.getElementById("showfavs").checked) {
-		var favs = JSON.parse(localStorage.getItem('favs'));
-    favslength = favs.length - 1;
-    currentselectedDate = new Date(JSON.parse(localStorage.getItem('favs'))[favslength]);}
-	else{
-  currentselectedDate = new Date();
-  if (currentselectedDate.getDay() == 0) 
-    {
+    const favs = JSON.parse(localStorage.getItem('favs')) || [];
+    const favslength = favs.length - 1;
+    if (favslength >= 0) currentselectedDate = new Date(favs[favslength]);
+  } else {
+    currentselectedDate = new Date();
+    if (currentselectedDate.getDay() == 0) {
       currentselectedDate.setDate(currentselectedDate.getDate()-1);
     }
   }
   
   CompareDates();
-
   DisplayComic();
- 
 }
 
 function RandomClick()
 {
   if(document.getElementById("showfavs").checked) {
-		currentselectedDate = new Date(JSON.parse(localStorage.getItem('favs'))[Math.floor(Math.random() * JSON.parse(localStorage.getItem('favs')).length)]); }
-	else{
-		var start = new Date(comicstartDate);
-		var end = new Date();
-		currentselectedDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
-	}
+    const favs = JSON.parse(localStorage.getItem('favs')) || [];
+    if (favs.length) {
+      currentselectedDate = new Date(favs[Math.floor(Math.random() * favs.length)]);
+    }
+  } else {
+    const start = new Date(comicstartDate);
+    const end = new Date();
+    currentselectedDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+  }
 
   CompareDates();
-
   DisplayComic();
- 
 }
 
 function DateChange()
@@ -421,27 +395,21 @@ function DisplayComic()
       }
     })
     .catch(function(error) {
-      console.error('Error fetching comic:', error);
+      // Error fetching comic
       document.getElementById("comic").src = ""; // Clear the image
       document.getElementById("comic").alt = "Failed to load comic. Please try again later.";
     });
     
-    var favs = JSON.parse(localStorage.getItem('favs'));
+    const favs = JSON.parse(localStorage.getItem('favs')) || [];
 	  if(favs == null)
 	  {
 		  favs = [];
 	  }
-  if(favs.indexOf(formattedDate) == -1)
-		{
-			//$(".favicon").css({"color": "red"}).removeClass('fa-heart').addClass('fa-heart-o');
-      document.getElementById("favheart").src = "./heartborder.svg";
-
-		}	
-		else
-		{
-		//	$(".favicon").css({"color": "red"}).removeClass('fa-heart-o').addClass('fa-heart');
-      document.getElementById("favheart").src = "./heart.svg";
-		}  
+  if(favs.indexOf(formattedDate) == -1) {
+    document.getElementById("favheart").src = "./heartborder.svg";
+  } else {
+    document.getElementById("favheart").src = "./heart.svg";
+  }  
 }
 
 function setButtonDisabled(id, disabled) {
@@ -457,11 +425,11 @@ function setButtonDisabled(id, disabled) {
 }
 
  function CompareDates() {
-	var favs = JSON.parse(localStorage.getItem('favs'));
-	const rotatedDatePicker = document.getElementById('rotated-DatePicker');
-	if(document.getElementById("showfavs").checked)
-	{
-		document.getElementById("DatePicker").disabled = true;
+  const favs = JSON.parse(localStorage.getItem('favs')) || [];
+  const rotatedDatePicker = document.getElementById('rotated-DatePicker');
+  if(document.getElementById("showfavs").checked)
+  {
+    document.getElementById("DatePicker").disabled = true;
 		if (rotatedDatePicker) rotatedDatePicker.disabled = true;
 		startDate = new Date(favs[0])}
 	else
@@ -542,7 +510,7 @@ function setButtonDisabled(id, disabled) {
  }
 
 function Rotate() {
-  var element = document.getElementById('comic');
+  const element = document.getElementById('comic');
   
   // Check if we're already in fullscreen mode
   const existingOverlay = document.getElementById('comic-overlay');
@@ -882,26 +850,18 @@ setStatus.onclick = function()
 setStatus = document.getElementById('showfavs');
 setStatus.onclick = function()
 {
-	var favs = JSON.parse(localStorage.getItem('favs'));
-  if(document.getElementById('showfavs').checked)
-	{
-		localStorage.setItem('showfavs', "true");
-		if(favs.indexOf(formattedDate) !== -1)
-		{
-		}
-		else
-		{
-		  currentselectedDate = new Date(favs[0]);	
-		}
-	} 
-	else
-	{
-		localStorage.setItem('showfavs', "false");
-	}
+  const favs = JSON.parse(localStorage.getItem('favs')) || [];
+  if(document.getElementById('showfavs').checked) {
+    localStorage.setItem('showfavs', "true");
+    if(favs.indexOf(formattedDate) === -1 && favs.length) {
+      currentselectedDate = new Date(favs[0]);	
+    }
+  } else {
+    localStorage.setItem('showfavs', "false");
+  }
 
-	CompareDates();
-	DisplayComic();
-
+  CompareDates();
+  DisplayComic();
 }
 
 getStatus = localStorage.getItem('stat');
@@ -947,27 +907,20 @@ getStatus = localStorage.getItem('settings');
 	
 function Addfav()
 {
-  var favs = JSON.parse(localStorage.getItem('favs'));
-  if(favs == null)
-  {
-  favs = [];
+  let favs = JSON.parse(localStorage.getItem('favs'));
+  if(favs == null) {
+    favs = [];
   }
-  if(favs.indexOf(formattedDate) == -1)
-  {
+  if(favs.indexOf(formattedDate) == -1) {
     favs.push(formattedDate);
-    //$(".favicon").css({"color": "red"}).removeClass('fa-heart').addClass('fa-heart');
     document.getElementById("favheart").src = "./heart.svg";
     document.getElementById("showfavs").disabled = false;
-  }
-  else
-  {
+  } else {
     favs.splice(favs.indexOf(formattedDate), 1);
-    //$(".favicon").css({"color": "red"}).removeClass('fa-heart-o').addClass('fa-heart');    document.getElementById("favheart").src = "./heartborder.svg";
-    if(favs.length === 0)
-    {
+    document.getElementById("favheart").src = "./heartborder.svg";
+    if(favs.length === 0) {
       document.getElementById("showfavs").checked = false;
       document.getElementById("showfavs").disabled = true;
-      // Keep SVG icon, don't change to text
     }
   }
   favs.sort();
@@ -978,7 +931,7 @@ function Addfav()
    
 function HideSettings()
 {
-  var x = document.getElementById("settingsDIV");
+  const x = document.getElementById("settingsDIV");
   
   // Save current scroll position
   const scrollPos = window.scrollY;
@@ -1039,19 +992,11 @@ function showInstallPromotion() {
   document.body.appendChild(installButton);
 
   installButton.addEventListener('click', () => {
-	// Hide the app provided install promotion
-	installButton.style.display = 'none';
-	// Show the install prompt
-	deferredPrompt.prompt();
-	// Wait for the user to respond to the prompt
-	deferredPrompt.userChoice.then((choiceResult) => {
-	  if (choiceResult.outcome === 'accepted') {
-		console.log('User accepted the install prompt');
-	  } else {
-		console.log('User dismissed the install prompt');
-	  }
-	  deferredPrompt = null;
-	});
+    installButton.style.display = 'none';
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then((choiceResult) => {
+      deferredPrompt = null;
+    });
   });
 }
 
