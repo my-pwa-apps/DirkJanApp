@@ -508,6 +508,13 @@ function DisplayComic()
 
   localStorage.setItem('lastcomic', currentselectedDate);
   
+  // Show loading state with spinner
+  const comicImg = document.getElementById("comic");
+  const rotatedComic = document.getElementById('rotated-comic');
+  
+  comicImg.classList.add('loading');
+  comicImg.classList.remove('loaded');
+  
   fetchWithFallback(url)
     .then(function(response)
 	{
@@ -524,16 +531,29 @@ function DisplayComic()
         pictureUrl = siteBody.substring(picturePosition, picturePosition+88);
         endPosition = pictureUrl.lastIndexOf('"');
         pictureUrl = siteBody.substring(picturePosition, picturePosition+endPosition);
-        document.getElementById("comic").src = pictureUrl;
         
-        // Also update the rotated comic if it exists
-        const rotatedComic = document.getElementById('rotated-comic');
-        if (rotatedComic) {
-          rotatedComic.src = pictureUrl;
-        }
+        // Create new image to preload and add smooth transition
+        const tempImg = new Image();
+        tempImg.onload = function() {
+          comicImg.src = pictureUrl;
+          comicImg.classList.remove('loading');
+          comicImg.classList.add('loaded');
+          
+          // Also update the rotated comic if it exists
+          if (rotatedComic) {
+            rotatedComic.src = pictureUrl;
+          }
+        };
+        tempImg.onerror = function() {
+          comicImg.classList.remove('loading');
+          comicImg.src = "";
+          comicImg.alt = "Failed to load comic image.";
+        };
+        tempImg.src = pictureUrl;
       }
       else
       {
+        comicImg.classList.remove('loading');
         if (nextclicked)
         {
           NextClick();
@@ -545,9 +565,9 @@ function DisplayComic()
       }
     })
     .catch(function(error) {
-      console.error('Error fetching comic:', error);
-      document.getElementById("comic").src = ""; // Clear the image
-      document.getElementById("comic").alt = "Failed to load comic. Please try again later.";
+      comicImg.classList.remove('loading');
+      comicImg.src = ""; // Clear the image
+      comicImg.alt = "Failed to load comic. Please try again later.";
     });
     
   var favs = loadFavs();
@@ -1545,4 +1565,194 @@ function makeMainToolbarDraggable(toolbar) {
   // Attach initial listeners
   toolbar.addEventListener('mousedown', onDown);
   toolbar.addEventListener('touchstart', onDown, { passive: false });
+}
+
+// ========================================
+// KEYBOARD SHORTCUTS
+// ========================================
+document.addEventListener('keydown', function(e) {
+  // Don't trigger shortcuts when typing in input fields
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+    return;
+  }
+  
+  // Prevent default for keys we're handling
+  const handledKeys = ['ArrowLeft', 'ArrowRight', 'Home', 'End', ' ', 'r', 'R', 'f', 'F'];
+  if (handledKeys.includes(e.key)) {
+    e.preventDefault();
+  }
+  
+  switch(e.key) {
+    case 'ArrowLeft':
+      // Left arrow - Previous comic
+      if (!document.getElementById('Previous').disabled) {
+        PreviousClick();
+      }
+      break;
+      
+    case 'ArrowRight':
+      // Right arrow - Next comic
+      if (!document.getElementById('Next').disabled) {
+        NextClick();
+      }
+      break;
+      
+    case 'Home':
+      // Home key - First comic
+      if (!document.getElementById('First').disabled) {
+        FirstClick();
+      }
+      break;
+      
+    case 'End':
+      // End key - Current/Latest comic
+      if (!document.getElementById('Current').disabled) {
+        CurrentClick();
+      }
+      break;
+      
+    case ' ':
+      // Spacebar - Random comic
+      if (!document.getElementById('Random').disabled) {
+        RandomClick();
+      }
+      break;
+      
+    case 'r':
+    case 'R':
+      // R key - Random comic (alternative)
+      if (!document.getElementById('Random').disabled) {
+        RandomClick();
+      }
+      break;
+      
+    case 'f':
+    case 'F':
+      // F key - Toggle favorite
+      Addfav();
+      break;
+  }
+});
+
+// ========================================
+// COMIC PRELOADING FOR SMOOTHER NAVIGATION
+// ========================================
+let preloadedComics = new Map();
+
+function preloadAdjacentComics() {
+  // Preload next and previous comics in the background
+  if (!formattedDate) return;
+  
+  const currentDate = new Date(formattedDate);
+  
+  // Preload next comic
+  const nextDate = new Date(currentDate);
+  nextDate.setDate(nextDate.getDate() + 1);
+  preloadComic(nextDate);
+  
+  // Preload previous comic
+  const prevDate = new Date(currentDate);
+  prevDate.setDate(prevDate.getDate() - 1);
+  preloadComic(prevDate);
+}
+
+function preloadComic(date) {
+  formatDate(date);
+  const preloadFormattedDate = year + "-" + month + "-" + day;
+  const preloadFormattedComicDate = year + month + day;
+  
+  // Don't preload if already cached
+  if (preloadedComics.has(preloadFormattedDate)) {
+    return;
+  }
+  
+  const url = `https://dirkjan.nl/cartoon/${preloadFormattedComicDate}`;
+  
+  fetchWithFallback(url)
+    .then(response => response.text())
+    .then(text => {
+      const notFound = text.includes("error404");
+      if (!notFound) {
+        let picturePos = text.indexOf('<article class="cartoon">') + 41;
+        let tempPictureUrl = text.substring(picturePos, picturePos + 88);
+        const endPos = tempPictureUrl.lastIndexOf('"');
+        tempPictureUrl = text.substring(picturePos, picturePos + endPos);
+        
+        // Preload the actual image
+        const img = new Image();
+        img.src = tempPictureUrl;
+        
+        // Cache it
+        preloadedComics.set(preloadFormattedDate, tempPictureUrl);
+        
+        // Limit cache size to prevent memory issues
+        if (preloadedComics.size > 10) {
+          const firstKey = preloadedComics.keys().next().value;
+          preloadedComics.delete(firstKey);
+        }
+      }
+    })
+    .catch(() => {
+      // Silently fail for preloading
+    });
+}
+
+// Trigger preloading after each comic display
+const originalDisplayComic = DisplayComic;
+DisplayComic = function() {
+  originalDisplayComic.call(this);
+  
+  // Preload adjacent comics after a short delay
+  setTimeout(() => {
+    preloadAdjacentComics();
+  }, 500);
+};
+
+// ========================================
+// VISUAL FEEDBACK - Show keyboard shortcuts hint on first load
+// ========================================
+function showKeyboardShortcutsHint() {
+  const hasSeenHint = localStorage.getItem('keyboardHintSeen');
+  
+  if (!hasSeenHint) {
+    setTimeout(() => {
+      const hint = document.createElement('div');
+      hint.id = 'keyboard-hint';
+      hint.innerHTML = `
+        <div style="position: fixed; bottom: 20px; right: 20px; background: rgba(0,0,0,0.85); color: white; padding: 15px 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 10003; max-width: 300px; font-size: 14px; backdrop-filter: blur(10px);">
+          <div style="font-weight: bold; margin-bottom: 10px; font-size: 16px;">⌨️ Keyboard Shortcuts</div>
+          <div style="line-height: 1.6;">
+            ← → : Previous/Next<br>
+            Home/End : First/Latest<br>
+            Space/R : Random<br>
+            F : Favorite
+          </div>
+          <button onclick="this.parentElement.parentElement.remove(); localStorage.setItem('keyboardHintSeen', 'true');" style="margin-top: 12px; padding: 6px 12px; background: linear-gradient(45deg, #f09819 0%, #ff8c00 100%); border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: bold; width: 100%;">Got it!</button>
+        </div>
+      `;
+      document.body.appendChild(hint);
+      
+      // Auto-hide after 8 seconds
+      setTimeout(() => {
+        const hintEl = document.getElementById('keyboard-hint');
+        if (hintEl) {
+          hintEl.style.transition = 'opacity 0.5s';
+          hintEl.style.opacity = '0';
+          setTimeout(() => {
+            if (hintEl.parentElement) {
+              hintEl.parentElement.removeChild(hintEl);
+            }
+            localStorage.setItem('keyboardHintSeen', 'true');
+          }, 500);
+        }
+      }, 8000);
+    }, 2000); // Show after 2 seconds
+  }
+}
+
+// Show hint on page load
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', showKeyboardShortcutsHint);
+} else {
+  showKeyboardShortcutsHint();
 }

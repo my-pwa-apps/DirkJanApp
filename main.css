@@ -958,4 +958,82 @@ input[type="date"]#DatePicker:disabled {
   }
 }
 
+/* ========================================
+   LOADING SPINNER & TRANSITIONS
+   ======================================== */
+
+/* Loading spinner for comic images */
+.loading-spinner {
+  display: inline-block;
+  width: 50px;
+  height: 50px;
+  border: 5px solid rgba(240, 152, 25, 0.3);
+  border-radius: 50%;
+  border-top-color: #f09819;
+  animation: spinner 0.8s linear infinite;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+}
+
+@keyframes spinner {
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* Container for comic image with loading state */
+.comic-container {
+  position: relative;
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Smooth fade-in transition for comics */
+.comic-fade-enter {
+  opacity: 0;
+  transform: scale(0.98);
+}
+
+.comic-fade-enter-active {
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+}
+
+.comic-fade-exit {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.comic-fade-exit-active {
+  opacity: 0;
+  transform: scale(0.98);
+  transition: opacity 0.2s ease-in, transform 0.2s ease-in;
+}
+
+/* Loading state for comic image */
+img#comic.loading {
+  opacity: 0.3;
+}
+
+img#comic.loaded {
+  animation: fadeInComic 0.3s ease-out;
+}
+
+@keyframes fadeInComic {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+
+
 
