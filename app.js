@@ -578,7 +578,12 @@ function DisplayComic()
     document.getElementById("favheart").src = "./heartborder.svg";
   } else {
     document.getElementById("favheart").src = "./heart.svg";
-  }  
+  }
+  
+  // Preload adjacent comics after a short delay
+  setTimeout(() => {
+    preloadAdjacentComics();
+  }, 500);
 }
 
 function setButtonDisabled(id, disabled) {
@@ -1697,16 +1702,7 @@ function preloadComic(date) {
     });
 }
 
-// Trigger preloading after each comic display
-const originalDisplayComic = DisplayComic;
-DisplayComic = function() {
-  originalDisplayComic.call(this);
-  
-  // Preload adjacent comics after a short delay
-  setTimeout(() => {
-    preloadAdjacentComics();
-  }, 500);
-};
+// We'll call preloadAdjacentComics() directly from within DisplayComic instead of wrapping it
 
 // ========================================
 // VISUAL FEEDBACK - Show keyboard shortcuts hint on first load
