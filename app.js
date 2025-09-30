@@ -88,34 +88,6 @@ function safeJSONParse(str, fallback) {
   try { return JSON.parse(str); } catch (_) { return fallback; }
 }
 
-// Toolbar reset logic
-function resetToolbarPosition() {
-  const toolbar = document.querySelector('.toolbar:not(.fullscreen-toolbar)');
-  if (!toolbar) return;
-  // Remove stored position
-  try { localStorage.removeItem(STORAGE_KEYS.TOOLBAR_POS); } catch(e) { /* ignore */ }
-  // Re-center horizontally, top at 0
-  const viewportWidth = window.innerWidth;
-  const rect = toolbar.getBoundingClientRect();
-  const centeredLeft = Math.max(0, (viewportWidth - rect.width) / 2);
-  toolbar.style.top = '0px';
-  toolbar.style.left = centeredLeft + 'px';
-  toolbar.style.transform = 'none';
-  const resetBtn = document.getElementById('reset-toolbar');
-  if (resetBtn) resetBtn.style.display = 'none';
-}
-
-function showResetButtonIfMoved() {
-  const resetBtn = document.getElementById('reset-toolbar');
-  if (!resetBtn) return;
-  const raw = localStorage.getItem(STORAGE_KEYS.TOOLBAR_POS) || localStorage.getItem('mainToolbarPosition');
-  const savedPos = safeJSONParse(raw, null);
-  if (savedPos && !localStorage.getItem(STORAGE_KEYS.TOOLBAR_POS)) {
-    try { localStorage.setItem(STORAGE_KEYS.TOOLBAR_POS, JSON.stringify(savedPos)); localStorage.removeItem('mainToolbarPosition'); } catch(_) {}
-  }
-  resetBtn.style.display = savedPos ? 'inline-block' : 'none';
-}
-
 // Keep toolbar within viewport on resize/orientation changes
 function clampMainToolbarInView() {
   const toolbar = document.querySelector('.toolbar:not(.fullscreen-toolbar)');
@@ -135,7 +107,6 @@ function clampMainToolbarInView() {
     toolbar.style.top = top + 'px';
     try { localStorage.setItem(STORAGE_KEYS.TOOLBAR_POS, JSON.stringify({ top, left })); } catch(_) {}
   }
-  showResetButtonIfMoved();
 }
 
 async function Share() 
@@ -1083,17 +1054,9 @@ document.addEventListener('DOMContentLoaded', function() {
       const centeredLeft = (viewportWidth - rect.width) / 2;
       mainToolbar.style.left = centeredLeft + 'px';
       clampMainToolbarInView();
-      showResetButtonIfMoved();
     });
   } else {
     clampMainToolbarInView();
-    showResetButtonIfMoved();
-  }
-
-  // Reset button wiring
-  const resetBtn = document.getElementById('reset-toolbar');
-  if (resetBtn) {
-    resetBtn.addEventListener('click', (e) => { e.preventDefault(); resetToolbarPosition(); });
   }
 
   window.addEventListener('resize', clampMainToolbarInView);
@@ -1569,7 +1532,6 @@ function makeMainToolbarDraggable(toolbar) {
       const numericTop = parseFloat(toolbar.style.top) || 0;
       const numericLeft = parseFloat(toolbar.style.left) || 0;
       try { localStorage.setItem(STORAGE_KEYS.TOOLBAR_POS, JSON.stringify({ top: numericTop, left: numericLeft })); } catch(_) {}
-      showResetButtonIfMoved();
       clampMainToolbarInView();
     }
 
@@ -1583,6 +1545,4 @@ function makeMainToolbarDraggable(toolbar) {
   // Attach initial listeners
   toolbar.addEventListener('mousedown', onDown);
   toolbar.addEventListener('touchstart', onDown, { passive: false });
-  
-  showResetButtonIfMoved();
 }
