@@ -689,6 +689,13 @@ function setButtonDisabled(id, disabled) {
 function Rotate() {
   const element = document.getElementById('comic');
   
+  if (!element) {
+    console.error('Rotate: Comic element not found');
+    return;
+  }
+  
+  console.log('Rotate function called, element class:', element.className);
+  
   // Check if we're already in fullscreen mode
   const existingOverlay = document.getElementById('comic-overlay');
   if (existingOverlay) {

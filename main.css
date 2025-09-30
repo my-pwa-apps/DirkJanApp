@@ -1017,6 +1017,8 @@ input[type="date"]#DatePicker:disabled {
 /* Loading state for comic image */
 img#comic.loading {
   opacity: 0.3;
+  cursor: pointer; /* Ensure cursor shows it's clickable */
+  pointer-events: auto; /* Ensure it's clickable even while loading */
 }
 
 img#comic.loaded {
