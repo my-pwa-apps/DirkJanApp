@@ -23,20 +23,18 @@ async function fetchWithFallback(url) {
       }
     } catch (error) {
       lastError = error;
-      console.warn(`Failed to fetch using proxy ${proxy}:`, error);
+      // Failed fetch attempt
       continue;
     }
   }
   
   // If all proxies failed with regular mode, try with no-cors as last resort
   try {
-    console.log("Trying direct fetch with no-cors mode as last resort");
     const response = await fetch(url, { mode: 'no-cors' });
     // Note: with no-cors, we cannot read the response content in JavaScript
     // but the browser can still use the response for things like displaying images
     return response;
   } catch (error) {
-    console.error("Even no-cors mode failed:", error);
     lastError = error;
   }
   
@@ -74,7 +72,6 @@ function loadFavs() {
     const parsed = JSON.parse(raw);
     return (_cachedFavs = Array.isArray(parsed) ? parsed : []);
   } catch (e) {
-    console.warn('Failed to parse favs from storage', e);
     return (_cachedFavs = []);
   }
 }
@@ -82,7 +79,7 @@ function saveFavs(arr) {
   if (!Array.isArray(arr)) return;
   const deduped = Array.from(new Set(arr)).sort();
   _cachedFavs = deduped;
-  try { localStorage.setItem(STORAGE_KEYS.FAVS, JSON.stringify(deduped)); } catch (e) { console.warn('Failed saving favs', e); }
+  try { localStorage.setItem(STORAGE_KEYS.FAVS, JSON.stringify(deduped)); } catch (e) { /* ignore */ }
 }
 function invalidateFavsCache() { _cachedFavs = null; }
 
@@ -144,7 +141,6 @@ function clampMainToolbarInView() {
 async function Share() 
 {
 	if(!pictureUrl) {
-		console.error('No image URL available to share');
 		alert('Sorry, no comic is available to share at this moment.');
 		return;
 	}
@@ -152,16 +148,12 @@ async function Share()
 	// Create share text with current date
 	const shareText = `Check out this DirkJan comic from ${formattedDate}!`;
 	const shareUrl = 'https://dirkjanapp.pages.dev';
-	
-	console.log('Attempting to share:', shareText, shareUrl, 'Image:', pictureUrl);
 
 	// Detect Android for special handling
 	const isAndroid = /Android/i.test(navigator.userAgent);
-	console.log('Device detected:', isAndroid ? 'Android' : 'Other', navigator.userAgent);
 
 	// Check if Web Share API is supported
 	if(!navigator.share) {
-		console.log('Web Share API not supported, using clipboard fallback');
 		fallbackShare(shareText, shareUrl);
 		return;
 	}
@@ -174,16 +166,11 @@ async function Share()
 	}
 
 	try {
-		console.log('Trying optimized image sharing...');
 		await shareWithImage(shareText, shareUrl);
-		console.log('Comic with image shared successfully');
 	} catch (error) {
-		console.log('Image sharing failed, trying enhanced fallback:', error);
-		
 		// Enhanced fallback for Android - try different approaches
 		if (isAndroid) {
 			try {
-				console.log('Trying Android-specific aggressive image URL sharing...');
 				
 				// Android-specific: Try sharing with the image URL prominently featured
 				const androidShareText = `📸 DirkJan Comic from ${formattedDate}\n\n🖼️ Image: ${pictureUrl}\n\n📱 Get the app: ${shareUrl}`;
@@ -194,10 +181,9 @@ async function Share()
 						title: 'DirkJan Comic Image',
 						text: androidShareText
 					});
-					console.log('Comic shared successfully via Android aggressive text sharing');
 					return;
 				} catch (error) {
-					console.warn('Android aggressive text sharing failed:', error);
+					// Try next method
 				}
 				
 				// Second try: Just the image URL with minimal text
@@ -207,10 +193,9 @@ async function Share()
 						text: `Comic image: ${pictureUrl}`,
 						url: shareUrl
 					});
-					console.log('Comic shared successfully via Android minimal sharing');
 					return;
 				} catch (error) {
-					console.warn('Android minimal sharing failed:', error);
+					// Try next method
 				}
 				
 				// Third try: Original approach
@@ -218,9 +203,7 @@ async function Share()
 					title: 'DirkJan Comic',
 					text: `${shareText}\n\n📸 Comic image: ${pictureUrl}\n\n🌐 App: ${shareUrl}`
 				});
-				console.log('Comic shared successfully via Android fallback text sharing');
 			} catch (androidError) {
-				console.error('All Android text sharing methods failed:', androidError);
 				fallbackShare(shareText, shareUrl);
 			}
 		} else {
@@ -231,9 +214,7 @@ async function Share()
 					text: `${shareText}\n\nView comic image: ${pictureUrl}`,
 					url: shareUrl
 				});
-				console.log('Comic shared successfully via Web Share API (text + image URL)');
 			} catch (textError) {
-				console.error('Web Share API failed completely:', textError);
 				// Final fallback to clipboard
 				fallbackShare(shareText, shareUrl);
 			}
@@ -248,7 +229,6 @@ async function Share()
 }
 
 async function shareWithImage(shareText, shareUrl) {
-  console.log('Attempting to acquire image blob for sharing');
   // Safe feature detection since some browsers throw for canShare with files param
   const fileShareSupported = (() => {
     try {
@@ -277,20 +257,18 @@ async function shareWithImage(shareText, shareUrl) {
   let blob = null;
   for (const url of attempts) {
     try {
-      console.log('Image fetch attempt:', url);
       const r = await tryFetch(url, 8000);
-      if (!r.ok) { console.warn('Non-OK response', r.status); continue; }
+      if (!r.ok) continue;
       const b = await r.blob();
-      if (b.size < 400) { console.warn('Blob too small', b.size); continue; }
+      if (b.size < 400) continue;
       blob = b; break;
-    } catch (err) { console.warn('Fetch attempt failed:', url, err); }
+    } catch (err) { /* Try next URL */ }
   }
   if (!blob) throw new Error('Failed to fetch image blob');
 
   // Ensure JPEG for widest support
   let finalFile;
   if (!/jpe?g/i.test(blob.type)) {
-    console.log('Converting image to JPEG');
     finalFile = await new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => {
@@ -322,14 +300,12 @@ async function shareWithImage(shareText, shareUrl) {
   for (const payload of shareVariants) {
     try {
       if (navigator.canShare && !navigator.canShare({ files: payload.files })) {
-        console.warn('canShare returned false for variant');
         continue;
       }
       await navigator.share(payload);
-      console.log('Image shared successfully using variant:', payload);
       return;
     } catch (err) {
-      console.warn('Share variant failed, trying next:', err);
+      // Try next variant
     }
   }
   throw new Error('All image share variants failed');
@@ -360,37 +336,32 @@ function showShareDialog(content) {
 	}
 }
 
+  
 function onLoad()
 {
-  // Remove the style element that was added for the lighter background
-  
   comicstartDate = "2015/05/04";   
- currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
+  currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
  
- let favs = loadFavs();
+  let favs = loadFavs();
 
- if(favs == null)
-	{
-		favs = [];
-	}
-	if(document.getElementById("showfavs").checked) {
-		currentselectedDate = new Date(favs[0]);
-		if(favs.length === 0)
-		{			document.getElementById("showfavs").checked = false;
-			document.getElementById("showfavs").disabled = true;
-			// Keep SVG icon, don't change to text
-			currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
-		}
-	}
-	else{
-		if(favs.length === 0)
-		{
-			document.getElementById("showfavs").checked = false;
-			document.getElementById("showfavs").disabled = true;
-			currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
-	    }
-		currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
-	}
+  if (favs == null) {
+    favs = [];
+  }
+  if (document.getElementById("showfavs").checked) {
+    currentselectedDate = new Date(favs[0]);
+    if (favs.length === 0) {
+      document.getElementById("showfavs").checked = false;
+      document.getElementById("showfavs").disabled = true;
+      currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
+    }
+  } else {
+    if (favs.length === 0) {
+      document.getElementById("showfavs").checked = false;
+      document.getElementById("showfavs").disabled = true;
+      currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
+    }
+    currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
+  }
  
  maxDate = new Date();
  nextclicked = true;
@@ -609,21 +580,14 @@ function DisplayComic()
     });
     
   var favs = loadFavs();
-	  if(favs == null)
-	  {
-		  favs = [];
-	  }
-  if(favs.indexOf(formattedDate) == -1)
-		{
-			//$(".favicon").css({"color": "red"}).removeClass('fa-heart').addClass('fa-heart-o');
-      document.getElementById("favheart").src = "./heartborder.svg";
-
-		}	
-		else
-		{
-		//	$(".favicon").css({"color": "red"}).removeClass('fa-heart-o').addClass('fa-heart');
-      document.getElementById("favheart").src = "./heart.svg";
-		}  
+  if (favs == null) {
+    favs = [];
+  }
+  if (favs.indexOf(formattedDate) == -1) {
+    document.getElementById("favheart").src = "./heartborder.svg";
+  } else {
+    document.getElementById("favheart").src = "./heart.svg";
+  }  
 }
 
 function setButtonDisabled(id, disabled) {
@@ -639,15 +603,15 @@ function setButtonDisabled(id, disabled) {
 }
 
  function CompareDates() {
-  var favs = loadFavs();
-	const rotatedDatePicker = document.getElementById('rotated-DatePicker');
-	if(document.getElementById("showfavs").checked)
-	{
-		document.getElementById("DatePicker").disabled = true;
-		if (rotatedDatePicker) rotatedDatePicker.disabled = true;
-		startDate = new Date(favs[0])}
-	else
-  {	
+  const favs = loadFavs();
+  const rotatedDatePicker = document.getElementById('rotated-DatePicker');
+  const showFavsChecked = document.getElementById("showfavs").checked;
+  
+  if (showFavsChecked) {
+    document.getElementById("DatePicker").disabled = true;
+    if (rotatedDatePicker) rotatedDatePicker.disabled = true;
+    startDate = new Date(favs[0]);
+  } else {	
 		document.getElementById("DatePicker").disabled = false;
 		if (rotatedDatePicker) rotatedDatePicker.disabled = false;
 		startDate = new Date(comicstartDate);
@@ -727,7 +691,7 @@ function setButtonDisabled(id, disabled) {
  }
 
 function Rotate() {
-  var element = document.getElementById('comic');
+  const element = document.getElementById('comic');
   
   // Check if we're already in fullscreen mode
   const existingOverlay = document.getElementById('comic-overlay');
@@ -937,7 +901,7 @@ function handleTouchEnd(e) {
 	const absY = Math.abs(deltaY);
 	
 	// Check if we're in fullscreen/rotated mode
-	const isInFullscreen = document.getElementById('rotated-comic') !== null;
+  const isInFullscreen = document.getElementById('rotated-comic') !== null;
 	
 	// Determine swipe direction based on mode
 	if (isInFullscreen) {
@@ -1434,19 +1398,14 @@ function showInstallPromotion() {
   document.body.appendChild(installButton);
 
   installButton.addEventListener('click', () => {
-	// Hide the app provided install promotion
-	installButton.style.display = 'none';
-	// Show the install prompt
-	deferredPrompt.prompt();
-	// Wait for the user to respond to the prompt
-	deferredPrompt.userChoice.then((choiceResult) => {
-	  if (choiceResult.outcome === 'accepted') {
-		console.log('User accepted the install prompt');
-	  } else {
-		console.log('User dismissed the install prompt');
-	  }
-	  deferredPrompt = null;
-	});
+    // Hide the app provided install promotion
+    installButton.style.display = 'none';
+    // Show the install prompt
+    deferredPrompt.prompt();
+    // Wait for the user to respond to the prompt
+    deferredPrompt.userChoice.then((choiceResult) => {
+      deferredPrompt = null;
+    });
   });
 }
 
@@ -1522,7 +1481,6 @@ function positionFullscreenToolbar() {
 // Make the main toolbar draggable
 function makeMainToolbarDraggable(toolbar) {
   if (!toolbar) {
-    console.log('Toolbar not found for dragging');
     return;
   }
 
@@ -1552,7 +1510,6 @@ function makeMainToolbarDraggable(toolbar) {
       return;
     }
 
-    console.log('Starting drag');
     isDragging = true;
     toolbar.style.cursor = 'grabbing';
     toolbar.style.transition = 'none'; // No transition during drag
@@ -1606,10 +1563,9 @@ function makeMainToolbarDraggable(toolbar) {
 
   const onUp = () => {
     if (isDragging) {
-      console.log('Ending drag');
       isDragging = false;
       toolbar.style.cursor = 'grab';
-      toolbar.style.transition = ''; // Restore original transition
+      toolbar.style.transition = '';
       const numericTop = parseFloat(toolbar.style.top) || 0;
       const numericLeft = parseFloat(toolbar.style.left) || 0;
       try { localStorage.setItem(STORAGE_KEYS.TOOLBAR_POS, JSON.stringify({ top: numericTop, left: numericLeft })); } catch(_) {}
@@ -1628,6 +1584,5 @@ function makeMainToolbarDraggable(toolbar) {
   toolbar.addEventListener('mousedown', onDown);
   toolbar.addEventListener('touchstart', onDown, { passive: false });
   
-  console.log('Toolbar drag functionality attached');
   showResetButtonIfMoved();
 }
