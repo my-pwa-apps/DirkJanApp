@@ -1662,9 +1662,19 @@ function preloadAdjacentComics() {
 }
 
 function preloadComic(date) {
+  // Save current global state to restore after preloading
+  const savedYear = year;
+  const savedMonth = month;
+  const savedDay = day;
+  
   formatDate(date);
   const preloadFormattedDate = year + "-" + month + "-" + day;
   const preloadFormattedComicDate = year + month + day;
+  
+  // Restore global state
+  year = savedYear;
+  month = savedMonth;
+  day = savedDay;
   
   // Don't preload if already cached
   if (preloadedComics.has(preloadFormattedDate)) {
