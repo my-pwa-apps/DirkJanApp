@@ -1,5 +1,75 @@
+// ========================================
+// SERVICE WORKER REGISTRATION & PWA SETUP
+// ========================================
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("./serviceworker.js");
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register("./serviceworker.js")
+      .then(registration => {
+        console.log('ServiceWorker registered successfully');
+        
+        // Check for updates periodically (every hour)
+        setInterval(() => {
+          registration.update();
+        }, 3600000);
+        
+        // Listen for new service worker waiting to activate
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing;
+          if (newWorker) {
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                // New service worker available
+                showUpdateNotification();
+              }
+            });
+          }
+        });
+      })
+      .catch(error => {
+        console.error('ServiceWorker registration failed:', error);
+      });
+  });
+}
+
+// Show update notification to user
+function showUpdateNotification() {
+  const notification = document.createElement('div');
+  notification.id = 'update-notification';
+  notification.innerHTML = `
+    <div style="position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.9); color: white; padding: 15px 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); z-index: 10004; max-width: 90%; text-align: center; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);">
+      <div style="font-weight: bold; margin-bottom: 8px;">🎉 Nieuwe versie beschikbaar!</div>
+      <button onclick="updateApp()" style="margin: 5px; padding: 8px 16px; background: linear-gradient(45deg, #f09819 0%, #ff8c00 100%); border: none; border-radius: 8px; color: white; cursor: pointer; font-weight: bold;">Updaten</button>
+      <button onclick="dismissUpdate()" style="margin: 5px; padding: 8px 16px; background: rgba(255,255,255,0.2); border: none; border-radius: 8px; color: white; cursor: pointer;">Later</button>
+    </div>
+  `;
+  document.body.appendChild(notification);
+}
+
+// Update app to new version
+function updateApp() {
+  const notification = document.getElementById('update-notification');
+  if (notification) {
+    notification.remove();
+  }
+  
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistration().then(registration => {
+      if (registration && registration.waiting) {
+        registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+        window.location.reload();
+      }
+    });
+  }
+}
+
+// Dismiss update notification
+function dismissUpdate() {
+  const notification = document.getElementById('update-notification');
+  if (notification) {
+    notification.style.transition = 'opacity 0.3s';
+    notification.style.opacity = '0';
+    setTimeout(() => notification.remove(), 300);
+  }
 }
 
 // Define CORS proxies - prioritize Garfield proxy
@@ -310,6 +380,9 @@ function showShareDialog(content) {
   
 function onLoad()
 {
+  // Check URL parameters for app shortcuts
+  const urlParams = new URLSearchParams(window.location.search);
+  
   comicstartDate = "2015/05/04";   
   currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
  
@@ -379,6 +452,14 @@ function onLoad()
 			currentselectedDate = new Date(localStorage.getItem('lastcomic'));
 		}
 	}
+  
+  // Handle app shortcut for random comic
+  if (urlParams.get('random') === 'true') {
+    const start = new Date(comicstartDate);
+    const end = new Date();
+    currentselectedDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+  }
+  
   CompareDates();
   DisplayComic();
 }
@@ -536,6 +617,7 @@ function DisplayComic()
         const tempImg = new Image();
         tempImg.onload = function() {
           comicImg.src = pictureUrl;
+          comicImg.alt = `DirkJan strip van ${day}-${month}-${year} door Mark Retera`;
           comicImg.classList.remove('loading');
           comicImg.classList.add('loaded');
           

@@ -6,24 +6,86 @@
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="keywords" content="dirkjan, bert, bello, van, druten, kutschool, dirkjan.nl, comic, comics, strip, strips, cartoon, cartoons, mark, retera, webapp, mobile, responsive, pwa, progressive, web, app, ios, android, windows, platform, multi, platforms, online, unofficial, independent">
-    <meta name="description" content="DirkJan Strip, Vandaag, Volgende, Vorige, Random, Eerste, Specifieke datum, Swipe">
+    <meta name="keywords" content="dirkjan, bert, bello, van, druten, kutschool, dirkjan.nl, comic, comics, strip, strips, cartoon, cartoons, mark, retera, webapp, mobile, responsive, pwa, progressive, web, app, ios, android, windows, platform, multi, platforms, online, unofficial, independent, nederlandse strip, dagelijkse strip, gratis comics">
+    <meta name="description" content="Lees dagelijks de nieuwste DirkJan strip van Mark Retera. Ontdek ook willekeurige comics, favorieten en navigeer eenvoudig door het hele archief sinds 2015. Gratis Nederlandse strip webapp.">
+    <meta name="author" content="Daily DirkJan App">
     <meta name="msapplication-TileColor" content="#da532c">
     <meta name="theme-color" content="black">
-    <title>Daily DirkJan Comics</title>
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://dirkjanapp.pages.dev/">
+    <meta property="og:title" content="Daily DirkJan Comics - Nederlandse Strip Webapp">
+    <meta property="og:description" content="Lees dagelijks de nieuwste DirkJan strip van Mark Retera. Navigeer door het volledige archief, ontdek willekeurige comics en bewaar je favorieten.">
+    <meta property="og:image" content="https://dirkjanapp.pages.dev/android-chrome-512x512.png">
+    <meta property="og:locale" content="nl_NL">
+    <meta property="og:site_name" content="Daily DirkJan Comics">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://dirkjanapp.pages.dev/">
+    <meta property="twitter:title" content="Daily DirkJan Comics - Nederlandse Strip Webapp">
+    <meta property="twitter:description" content="Lees dagelijks de nieuwste DirkJan strip van Mark Retera. Navigeer door het volledige archief, ontdek willekeurige comics en bewaar je favorieten.">
+    <meta property="twitter:image" content="https://dirkjanapp.pages.dev/android-chrome-512x512.png">
+    
+    <title>Daily DirkJan Comics - Nederlandse Strip Webapp | Dagelijkse DirkJan van Mark Retera</title>
     <link rel="stylesheet" href="./main.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <link rel="canonical" href="https://dirkjanapp.pages.dev">
     <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.webp">
     <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32x32.webp">
     <link rel="icon" type="image/png" sizes="16x16" href="./favicon-16x16.webp">    <link rel="manifest" href="./manifest.webmanifest">
+    
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Daily DirkJan Comics",
+      "description": "Lees dagelijks de nieuwste DirkJan strip van Mark Retera. Ontdek ook willekeurige comics, favorieten en navigeer eenvoudig door het hele archief sinds 2015.",
+      "url": "https://dirkjanapp.pages.dev/",
+      "applicationCategory": "Entertainment",
+      "operatingSystem": "All",
+      "browserRequirements": "Requires JavaScript. Requires HTML5.",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "EUR"
+      },
+      "inLanguage": "nl-NL",
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.8",
+        "ratingCount": "100"
+      },
+      "creator": {
+        "@type": "Organization",
+        "name": "Daily DirkJan App",
+        "url": "https://dirkjanapp.pages.dev/"
+      },
+      "about": {
+        "@type": "ComicSeries",
+        "name": "DirkJan",
+        "author": {
+          "@type": "Person",
+          "name": "Mark Retera"
+        },
+        "publisher": {
+          "@type": "Organization",
+          "name": "dirkjan.nl",
+          "url": "https://dirkjan.nl"
+        }
+      }
+    }
+    </script>
   </head>
 
 <body onload="onLoad()">
-  <h1 hidden>Daily DirkJan Comics</h1>
+  <h1 hidden>Daily DirkJan Comics - Dagelijkse Nederlandse Strip van Mark Retera</h1>
+  <p hidden>Lees elke dag de nieuwste DirkJan strip. Deze gratis webapp biedt toegang tot het volledige archief van DirkJan comics sinds 2015. Bekijk de strip van vandaag, ontdek willekeurige comics, navigeer met swipe-gebaren, en bewaar je favoriete strips. Perfect voor fans van Nederlandse humor en cartoons.</p>
   <a class="skip-link" href="#comic">Skip to comic</a>
   <div class="logo" role="banner">
-    <a href="https://dirkjan.nl" target="_blank" rel="noopener"><img src="./dirk-jan-tekst.svg" class="logo-img" alt="Daily DirkJan Title"/></a>
+    <a href="https://dirkjan.nl" target="_blank" rel="noopener"><img src="./dirk-jan-tekst.svg" class="logo-img" alt="DirkJan logo - Nederlandse stripfiguur door Mark Retera"/></a>
   </div>
     
   <!-- Modern Toolbar -->

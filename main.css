@@ -76,13 +76,18 @@ input[type=checkbox]:checked:after
 
 .logo
 {
-    padding: 15px 10px;
+    padding: 10px 15px; /* Small padding left/right for breathing room */
     margin-bottom: 5px;
+    width: 100%; /* Full width */
+    box-sizing: border-box; /* Include padding in width calculation */
 }
 
 .logo img
 {
     width: 100%;
+    max-width: 100%;
+    height: auto;
+    display: block;
 }
 .button {
     margin: 5px ;
@@ -1135,12 +1140,14 @@ img#comic.loaded {
   
   /* Logo adjustments for mobile */
   .logo {
-    padding: 10px 5px;
+    padding: 8px 12px;
     margin-bottom: 0;
+    width: 100%;
   }
   
   .logo img {
-    max-width: 90%;
+    width: 100%;
+    max-width: 100%;
   }
   
   /* Settings icons responsive positioning */

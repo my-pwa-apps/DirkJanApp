@@ -1,71 +1,188 @@
-// Name and version for our cache
-const CACHE_NAME = 'pwa-cache-v1';
-// Offline fallback page (make sure you have this file available)
-const OFFLINE_URL = '/offline.html';
+// Service Worker for DirkJan PWA
+// Cache versioning - increment when you need to force cache refresh
+const CACHE_VERSION = 'v2';
+const CACHE_NAME = `dirkjan-cache-${CACHE_VERSION}`;
+const RUNTIME_CACHE = `dirkjan-runtime-${CACHE_VERSION}`;
+const IMAGE_CACHE = `dirkjan-images-${CACHE_VERSION}`;
 
-// During install, pre-cache the offline fallback page.
+// Assets to cache immediately on install
+const PRECACHE_ASSETS = [
+  './index.html',
+  './offline.html',
+  './main.css',
+  './app.js',
+  './manifest.webmanifest',
+  './dirk-jan-tekst.svg',
+  './tune.svg',
+  './heart.svg',
+  './heartborder.svg',
+  './share.svg',
+  './favicon-32x32.webp',
+  './android-chrome-192x192.png'
+];
+
+// Maximum cache sizes
+const MAX_IMAGE_CACHE_SIZE = 50; // Keep last 50 comic images
+const MAX_RUNTIME_CACHE_SIZE = 30;
+
+// Install event - pre-cache essential assets
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => cache.addAll([OFFLINE_URL]))
+      .then(cache => {
+        console.log('[ServiceWorker] Pre-caching essential assets');
+        return cache.addAll(PRECACHE_ASSETS);
+      })
       .then(() => self.skipWaiting())
+      .catch(error => {
+        console.error('[ServiceWorker] Pre-cache failed:', error);
+      })
   );
 });
 
-// Activate event – cleanup old caches if necessary.
+// Activate event - cleanup old caches
 self.addEventListener('activate', event => {
   event.waitUntil(
-    caches.keys().then(cacheNames =>
-      Promise.all(
-        cacheNames.map(cache => {
-          if (cache !== CACHE_NAME) {
-            return caches.delete(cache);
-          }
-        })
-      )
-    ).then(() => self.clients.claim())
+    caches.keys()
+      .then(cacheNames => {
+        return Promise.all(
+          cacheNames.map(cache => {
+            // Delete old caches that don't match current version
+            if (cache !== CACHE_NAME && cache !== RUNTIME_CACHE && cache !== IMAGE_CACHE) {
+              console.log('[ServiceWorker] Deleting old cache:', cache);
+              return caches.delete(cache);
+            }
+          })
+        );
+      })
+      .then(() => {
+        console.log('[ServiceWorker] Activated and claimed clients');
+        return self.clients.claim();
+      })
   );
 });
 
-// Fetch event – serve from cache, and dynamically cache new requests.
+// Fetch event - smart caching strategy
 self.addEventListener('fetch', event => {
+  const { request } = event;
+  const url = new URL(request.url);
+
   // Only handle GET requests
-  if (event.request.method !== 'GET') {
+  if (request.method !== 'GET') {
     return;
   }
 
-  event.respondWith(
-    caches.match(event.request).then(cachedResponse => {
-      // Return cached response if available
-      if (cachedResponse) {
-        return cachedResponse;
+  // Strategy: Cache First for app shell (HTML, CSS, JS)
+  if (request.destination === 'document' || 
+      request.destination === 'style' || 
+      request.destination === 'script' ||
+      url.pathname.endsWith('.svg')) {
+    event.respondWith(cacheFirstStrategy(request, CACHE_NAME));
+    return;
+  }
+
+  // Strategy: Cache First with size limit for images (comics)
+  if (request.destination === 'image') {
+    event.respondWith(cacheFirstWithLimit(request, IMAGE_CACHE, MAX_IMAGE_CACHE_SIZE));
+    return;
+  }
+
+  // Strategy: Network First for API calls and external resources
+  event.respondWith(networkFirstStrategy(request, RUNTIME_CACHE));
+});
+
+// Cache First Strategy - for app shell
+async function cacheFirstStrategy(request, cacheName) {
+  const cachedResponse = await caches.match(request);
+  if (cachedResponse) {
+    return cachedResponse;
+  }
+
+  try {
+    const networkResponse = await fetch(request);
+    if (networkResponse && networkResponse.status === 200) {
+      const cache = await caches.open(cacheName);
+      cache.put(request, networkResponse.clone());
+    }
+    return networkResponse;
+  } catch (error) {
+    // If fetch fails and it's an HTML request, return offline page
+    if (request.headers.get('accept')?.includes('text/html')) {
+      return caches.match('./offline.html');
+    }
+    throw error;
+  }
+}
+
+// Cache First with cache size limit - for images
+async function cacheFirstWithLimit(request, cacheName, maxSize) {
+  const cachedResponse = await caches.match(request);
+  if (cachedResponse) {
+    return cachedResponse;
+  }
+
+  try {
+    const networkResponse = await fetch(request);
+    if (networkResponse && networkResponse.status === 200) {
+      const cache = await caches.open(cacheName);
+      
+      // Manage cache size
+      const keys = await cache.keys();
+      if (keys.length >= maxSize) {
+        // Remove oldest entries (first in cache)
+        await cache.delete(keys[0]);
       }
+      
+      cache.put(request, networkResponse.clone());
+    }
+    return networkResponse;
+  } catch (error) {
+    // Return cached version if network fails
+    return cachedResponse || new Response('Image not available offline', { status: 503 });
+  }
+}
 
-      // Else fetch from network
-      return fetch(event.request)
-        .then(networkResponse => {
-          // Only cache successful responses (status 200)
-          if (!networkResponse || networkResponse.status !== 200 || networkResponse.type === 'opaque') {
-            return networkResponse;
-          }
+// Network First Strategy - for API calls
+async function networkFirstStrategy(request, cacheName) {
+  try {
+    const networkResponse = await fetch(request);
+    if (networkResponse && networkResponse.status === 200) {
+      const cache = await caches.open(cacheName);
+      cache.put(request, networkResponse.clone());
+    }
+    return networkResponse;
+  } catch (error) {
+    const cachedResponse = await caches.match(request);
+    if (cachedResponse) {
+      return cachedResponse;
+    }
+    throw error;
+  }
+}
 
-          // Clone the response to cache it
-          const clonedResponse = networkResponse.clone();
-          caches.open(CACHE_NAME).then(cache => {
-            cache.put(event.request, clonedResponse);
-          });
+// Background sync for offline actions (future enhancement)
+self.addEventListener('sync', event => {
+  if (event.tag === 'sync-favorites') {
+    event.waitUntil(syncFavorites());
+  }
+});
 
-          return networkResponse;
-        })
-        .catch(error => {
-          // If network fetch fails and the request is for an HTML page,
-          // return the offline fallback page.
-          if (event.request.headers.get('accept')?.includes('text/html')) {
-            return caches.match(OFFLINE_URL);
-          }
-          // Otherwise, just propagate the error.
-          throw error;
-        });
-    })
-  );
+async function syncFavorites() {
+  // Placeholder for syncing favorites when back online
+  console.log('[ServiceWorker] Syncing favorites');
+}
+
+// Listen for messages from the app
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+  
+  if (event.data && event.data.type === 'CLEAR_CACHE') {
+    event.waitUntil(
+      caches.keys().then(cacheNames => {
+        return Promise.all(cacheNames.map(cache => caches.delete(cache)));
+      })
+    );
+  }
 });
