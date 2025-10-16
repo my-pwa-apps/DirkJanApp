@@ -146,10 +146,10 @@ input
 }
 
 /* Modern toolbar design with Fluent Design */
-/* Toolbar container now only provides initial vertical space; positioning handled on the toolbar itself */
+/* Toolbar container provides space for the toolbar */
 .toolbar-container {
-  position: static; /* Allow toolbar (absolute) to position relative to the document */
-  height: 120px; /* Initial space so content below doesn't jump under toolbar */
+  position: relative;
+  height: 80px; /* Space for toolbar */
   margin: 15px 0;
   width: 100%;
 }
@@ -171,10 +171,10 @@ input
     -webkit-backdrop-filter: blur(20px);
     backdrop-filter: blur(20px);
     box-sizing: border-box;
-  position: absolute; /* Positioned relative to the document now */
-  top: 0; /* Default start position */
-  left: 50%;
-  transform: translateX(-50%); /* Initial centering before user moves it */
+    position: absolute;
+    /* Initial position set by JavaScript after logo is loaded */
+    left: 50%;
+    transform: translateX(-50%); /* Initial centering before user moves it or JS calculates position */
     cursor: grab;
     z-index: 100;
     gap: 8px; /* Add default gap between buttons */
@@ -627,13 +627,19 @@ input
     -ms-transform: rotate(0deg);
     -webkit-transform: rotate(0deg);
     transform: rotate(0deg);
-    width: 100%;
-    max-width: 100%;
+    width: 100vw; /* Full viewport width */
+    max-width: 100vw;
     height: auto;
     display: block;
     margin: 0;
     padding: 0;
     cursor: pointer;
+    /* Break out of parent container to fill screen */
+    position: relative;
+    left: 50%;
+    right: 50%;
+    margin-left: -50vw;
+    margin-right: -50vw;
 }
 
 /* Date picker styling to match buttons */
@@ -1094,6 +1100,111 @@ img#comic.loaded {
   right: 20px;
   position: absolute;
   cursor: pointer;
+}
+
+/* ========================================
+   RESPONSIVE DESIGN - MOBILE & TABLET
+   ======================================== */
+
+/* Ensure comic always fills full width on all devices */
+@media (max-width: 1200px) {
+  .normal {
+    width: 100vw;
+    max-width: 100vw;
+  }
+}
+
+/* Mobile optimizations */
+@media (max-width: 768px) {
+  /* Ensure main container doesn't restrict comic width */
+  main {
+    max-width: 100%;
+    padding: 0;
+    margin: 0 auto;
+  }
+  
+  /* Comic fills entire screen width on mobile */
+  .normal {
+    width: 100vw;
+    max-width: 100vw;
+    margin-left: -50vw;
+    margin-right: -50vw;
+    left: 50%;
+    right: 50%;
+  }
+  
+  /* Logo adjustments for mobile */
+  .logo {
+    padding: 10px 5px;
+    margin-bottom: 0;
+  }
+  
+  .logo img {
+    max-width: 90%;
+  }
+  
+  /* Settings icons responsive positioning */
+  .settings-icons-container {
+    max-width: 100%;
+    padding: 0 10px;
+  }
+  
+  #settings {
+    right: 115px;
+  }
+  
+  #favheart {
+    right: 65px;
+  }
+  
+  #share {
+    right: 15px;
+  }
+}
+
+/* Small mobile devices */
+@media (max-width: 480px) {
+  .logo img {
+    max-width: 95%;
+  }
+  
+  /* Adjust icon spacing for very small screens */
+  #settings {
+    right: 105px;
+    font-size: 22px;
+  }
+  
+  #favheart {
+    right: 58px;
+    font-size: 22px;
+  }
+  
+  #share {
+    right: 12px;
+    font-size: 22px;
+  }
+}
+
+/* Large screens - maintain max width for readability */
+@media (min-width: 1400px) {
+  .normal {
+    width: 100vw;
+    max-width: 100vw;
+    /* Comic still fills full width even on large screens */
+  }
+  
+  /* Keep other content centered */
+  main {
+    max-width: 900px;
+  }
+}
+
+/* Handle very wide screens */
+@media (min-width: 1920px) {
+  .normal {
+    width: 100vw;
+    max-width: 100vw;
+  }
 }
 
 

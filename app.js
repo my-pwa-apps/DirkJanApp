@@ -1069,10 +1069,24 @@ document.addEventListener('DOMContentLoaded', function() {
   const savedPos = safeJSONParse(savedPosRaw, null);
   if (!savedPos && mainToolbar) {
     window.addEventListener('load', () => {
+      // Calculate initial position between logo and comic
+      const logo = document.querySelector('.logo');
+      const toolbarContainer = document.querySelector('.toolbar-container');
+      
+      if (logo && toolbarContainer) {
+        // Position toolbar right after the logo + its margin
+        const logoRect = logo.getBoundingClientRect();
+        const initialTop = logoRect.bottom + window.scrollY + 15; // 15px margin
+        mainToolbar.style.top = initialTop + 'px';
+      }
+      
+      // Center horizontally
       const viewportWidth = window.innerWidth;
       const rect = mainToolbar.getBoundingClientRect();
       const centeredLeft = (viewportWidth - rect.width) / 2;
       mainToolbar.style.left = centeredLeft + 'px';
+      mainToolbar.style.transform = 'none'; // Remove the translateX transform
+      
       clampMainToolbarInView();
     });
   } else {
