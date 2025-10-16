@@ -626,6 +626,8 @@ input
     left: 50%;
     transform: translate(-50%, -50%) rotate(90deg);
     z-index: 10001;
+    cursor: pointer; /* Make it clear the image is clickable */
+    pointer-events: auto; /* Ensure click events work */
 }
   
 .normal {
@@ -710,137 +712,150 @@ input[type="date"]#DatePicker:disabled {
     display: flex;
     justify-content: flex-end;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
     padding-right: 15px;
 }
 
-/* Modern icon button styles */
+/* Modern icon button styles with vibrant colors */
 .icon-button {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(240, 240, 240, 0.95) 100%);
-  border: 2px solid rgba(100, 100, 100, 0.2);
-  border-radius: 12px;
-  padding: 8px;
+  background: #ffffff;
+  border: none;
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  padding: 0;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1), 
-              0 1px 2px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12), 
+              0 1px 4px rgba(0, 0, 0, 0.08);
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
-  overflow: hidden;
-}
-
-.icon-button::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  border-radius: 50%;
-  background: rgba(100, 100, 255, 0.15);
-  transform: translate(-50%, -50%);
-  transition: width 0.6s, height 0.6s;
-}
-
-.icon-button:hover::before {
-  width: 100px;
-  height: 100px;
+  overflow: visible;
 }
 
 .icon-button:hover {
-  transform: translateY(-2px) scale(1.05);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15),
-              0 3px 6px rgba(0, 0, 0, 0.1);
-  border-color: rgba(100, 100, 255, 0.4);
+  transform: translateY(-3px) scale(1.08);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18),
+              0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
 .icon-button:active {
-  transform: translateY(0) scale(0.98);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
 }
 
 .icon-button svg {
-  width: 28px;
-  height: 28px;
-  stroke: #333;
-  fill: none;
+  width: 24px;
+  height: 24px;
+  stroke-width: 2.5;
   transition: all 0.3s ease;
   position: relative;
   z-index: 1;
 }
 
-/* Settings button - blue theme */
+/* Settings button - Modern blue gradient */
+#settings {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+#settings svg {
+  stroke: #ffffff;
+  fill: none;
+}
+
 #settings:hover {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(37, 99, 235, 0.1) 100%);
-  border-color: rgba(59, 130, 246, 0.5);
+  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
 }
 
 #settings:hover svg {
-  stroke: #2563eb;
-  animation: rotate-gear 0.6s ease;
+  animation: rotate-gear 0.8s ease;
 }
 
 @keyframes rotate-gear {
   0%, 100% { transform: rotate(0deg); }
-  50% { transform: rotate(90deg); }
+  50% { transform: rotate(180deg); }
 }
 
-/* Heart button - red theme with pulse */
+/* Heart button - Vibrant pink/red gradient */
+#favheart {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
+}
+
+#favheart svg {
+  stroke: #ffffff;
+  fill: none;
+  transition: all 0.3s ease;
+}
+
 #favheart:hover {
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.1) 100%);
-  border-color: rgba(239, 68, 68, 0.5);
+  background: linear-gradient(135deg, #f5576c 0%, #f093fb 100%);
+  box-shadow: 0 8px 25px rgba(245, 87, 108, 0.5);
 }
 
 #favheart:hover svg {
-  stroke: #dc2626;
   animation: heart-pulse 0.6s ease;
 }
 
-#favheart svg[style*="fill: currentColor"] {
-  fill: #dc2626;
-  stroke: #dc2626;
+/* When favorited - filled heart */
+#favheart svg[style*="fill: currentColor"],
+#favheart svg[style*="fill:currentColor"] {
+  fill: #ffffff !important;
+  stroke: #ffffff !important;
 }
 
 @keyframes heart-pulse {
   0%, 100% { transform: scale(1); }
-  25% { transform: scale(1.15); }
+  25% { transform: scale(1.2); }
   50% { transform: scale(1.05); }
-  75% { transform: scale(1.1); }
+  75% { transform: scale(1.15); }
 }
 
-/* Share button - green theme */
+/* Share button - Fresh green/teal gradient */
+#share {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4);
+}
+
+#share svg {
+  stroke: #ffffff;
+  fill: none;
+}
+
 #share:hover {
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(22, 163, 74, 0.1) 100%);
-  border-color: rgba(34, 197, 94, 0.5);
+  background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+  box-shadow: 0 8px 25px rgba(79, 172, 254, 0.5);
 }
 
 #share:hover svg {
-  stroke: #16a34a;
-  animation: share-bounce 0.6s ease;
+  animation: share-wobble 0.6s ease;
 }
 
-@keyframes share-bounce {
-  0%, 100% { transform: translateY(0); }
-  25% { transform: translateY(-4px); }
-  50% { transform: translateY(-2px); }
-  75% { transform: translateY(-3px); }
+@keyframes share-wobble {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-12deg); }
+  50% { transform: rotate(8deg); }
+  75% { transform: rotate(-8deg); }
 }
 
 /* Mobile responsive styles for icon buttons */
 @media (max-width: 768px) {
     .icon-button {
-        padding: 10px;
+        width: 52px;
+        height: 52px;
     }
     
     .icon-button svg {
-        width: 32px;
-        height: 32px;
+        width: 26px;
+        height: 26px;
     }
     
     .settings-icons-container {
-        gap: 16px;
+        gap: 10px;
         padding-right: 20px;
     }
 }
@@ -848,16 +863,17 @@ input[type="date"]#DatePicker:disabled {
 /* Tablet responsive styles for icon buttons */
 @media (min-width: 769px) and (max-width: 1024px) {
     .icon-button {
-        padding: 9px;
+        width: 50px;
+        height: 50px;
     }
     
     .icon-button svg {
-        width: 30px;
-        height: 30px;
+        width: 25px;
+        height: 25px;
     }
     
     .settings-icons-container {
-        gap: 14px;
+        gap: 9px;
     }
 }
 
@@ -1246,16 +1262,17 @@ img#comic.loaded {
   
   /* Adjust icon spacing for very small screens */
   .icon-button {
-    padding: 7px;
+    width: 44px;
+    height: 44px;
   }
   
   .icon-button svg {
-    width: 26px;
-    height: 26px;
+    width: 22px;
+    height: 22px;
   }
   
   .settings-icons-container {
-    gap: 10px;
+    gap: 8px;
     padding-right: 12px;
   }
 }

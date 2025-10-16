@@ -853,7 +853,14 @@ function Rotate() {
     clonedComic.id = 'rotated-comic';
     clonedComic.className = "rotate";
     clonedComic.style.display = 'block'; // Ensure visible
-    clonedComic.onclick = null; // Remove the onclick handler to prevent recursive calls// Create the fullscreen toolbar
+    
+    // Add click handler to rotated comic to exit fullscreen
+    clonedComic.onclick = function(e) {
+      e.stopPropagation();
+      Rotate(); // Exit fullscreen mode
+    };
+    
+    // Create the fullscreen toolbar
     const fullscreenToolbar = document.createElement('div');
     fullscreenToolbar.id = 'fullscreen-toolbar';
     fullscreenToolbar.className = 'toolbar fullscreen-toolbar';
