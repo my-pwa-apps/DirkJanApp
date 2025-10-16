@@ -168,8 +168,8 @@ input
         0 2px 8px rgba(0, 0, 0, 0.2),
         inset 0 1px 0 rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.15);
-    backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
     box-sizing: border-box;
   position: absolute; /* Positioned relative to the document now */
   top: 0; /* Default start position */
@@ -773,8 +773,8 @@ input[type="date"]#DatePicker:disabled {
       0 4px 12px rgba(0, 0, 0, 0.4),
       inset 0 1px 0 rgba(255, 255, 255, 0.15);
   border: 1px solid rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(25px);
   -webkit-backdrop-filter: blur(25px);
+  backdrop-filter: blur(25px);
   display: flex;
   justify-content: space-evenly;
   align-items: center;
@@ -1034,6 +1034,66 @@ img#comic.loaded {
     opacity: 1;
     transform: scale(1);
   }
+}
+
+/* ========================================
+   ACCESSIBILITY & UTILITY CLASSES
+   ======================================== */
+
+/* Skip link for accessibility */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: auto;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.skip-link:focus {
+  position: static;
+  left: auto;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  background: #000;
+  color: #fff;
+  padding: 10px;
+  z-index: 10005;
+}
+
+/* Hidden button grid for backwards compatibility */
+.buttongrid {
+  display: none !important;
+}
+
+/* Settings icons container */
+.settings-icons-container {
+  position: relative;
+  height: 60px;
+  margin: 10px auto;
+  max-width: 900px;
+}
+
+#settings {
+  font-size: 25px;
+  right: 125px;
+  position: absolute;
+  cursor: pointer;
+}
+
+#favheart {
+  font-size: 25px;
+  right: 70px;
+  position: absolute;
+  cursor: pointer;
+}
+
+#share {
+  font-size: 25px;
+  right: 20px;
+  position: absolute;
+  cursor: pointer;
 }
 
 

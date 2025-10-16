@@ -21,7 +21,7 @@
 
 <body onload="onLoad()">
   <h1 hidden>Daily DirkJan Comics</h1>
-  <a class="skip-link" href="#comic" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;">Skip to comic</a>
+  <a class="skip-link" href="#comic">Skip to comic</a>
   <div class="logo" role="banner">
     <a href="https://dirkjan.nl" target="_blank" rel="noopener"><img src="./dirk-jan-tekst.svg" class="logo-img" alt="Daily DirkJan Title"/></a>
   </div>
@@ -44,10 +44,10 @@
           <circle cx="8.5" cy="15.5" r="1.5" fill="currentColor"/>
         </svg>
       </button>
-      <button class="toolbar-button toolbar-datepicker-btn" title="Selecteer datum" aria-label="Datum kiezen">
+      <div class="toolbar-button toolbar-datepicker-btn" title="Selecteer datum" aria-label="Datum kiezen">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
         <input id="DatePicker" class="toolbar-datepicker" oninput="DateChange()" type="date" min="2015-05-04" title="Selecteer datum" aria-label="Datum" />
-      </button>
+      </div>
       <button class="toolbar-button" id="Next" onclick="NextClick()" title="Volgende comic" aria-label="Volgende">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
@@ -58,12 +58,12 @@
   </div>
   
   <!-- Keep old buttongrid hidden for backwards compatibility -->
-  <div class="buttongrid" style="display: none;">
+  <div class="buttongrid">
     <button class="button" id="Previous-old" onclick="PreviousClick()">Vorige</button>
     <button class="button" id="Random-old" onclick="RandomClick()">Willekeurig</button>
     <button class="button" id="Next-old" onclick="NextClick()">Volgende</button>
     <button class="button" id="First-old" onclick="FirstClick()">Eerste</button>
-    <input id="DatePicker-old" oninput="DateChange()" type="date" min="2015-05-04">
+    <input id="DatePicker-old" oninput="DateChange()" type="date" min="2015-05-04" title="Selecteer datum" aria-label="Selecteer datum">
     <button class="button" id="Current-old" onclick="CurrentClick()">Vandaag</button>
   </div>
   <br>
@@ -72,9 +72,9 @@
   <br>
   <br>
   <div class="settings-icons-container" role="group" aria-label="Acties">
-    <img id="settings" onclick="HideSettings()" src="./tune.svg" alt="Instellingen" style="font-size:25px; right:125px; position:absolute" role="button" tabindex="0" >
-    <img id="favheart" onclick="Addfav()" src="./heartborder.svg" alt="Favoriet toevoegen" style="font-size:25px; right:70px; position:absolute" role="button" tabindex="0" >
-    <img id="share" onclick="Share()" src="./share.svg" alt="Delen" style="font-size:25px; right:20px; position:absolute" role="button" tabindex="0" >
+    <img id="settings" onclick="HideSettings()" src="./tune.svg" alt="Instellingen" role="button" tabindex="0" >
+    <img id="favheart" onclick="Addfav()" src="./heartborder.svg" alt="Favoriet toevoegen" role="button" tabindex="0" >
+    <img id="share" onclick="Share()" src="./share.svg" alt="Delen" role="button" tabindex="0" >
   </div>
   <br>
 	<br>

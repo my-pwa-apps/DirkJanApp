@@ -570,7 +570,7 @@ function DisplayComic()
       comicImg.alt = "Failed to load comic. Please try again later.";
     });
     
-  var favs = loadFavs();
+  let favs = loadFavs();
   if (favs == null) {
     favs = [];
   }
@@ -693,8 +693,6 @@ function Rotate() {
     console.error('Rotate: Comic element not found');
     return;
   }
-  
-  console.log('Rotate function called, element class:', element.className);
   
   // Check if we're already in fullscreen mode
   const existingOverlay = document.getElementById('comic-overlay');
@@ -913,22 +911,18 @@ function handleTouchEnd(e) {
       // Vertical swipe
       if (deltaY < 0) {
         // Swipe Up -> Previous
-        console.log('Swipe up detected in rotated view');
         PreviousClick();
       } else {
         // Swipe Down -> Next
-        console.log('Swipe down detected in rotated view');
         NextClick();
       }
     } else if (absX > absY && absX > SWIPE_MIN_DISTANCE) {
       // Horizontal swipe
       if (deltaX < 0) {
         // Swipe Left -> Random
-        console.log('Swipe left detected in rotated view');
         RandomClick();
       } else {
         // Swipe Right -> Today
-        console.log('Swipe right detected in rotated view');
         CurrentClick();
       }
     }
@@ -938,22 +932,18 @@ function handleTouchEnd(e) {
       // Horizontal swipe
       if (deltaX > 0) {
         // Swipe right
-        console.log('Swipe right detected');
         PreviousClick();
       } else {
         // Swipe left
-        console.log('Swipe left detected');
         NextClick();
       }
     } else if (absY > absX && absY > SWIPE_MIN_DISTANCE) {
       // Vertical swipe
       if (deltaY > 0) {
         // Swipe down
-        console.log('Swipe down detected');
         RandomClick();
       } else {
         // Swipe up
-        console.log('Swipe up detected');
         CurrentClick();
       }
     }
@@ -1048,8 +1038,6 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Lighter Android-specific event handling
   if (/Android/i.test(navigator.userAgent)) {
-    console.log('Android device detected - applying button state fixes');
-    
     // Handle focus issues without breaking interaction feedback
     document.addEventListener('focusin', function(e) {
       if (e.target.closest('.toolbar-button, .toolbar-datepicker-btn')) {
@@ -1136,8 +1124,6 @@ function initializeMobileButtonStates() {
   
   if (!isMobile && !isTouch) return;
   
-  console.log('Initializing mobile button state management');
-  
   // Get all toolbar buttons
   const toolbarButtons = document.querySelectorAll('.toolbar-button, .toolbar-datepicker-btn');
   
@@ -1150,14 +1136,11 @@ function initializeMobileButtonStates() {
       touchStartTime = Date.now();
       isPressed = true;
       button.style.transition = 'all 0.1s ease';
-      console.log('Touch start on button:', button.id || button.className);
     }, { passive: true });
     
     // Handle touch end - reset button state
     button.addEventListener('touchend', (e) => {
       if (isPressed) {
-        console.log('Touch end on button:', button.id || button.className);
-        
         // Small delay to allow the visual feedback, then reset
         setTimeout(() => {
           button.style.transform = '';
@@ -1170,7 +1153,6 @@ function initializeMobileButtonStates() {
     
     // Handle touch cancel
     button.addEventListener('touchcancel', (e) => {
-      console.log('Touch cancel on button:', button.id || button.className);
       button.style.transform = '';
       button.style.transition = '';
       button.blur();
@@ -1180,7 +1162,6 @@ function initializeMobileButtonStates() {
     // Handle focus loss
     button.addEventListener('blur', (e) => {
       if (isPressed) {
-        console.log('Blur on button:', button.id || button.className);
         button.style.transform = '';
         button.style.transition = '';
         isPressed = false;
@@ -1198,7 +1179,6 @@ function initializeMobileButtonStates() {
     // Additional safeguard: reset on mouse leave (for devices that support both touch and mouse)
     button.addEventListener('mouseleave', (e) => {
       if (isPressed) {
-        console.log('Mouse leave on button:', button.id || button.className);
         button.style.transform = '';
         button.style.transition = '';
         isPressed = false;
@@ -1216,8 +1196,6 @@ function initializeMobileButtonStates() {
       }, 200);
     });
   }, { passive: true });
-  
-  console.log(`Mobile button state management initialized for ${toolbarButtons.length} buttons`);
 }
 
 // Initialize mobile button states when DOM is ready
@@ -1332,7 +1310,7 @@ function Addfav()
    
 function HideSettings()
 {
-  var x = document.getElementById("settingsDIV");
+  const x = document.getElementById("settingsDIV");
   
   // Save current scroll position
   const scrollPos = window.scrollY;
