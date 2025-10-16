@@ -287,9 +287,14 @@ async function shareWithImage(shareText, shareUrl) {
     } finally { clearTimeout(t); }
   };
 
-  // Build URL attempts (proxies + direct)
+  // Build URL attempts - ALWAYS prefer corsproxy.garfieldapp first for every comic
+  // Primary: Garfield proxy (most reliable)
+  // Fallback 1: Direct URL (in case proxies are down)
+  // Fallback 2: AllOrigins proxy
+  // Fallback 3: CorsProxy.io
+  const garfieldProxy = 'https://corsproxy.garfieldapp.workers.dev/cors-proxy?';
   const attempts = [
-    `${CORS_PROXIES[0]}${encodeURIComponent(pictureUrl)}`,
+    `${garfieldProxy}${encodeURIComponent(pictureUrl)}`,
     pictureUrl,
     `${CORS_PROXIES[1]}${encodeURIComponent(pictureUrl)}`,
     `${CORS_PROXIES[2]}${encodeURIComponent(pictureUrl)}`
@@ -298,10 +303,10 @@ async function shareWithImage(shareText, shareUrl) {
   let blob = null;
   for (const url of attempts) {
     try {
-      const r = await tryFetch(url, 8000);
+      const r = await tryFetch(url, 10000); // Increased timeout to 10s for better reliability
       if (!r.ok) continue;
       const b = await r.blob();
-      if (b.size < 400) continue;
+      if (b.size < 400) continue; // Ensure valid image size
       blob = b; break;
     } catch (err) { /* Try next URL */ }
   }
@@ -656,10 +661,23 @@ function DisplayComic()
   if (favs == null) {
     favs = [];
   }
+  
+  // Update heart icon based on favorite status
+  const heartButton = document.getElementById("favheart");
+  const heartSvg = heartButton ? heartButton.querySelector('svg') : null;
+  
   if (favs.indexOf(formattedDate) == -1) {
-    document.getElementById("favheart").src = "./heartborder.svg";
+    // Not a favorite - unfilled heart
+    if (heartSvg) {
+      heartSvg.style.fill = 'none';
+      heartSvg.style.stroke = 'currentColor';
+    }
   } else {
-    document.getElementById("favheart").src = "./heart.svg";
+    // Is a favorite - filled heart
+    if (heartSvg) {
+      heartSvg.style.fill = 'currentColor';
+      heartSvg.style.stroke = 'currentColor';
+    }
   }
   
   // Preload adjacent comics after a short delay
@@ -1387,13 +1405,24 @@ getStatus = localStorage.getItem('settings');
 function Addfav()
 {
   let favs = loadFavs();
+  const heartButton = document.getElementById("favheart");
+  const heartSvg = heartButton ? heartButton.querySelector('svg') : null;
+  
   if (!favs.includes(formattedDate)) {
     favs.push(formattedDate);
-    document.getElementById("favheart").src = "./heart.svg";
+    // Fill the heart
+    if (heartSvg) {
+      heartSvg.style.fill = 'currentColor';
+      heartSvg.style.stroke = 'currentColor';
+    }
     document.getElementById("showfavs").disabled = false;
   } else {
     favs = favs.filter(f => f !== formattedDate);
-    document.getElementById("favheart").src = "./heartborder.svg";
+    // Unfill the heart
+    if (heartSvg) {
+      heartSvg.style.fill = 'none';
+      heartSvg.style.stroke = 'currentColor';
+    }
     if (favs.length === 0) {
       document.getElementById("showfavs").checked = false;
       document.getElementById("showfavs").disabled = true;
