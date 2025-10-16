@@ -641,6 +641,7 @@ input
     margin: 0;
     padding: 0;
     cursor: pointer;
+    pointer-events: auto; /* Ensure comic is always clickable */
     /* Break out of parent container to fill screen */
     position: relative;
     left: 50%;
