@@ -72,41 +72,68 @@ function dismissUpdate() {
   }
 }
 
-// Define CORS proxies - prioritize Garfield proxy
+// Define CORS proxies with priority order
+// Note: Garfield proxy may have intermittent issues, but we try it first
 const CORS_PROXIES = [
   'https://corsproxy.garfieldapp.workers.dev/cors-proxy?',
-  'https://api.allorigins.win/raw?url=',
-  'https://corsproxy.io/?'
+  'https://corsproxy.io/?',
+  'https://api.allorigins.win/raw?url='
 ];
 
-// Fetch with fallback function
+// Track which proxy is currently working best
+let workingProxyIndex = 0;
+let proxyFailureCount = [0, 0, 0];
+
+// Fetch with intelligent fallback function
 async function fetchWithFallback(url) {
   let lastError;
+  const maxRetries = CORS_PROXIES.length;
   
-  // Try each proxy with regular CORS mode
-  for (const proxy of CORS_PROXIES) {
+  // Start with the last known working proxy for better performance
+  const startIndex = workingProxyIndex;
+  
+  for (let i = 0; i < maxRetries; i++) {
+    const proxyIndex = (startIndex + i) % CORS_PROXIES.length;
+    const proxy = CORS_PROXIES[proxyIndex];
+    
     try {
       const proxyUrl = `${proxy}${encodeURIComponent(url)}`;
-      const response = await fetch(proxyUrl);
+      const response = await fetch(proxyUrl, { 
+        signal: AbortSignal.timeout(15000) // 15 second timeout
+      });
+      
       if (response.ok) {
+        // Success! Update working proxy and reset failure count
+        workingProxyIndex = proxyIndex;
+        proxyFailureCount[proxyIndex] = 0;
         return response;
       }
+      
+      // Non-OK response, count as failure
+      proxyFailureCount[proxyIndex]++;
+      
     } catch (error) {
       lastError = error;
-      // Failed fetch attempt
-      continue;
+      proxyFailureCount[proxyIndex]++;
+      
+      // If this proxy has failed multiple times, deprioritize it
+      if (proxyFailureCount[proxyIndex] >= 3) {
+        // Skip to next proxy
+        continue;
+      }
     }
   }
   
-  // If all proxies failed with regular mode, try with no-cors as last resort
+  // If all proxies failed, try direct access with no-cors as last resort
   try {
     const response = await fetch(url, { mode: 'no-cors' });
-    // Note: with no-cors, we cannot read the response content in JavaScript
-    // but the browser can still use the response for things like displaying images
     return response;
   } catch (error) {
     lastError = error;
   }
+  
+  // Reset failure counts if everything failed (network might be back)
+  proxyFailureCount = [0, 0, 0];
   
   throw lastError || new Error('All fetch attempts failed');
 }
@@ -287,23 +314,23 @@ async function shareWithImage(shareText, shareUrl) {
     } finally { clearTimeout(t); }
   };
 
-  // Build URL attempts - ALWAYS prefer corsproxy.garfieldapp first for every comic
-  // Primary: Garfield proxy (most reliable)
-  // Fallback 1: Direct URL (in case proxies are down)
-  // Fallback 2: AllOrigins proxy
-  // Fallback 3: CorsProxy.io
-  const garfieldProxy = 'https://corsproxy.garfieldapp.workers.dev/cors-proxy?';
-  const attempts = [
-    `${garfieldProxy}${encodeURIComponent(pictureUrl)}`,
-    pictureUrl,
-    `${CORS_PROXIES[1]}${encodeURIComponent(pictureUrl)}`,
-    `${CORS_PROXIES[2]}${encodeURIComponent(pictureUrl)}`
-  ];
+  // Build URL attempts using the intelligent proxy selection
+  // Try proxies in order based on recent success
+  const attempts = [];
+  
+  // Add proxies in priority order (starting with last working one)
+  for (let i = 0; i < CORS_PROXIES.length; i++) {
+    const proxyIndex = (workingProxyIndex + i) % CORS_PROXIES.length;
+    attempts.push(`${CORS_PROXIES[proxyIndex]}${encodeURIComponent(pictureUrl)}`);
+  }
+  
+  // Add direct URL as final fallback
+  attempts.push(pictureUrl);
 
   let blob = null;
   for (const url of attempts) {
     try {
-      const r = await tryFetch(url, 10000); // Increased timeout to 10s for better reliability
+      const r = await tryFetch(url, 12000); // 12 second timeout for image downloads
       if (!r.ok) continue;
       const b = await r.blob();
       if (b.size < 400) continue; // Ensure valid image size
