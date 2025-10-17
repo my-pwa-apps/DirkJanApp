@@ -206,6 +206,10 @@ function clampMainToolbarInView() {
 
 async function Share() 
 {
+	console.log('Share() function called');
+	console.log('pictureUrl:', pictureUrl);
+	console.log('navigator.share available:', !!navigator.share);
+	
 	if(!pictureUrl) {
 		alert('Sorry, no comic is available to share at this moment.');
 		return;
@@ -217,12 +221,16 @@ async function Share()
 
 	// Detect Android for special handling
 	const isAndroid = /Android/i.test(navigator.userAgent);
+	console.log('isAndroid:', isAndroid);
 
 	// Check if Web Share API is supported
 	if(!navigator.share) {
+		console.log('Web Share API not supported, using fallback');
 		fallbackShare(shareText, shareUrl);
 		return;
 	}
+
+	console.log('Web Share API supported, attempting to share');
 
 	// Show immediate feedback to user
 	const originalShareButton = document.getElementById('share');
@@ -232,8 +240,11 @@ async function Share()
 	}
 
 	try {
+		console.log('Attempting shareWithImage...');
 		await shareWithImage(shareText, shareUrl);
+		console.log('shareWithImage succeeded');
 	} catch (error) {
+		console.log('shareWithImage failed:', error);
 		// Enhanced fallback for Android - try different approaches
 		if (isAndroid) {
 			try {
