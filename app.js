@@ -1,6 +1,64 @@
 // ========================================
+// CONFIGURATION & CONSTANTS
+// ========================================
+
+/**
+ * Application Configuration
+ * Central location for all magic numbers and configuration values
+ */
+const CONFIG = Object.freeze({
+  // Timing
+  UPDATE_CHECK_INTERVAL: 3600000,      // 1 hour in ms
+  ROTATION_DEBOUNCE: 300,              // Rotation debounce delay in ms
+  NOTIFICATION_AUTO_HIDE: 8000,        // Auto-hide notification after 8s
+  KEYBOARD_HINT_DELAY: 2000,           // Show keyboard hint after 2s
+  
+  // CORS Proxies (in priority order)
+  CORS_PROXIES: [
+    'https://corsproxy.garfieldapp.workers.dev/cors-proxy?',
+    'https://corsproxy.io/?',
+    'https://api.allorigins.win/raw?url='
+  ],
+  
+  // Fetch timeouts
+  FETCH_TIMEOUT: 15000,                // 15 second timeout
+  IMAGE_FETCH_TIMEOUT: 12000,          // 12 second timeout for images
+  
+  // Swipe detection
+  SWIPE_MIN_DISTANCE: 50,              // Minimum swipe distance in px
+  SWIPE_MAX_TIME: 500,                 // Maximum swipe time in ms
+  TAP_MAX_MOVEMENT: 10,                // Maximum movement for tap detection in px
+  TAP_MAX_TIME: 300,                   // Maximum time for tap detection in ms
+  
+  // Cache limits
+  MAX_PRELOAD_CACHE: 20,               // Maximum preloaded comics
+  MIN_IMAGE_SIZE: 400,                 // Minimum valid image size in bytes
+  
+  // Image scaling
+  ROTATED_IMAGE_SCALE: 0.9,            // Scale factor for rotated images (90%)
+  
+  // Comic dates
+  COMIC_START_DATE: "2015/05/04",      // First DirkJan comic date
+  
+  // Storage keys
+  STORAGE_KEYS: Object.freeze({
+    FAVS: 'favs',
+    LAST_COMIC: 'lastcomic',
+    TOOLBAR_POS: 'mainToolbarPosition',
+    SWIPE: 'stat',
+    SHOW_FAVS: 'showfavs',
+    LAST_DATE: 'lastdate',
+    SETTINGS_VISIBLE: 'settings'
+  })
+});
+
+// ========================================
 // SERVICE WORKER REGISTRATION & PWA SETUP
 // ========================================
+
+/**
+ * Initializes and registers the service worker for PWA functionality
+ */
 if ("serviceWorker" in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register("./serviceworker.js")
@@ -8,7 +66,7 @@ if ("serviceWorker" in navigator) {
         // Check for updates periodically (every hour)
         setInterval(() => {
           registration.update();
-        }, 3600000);
+        }, CONFIG.UPDATE_CHECK_INTERVAL);
         
         // Listen for new service worker waiting to activate
         registration.addEventListener('updatefound', () => {
@@ -29,7 +87,9 @@ if ("serviceWorker" in navigator) {
   });
 }
 
-// Show update notification to user
+/**
+ * Shows update notification to user when new version is available
+ */
 function showUpdateNotification() {
   const notification = document.createElement('div');
   notification.id = 'update-notification';
@@ -43,7 +103,9 @@ function showUpdateNotification() {
   document.body.appendChild(notification);
 }
 
-// Update app to new version
+/**
+ * Updates app to new version by activating waiting service worker
+ */
 function updateApp() {
   const notification = document.getElementById('update-notification');
   if (notification) {
@@ -60,7 +122,9 @@ function updateApp() {
   }
 }
 
-// Dismiss update notification
+/**
+ * Dismisses the update notification with fade-out animation
+ */
 function dismissUpdate() {
   const notification = document.getElementById('update-notification');
   if (notification) {
@@ -70,34 +134,36 @@ function dismissUpdate() {
   }
 }
 
-// Define CORS proxies with priority order
-// Note: Garfield proxy may have intermittent issues, but we try it first
-const CORS_PROXIES = [
-  'https://corsproxy.garfieldapp.workers.dev/cors-proxy?',
-  'https://corsproxy.io/?',
-  'https://api.allorigins.win/raw?url='
-];
+// ========================================
+// CORS PROXY SYSTEM
+// ========================================
 
 // Track which proxy is currently working best
 let workingProxyIndex = 0;
 let proxyFailureCount = [0, 0, 0];
 
-// Fetch with intelligent fallback function
+/**
+ * Fetches a URL with intelligent CORS proxy fallback
+ * Automatically tries multiple proxies and tracks which ones are working
+ * @param {string} url - The URL to fetch
+ * @returns {Promise<Response>} The fetch response
+ * @throws {Error} If all fetch attempts fail
+ */
 async function fetchWithFallback(url) {
   let lastError;
-  const maxRetries = CORS_PROXIES.length;
+  const maxRetries = CONFIG.CORS_PROXIES.length;
   
   // Start with the last known working proxy for better performance
   const startIndex = workingProxyIndex;
   
   for (let i = 0; i < maxRetries; i++) {
-    const proxyIndex = (startIndex + i) % CORS_PROXIES.length;
-    const proxy = CORS_PROXIES[proxyIndex];
+    const proxyIndex = (startIndex + i) % CONFIG.CORS_PROXIES.length;
+    const proxy = CONFIG.CORS_PROXIES[proxyIndex];
     
     try {
       const proxyUrl = `${proxy}${encodeURIComponent(url)}`;
       const response = await fetch(proxyUrl, { 
-        signal: AbortSignal.timeout(15000) // 15 second timeout
+        signal: AbortSignal.timeout(CONFIG.FETCH_TIMEOUT)
       });
       
       if (response.ok) {
@@ -136,33 +202,81 @@ async function fetchWithFallback(url) {
   throw lastError || new Error('All fetch attempts failed');
 }
 
-let pictureUrl = ''; // Global comic image URL
-let formattedDate = ''; // Global formatted date for sharing
-// Explicitly declare other global state variables to avoid accidental implicit globals
-let comicstartDate, currentselectedDate, maxDate, nextclicked, siteBody, notFound, picturePosition, endPosition, formattedComicDate, startDate, endDate, formattedmaxDate, year, month, day;
-nextclicked = false;
+// ========================================
+// GLOBAL STATE & UTILITY FUNCTIONS
+// ========================================
 
-// === Central constants & storage keys ===
-const STORAGE_KEYS = Object.freeze({
-  FAVS: 'favs',
-  LAST_COMIC: 'lastcomic',
-  TOOLBAR_POS: 'mainToolbarPosition',
-  SWIPE: 'stat',
-  SHOW_FAVS: 'showfavs',
-  LAST_DATE: 'lastdate',
-  SETTINGS_VISIBLE: 'settings'
-});
+// Comic state
+let pictureUrl = '';           // Current comic image URL
+let formattedDate = '';         // Current formatted date for sharing (YYYY-MM-DD)
+let formattedComicDate = '';    // Date formatted for API calls (YYYYMMDD)
+let comicstartDate = CONFIG.COMIC_START_DATE;
+let currentselectedDate;        // Currently selected date object
+let maxDate;                    // Maximum available comic date
+let nextclicked = false;        // Tracks navigation direction
 
-// Swipe thresholds (could be tuned)
-const SWIPE_MIN_DISTANCE = 50;   // px
-const SWIPE_MAX_TIME = 500;      // ms
+// Parsing variables
+let siteBody, notFound, picturePosition, endPosition;
+let startDate, endDate, formattedmaxDate;
+let year, month, day;
 
-// === Favorites caching helpers ===
+// Favorites cache
 let _cachedFavs = null;
+
+/**
+ * Utility Functions
+ */
+const UTILS = {
+  /**
+   * Safely parses JSON with fallback
+   * @param {string} str - JSON string to parse
+   * @param {*} fallback - Fallback value if parse fails
+   * @returns {*} Parsed value or fallback
+   */
+  safeJSONParse(str, fallback) {
+    try { return JSON.parse(str); } catch (_) { return fallback; }
+  },
+  
+  /**
+   * Formats a date object into YYYY-MM-DD components
+   * @param {Date} datetoFormat - Date to format
+   * @returns {void} Sets global year, month, day variables
+   */
+  formatDate(datetoFormat) {
+    day = datetoFormat.getDate();
+    month = datetoFormat.getMonth() + 1;
+    year = datetoFormat.getFullYear();
+    month = ("0" + month).slice(-2);
+    day = ("0" + day).slice(-2);
+  },
+  
+  /**
+   * Checks if device is mobile or touch-enabled
+   * @returns {boolean} True if mobile/touch device
+   */
+  isMobileOrTouch() {
+    const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    return isMobile || isTouch;
+  }
+};
+
+// Backward compatibility - keep old function names
+function formatDate(datetoFormat) { UTILS.formatDate(datetoFormat); }
+function safeJSONParse(str, fallback) { return UTILS.safeJSONParse(str, fallback); }
+
+// ========================================
+// FAVORITES MANAGEMENT
+// ========================================
+
+/**
+ * Loads favorites from localStorage with caching
+ * @returns {Array<string>} Array of favorite comic dates (YYYY-MM-DD format)
+ */
 function loadFavs() {
   if (Array.isArray(_cachedFavs)) return _cachedFavs;
   try {
-    const raw = localStorage.getItem(STORAGE_KEYS.FAVS);
+    const raw = localStorage.getItem(CONFIG.STORAGE_KEYS.FAVS);
     if (!raw) return (_cachedFavs = []);
     const parsed = JSON.parse(raw);
     return (_cachedFavs = Array.isArray(parsed) ? parsed : []);
@@ -170,20 +284,30 @@ function loadFavs() {
     return (_cachedFavs = []);
   }
 }
+
+/**
+ * Saves favorites to localStorage with deduplication
+ * @param {Array<string>} arr - Array of favorite dates to save
+ */
 function saveFavs(arr) {
   if (!Array.isArray(arr)) return;
   const deduped = Array.from(new Set(arr)).sort();
   _cachedFavs = deduped;
-  try { localStorage.setItem(STORAGE_KEYS.FAVS, JSON.stringify(deduped)); } catch (e) { /* ignore */ }
+  try { localStorage.setItem(CONFIG.STORAGE_KEYS.FAVS, JSON.stringify(deduped)); } catch (e) { /* ignore */ }
 }
+
+/**
+ * Invalidates the favorites cache (forces reload from localStorage)
+ */
 function invalidateFavsCache() { _cachedFavs = null; }
 
-// Generic safe JSON parse helper
-function safeJSONParse(str, fallback) {
-  try { return JSON.parse(str); } catch (_) { return fallback; }
-}
+// ========================================
+// TOOLBAR POSITIONING
+// ========================================
 
-// Keep toolbar within viewport on resize/orientation changes
+/**
+ * Keeps main toolbar within viewport bounds on resize/orientation changes
+ */
 function clampMainToolbarInView() {
   const toolbar = document.querySelector('.toolbar:not(.fullscreen-toolbar)');
   if (!toolbar) return;
@@ -200,10 +324,19 @@ function clampMainToolbarInView() {
   if (changed) {
     toolbar.style.left = left + 'px';
     toolbar.style.top = top + 'px';
-    try { localStorage.setItem(STORAGE_KEYS.TOOLBAR_POS, JSON.stringify({ top, left })); } catch(_) {}
+    try { localStorage.setItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS, JSON.stringify({ top, left })); } catch(_) {}
   }
 }
 
+// ========================================
+// SHARING FUNCTIONALITY
+// ========================================
+
+/**
+ * Shares the current comic using Web Share API with extensive fallbacks
+ * Handles image sharing, text fallbacks, and clipboard copying
+ * @returns {Promise<void>}
+ */
 async function Share() 
 {
 	console.log('Share() function called');
@@ -305,6 +438,14 @@ async function Share()
 	}
 }
 
+/**
+ * Attempts to share comic with image attachment
+ * Tries multiple CORS proxies to fetch the image
+ * @param {string} shareText - Text to share
+ * @param {string} shareUrl - URL to share
+ * @returns {Promise<void>}
+ * @throws {Error} If image sharing is not supported or fails
+ */
 async function shareWithImage(shareText, shareUrl) {
   // Safe feature detection since some browsers throw for canShare with files param
   const fileShareSupported = (() => {
@@ -328,9 +469,9 @@ async function shareWithImage(shareText, shareUrl) {
   const attempts = [];
   
   // Add proxies in priority order (starting with last working one)
-  for (let i = 0; i < CORS_PROXIES.length; i++) {
-    const proxyIndex = (workingProxyIndex + i) % CORS_PROXIES.length;
-    attempts.push(`${CORS_PROXIES[proxyIndex]}${encodeURIComponent(pictureUrl)}`);
+  for (let i = 0; i < CONFIG.CORS_PROXIES.length; i++) {
+    const proxyIndex = (workingProxyIndex + i) % CONFIG.CORS_PROXIES.length;
+    attempts.push(`${CONFIG.CORS_PROXIES[proxyIndex]}${encodeURIComponent(pictureUrl)}`);
   }
   
   // Add direct URL as final fallback
@@ -339,10 +480,10 @@ async function shareWithImage(shareText, shareUrl) {
   let blob = null;
   for (const url of attempts) {
     try {
-      const r = await tryFetch(url, 12000); // 12 second timeout for image downloads
+      const r = await tryFetch(url, CONFIG.IMAGE_FETCH_TIMEOUT);
       if (!r.ok) continue;
       const b = await r.blob();
-      if (b.size < 400) continue; // Ensure valid image size
+      if (b.size < CONFIG.MIN_IMAGE_SIZE) continue; // Ensure valid image size
       blob = b; break;
     } catch (err) { /* Try next URL */ }
   }
@@ -393,6 +534,11 @@ async function shareWithImage(shareText, shareUrl) {
   throw new Error('All image share variants failed');
 }
 
+/**
+ * Fallback share method using clipboard
+ * @param {string} text - Share text
+ * @param {string} url - Share URL
+ */
 function fallbackShare(text, url) {
 	// Try to copy to clipboard with image URL included
 	const shareContent = `${text}\n${url}\n\nComic image: ${pictureUrl}`;
@@ -410,6 +556,10 @@ function fallbackShare(text, url) {
 	}
 }
 
+/**
+ * Shows a dialog for manual sharing
+ * @param {string} content - Content to share
+ */
 function showShareDialog(content) {
 	// Create a more user-friendly dialog
 	const userCopied = prompt('Copy this text to share the comic (includes both link and image URL):\n\n(Tip: Select all with Ctrl+A, then copy with Ctrl+C)', content);
@@ -418,7 +568,14 @@ function showShareDialog(content) {
 	}
 }
 
-  
+// ========================================
+// INITIALIZATION & NAVIGATION
+// ========================================
+
+/**
+ * Initializes the application on page load
+ * Sets up initial date, favorites, and displays the first comic
+ */  
 function onLoad()
 {
   // Check URL parameters for app shortcuts
@@ -505,6 +662,10 @@ function onLoad()
   DisplayComic();
 }
 
+/**
+ * Navigates to the previous comic
+ * Handles both normal and favorites-only mode
+ */
 function PreviousClick()
 {
   if (document.getElementById("showfavs").checked) {
@@ -521,6 +682,10 @@ function PreviousClick()
   DisplayComic();
 } 
 
+/**
+ * Navigates to the next comic
+ * Handles both normal and favorites-only mode
+ */
 function NextClick()
 {
   nextclicked = true;
@@ -537,6 +702,10 @@ function NextClick()
   DisplayComic();
 }
 
+/**
+ * Navigates to the first comic
+ * In favorites mode, goes to first favorite
+ */
 function FirstClick()
 {
   if (document.getElementById("showfavs").checked) {
@@ -549,6 +718,10 @@ function FirstClick()
   DisplayComic();
 }
 
+/**
+ * Navigates to the current/latest comic
+ * In favorites mode, goes to last favorite
+ */
 function CurrentClick()
 {
   if (document.getElementById("showfavs").checked) {
@@ -565,6 +738,10 @@ function CurrentClick()
   DisplayComic();
 }
 
+/**
+ * Navigates to a random comic
+ * In favorites mode, picks random favorite
+ */
 function RandomClick()
 {
   if (document.getElementById("showfavs").checked) {
@@ -581,6 +758,10 @@ function RandomClick()
   DisplayComic();
 }
 
+/**
+ * Handles date picker changes
+ * Syncs both main and rotated date pickers
+ */
 function DateChange()
 {
   // Get the date from either the main or rotated date picker
@@ -612,6 +793,10 @@ function DateChange()
   }
 }
 
+/**
+ * Fetches and displays the current comic
+ * Handles loading states, errors, and updates UI
+ */
 function DisplayComic()
 {
     formatDate(currentselectedDate);
@@ -722,6 +907,11 @@ function DisplayComic()
   }, 500);
 }
 
+/**
+ * Sets a button's disabled state (both main and rotated versions)
+ * @param {string} id - Button ID
+ * @param {boolean} disabled - Whether button should be disabled
+ */
 function setButtonDisabled(id, disabled) {
   const mainButton = document.getElementById(id);
   if (mainButton) {
@@ -734,6 +924,10 @@ function setButtonDisabled(id, disabled) {
   }
 }
 
+/**
+ * Compares current date with comic date range
+ * Updates navigation button states accordingly
+ */
  function CompareDates() {
   const favs = loadFavs();
   const rotatedDatePicker = document.getElementById('rotated-DatePicker');
@@ -813,6 +1007,12 @@ function setButtonDisabled(id, disabled) {
 	}
 }
 
+ /**
+  * Formats a date object into year, month, day components
+  * Sets global year, month, day variables
+  * @param {Date} datetoFormat - Date to format
+  * @deprecated Use UTILS.formatDate instead
+  */
  function formatDate(datetoFormat)
  {
   day = datetoFormat.getDate();
@@ -822,9 +1022,18 @@ function setButtonDisabled(id, disabled) {
   day = ("0"+day).slice(-2);
  }
 
-// Add a flag to prevent rapid calls
+// ========================================
+// COMIC ROTATION & FULLSCREEN
+// ========================================
+
+// Debounce flag to prevent rapid rotation calls
 let isRotating = false;
 
+/**
+ * Toggles comic rotation to fullscreen mode
+ * Handles both entering and exiting fullscreen with 90-degree rotation
+ * Includes tap detection and swipe support in fullscreen mode
+ */
 function Rotate() {
   // Prevent rapid double-calls
   if (isRotating) {
@@ -1004,11 +1213,14 @@ function Rotate() {
     // Reset the flag after a short delay to prevent rapid re-triggering
     setTimeout(() => {
       isRotating = false;
-    }, 300);
+    }, CONFIG.ROTATION_DEBOUNCE);
   }
 }
 
-// Handle resize and orientation change in rotated view
+/**
+ * Handles resize and orientation change in rotated view
+ * Repositions comic and toolbar appropriately
+ */
 function handleRotatedViewResize() {
   const rotatedComic = document.getElementById('rotated-comic');
   if (rotatedComic) {
@@ -1017,26 +1229,37 @@ function handleRotatedViewResize() {
   positionFullscreenToolbar();
 }
 
-// Native swipe implementation
+// ========================================
+// TOUCH & SWIPE HANDLING
+// ========================================
+
+// Touch tracking variables
 let touchStartX = 0;
 let touchStartY = 0;
 let touchEndX = 0;
 let touchEndY = 0;
 let touchStartTime = 0;
 
-// (Duplicate swipe constants removed; using SWIPE_MIN_DISTANCE and SWIPE_MAX_TIME defined earlier)
-
+/**
+ * Handles touch start event
+ * Records initial touch position and time for swipe/tap detection
+ * @param {TouchEvent} e - Touch event
+ */
 function handleTouchStart(e) {
 	const touch = e.touches[0];
 	touchStartX = touch.clientX;
 	touchStartY = touch.clientY;
 	touchStartTime = Date.now();
-	console.log('Touch start - target:', e.target.id, 'x:', touchStartX, 'y:', touchStartY);
 	
 	// Early return for swipe gesture handling, but keep tracking for tap detection
 	if (!document.getElementById("swipe").checked) return;
 }
 
+/**
+ * Handles touch move event
+ * Prevents default scrolling during horizontal swipes
+ * @param {TouchEvent} e - Touch event
+ */
 function handleTouchMove(e) {
 	if (!document.getElementById("swipe").checked) return;
 	
@@ -1051,6 +1274,11 @@ function handleTouchMove(e) {
 	}
 }
 
+/**
+ * Handles touch end event
+ * Detects taps (for rotation) and swipes (for navigation)
+ * @param {TouchEvent} e - Touch event
+ */
 function handleTouchEnd(e) {
 	const touch = e.changedTouches[0];
 	touchEndX = touch.clientX;
@@ -1063,14 +1291,12 @@ function handleTouchEnd(e) {
 	// Check if this was a tap (not a swipe) on the comic element
 	const absX = Math.abs(deltaX);
 	const absY = Math.abs(deltaY);
-	const isTap = absX < 10 && absY < 10 && deltaTime < 300;
+	const isTap = absX < CONFIG.TAP_MAX_MOVEMENT && absY < CONFIG.TAP_MAX_MOVEMENT && deltaTime < CONFIG.TAP_MAX_TIME;
 	
 	// If it's a tap on the comic image (not in fullscreen), trigger rotation
 	// This works regardless of swipe setting
 	const targetIsComic = e.target.id === 'comic' || e.target.closest('#comic');
-	console.log('Touch end - isTap:', isTap, 'targetIsComic:', targetIsComic, 'target:', e.target.id, 'absX:', absX, 'absY:', absY, 'deltaTime:', deltaTime);
 	if (isTap && targetIsComic && !document.getElementById('rotated-comic')) {
-		console.log('Triggering rotation!');
 		Rotate();
 		return;
 	}
@@ -1079,7 +1305,7 @@ function handleTouchEnd(e) {
 	if (!document.getElementById("swipe").checked) return;
 	
 	// Check if the swipe is valid (meets distance and time requirements)
-  if (deltaTime > SWIPE_MAX_TIME) return;
+  if (deltaTime > CONFIG.SWIPE_MAX_TIME) return;
 	
 	// Check if we're in fullscreen/rotated mode
   const isInFullscreen = document.getElementById('rotated-comic') !== null;
@@ -1087,7 +1313,7 @@ function handleTouchEnd(e) {
 	// Determine swipe direction based on mode
 	if (isInFullscreen) {
     // Rotated mode: Vertical for Next/Prev, Horizontal for Random/Today
-    if (absY > absX && absY > SWIPE_MIN_DISTANCE) {
+    if (absY > absX && absY > CONFIG.SWIPE_MIN_DISTANCE) {
       // Vertical swipe
       if (deltaY < 0) {
         // Swipe Up -> Previous
@@ -1096,7 +1322,7 @@ function handleTouchEnd(e) {
         // Swipe Down -> Next
         NextClick();
       }
-    } else if (absX > absY && absX > SWIPE_MIN_DISTANCE) {
+    } else if (absX > absY && absX > CONFIG.SWIPE_MIN_DISTANCE) {
       // Horizontal swipe
       if (deltaX < 0) {
         // Swipe Left -> Random
@@ -1108,7 +1334,7 @@ function handleTouchEnd(e) {
     }
   } else {
     // Normal mode: Horizontal for Next/Prev, Vertical for Random/Today
-    if (absX > absY && absX > SWIPE_MIN_DISTANCE) {
+    if (absX > absY && absX > CONFIG.SWIPE_MIN_DISTANCE) {
       // Horizontal swipe
       if (deltaX > 0) {
         // Swipe right
@@ -1117,7 +1343,7 @@ function handleTouchEnd(e) {
         // Swipe left
         NextClick();
       }
-    } else if (absY > absX && absY > SWIPE_MIN_DISTANCE) {
+    } else if (absY > absX && absY > CONFIG.SWIPE_MIN_DISTANCE) {
       // Vertical swipe
       if (deltaY > 0) {
         // Swipe down
@@ -1343,102 +1569,73 @@ if (document.readyState === 'loading') {
   window.addEventListener('resize', clampMainToolbarInView);
   window.addEventListener('orientationchange', clampMainToolbarInView);
   
-  // Add mobile button state reset functionality
-  addMobileButtonStateReset();
+  // Initialize mobile button state management
+  initializeMobileButtonStates();
 }
 
-// Function to handle mobile button state issues
-function addMobileButtonStateReset() {
-  // Add event listeners to all toolbar buttons to reset their state after click
-  const toolbarButtons = document.querySelectorAll('.toolbar-button, .toolbar-datepicker-btn');
-  
-  toolbarButtons.forEach(button => {
-    // Handle touchend to reset button state
-    button.addEventListener('touchend', function() {
-      // Small delay to allow the click event to fire first
-      setTimeout(() => {
-        this.blur(); // Remove focus
-        this.style.transform = ''; // Reset any transform
-      }, 100);
-    }, { passive: true });
-    
-    // Handle click to reset button state (for both mouse and touch)
-    button.addEventListener('click', function() {
-      // Small delay to allow the action to complete
-      setTimeout(() => {
-        this.blur(); // Remove focus
-        this.style.transform = ''; // Reset any transform
-      }, 150);
-    });
-    
-    // Handle focus loss
-    button.addEventListener('blur', function() {
-      this.style.transform = ''; // Reset any transform when losing focus
-    });
-  });
-}
+// ========================================
+// MOBILE BUTTON STATE MANAGEMENT
+// ========================================
 
-// Mobile button state management to fix "popped out" buttons on touch devices
+/**
+ * Unified mobile button state management
+ * Fixes "stuck" or "popped out" button states on touch devices
+ * Consolidates all button reset logic in one place
+ */
 function initializeMobileButtonStates() {
-  const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-  const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  // Only run on mobile/touch devices
+  if (!UTILS.isMobileOrTouch()) return;
   
-  if (!isMobile && !isTouch) return;
-  
-  // Get all toolbar buttons
   const toolbarButtons = document.querySelectorAll('.toolbar-button, .toolbar-datepicker-btn');
   
   toolbarButtons.forEach(button => {
-    let touchStartTime = 0;
     let isPressed = false;
     
-    // Handle touch start
-    button.addEventListener('touchstart', (e) => {
-      touchStartTime = Date.now();
+    // Touch start - mark as pressed
+    button.addEventListener('touchstart', () => {
       isPressed = true;
       button.style.transition = 'all 0.1s ease';
     }, { passive: true });
     
-    // Handle touch end - reset button state
-    button.addEventListener('touchend', (e) => {
+    // Touch end - reset state with delay for visual feedback
+    button.addEventListener('touchend', () => {
       if (isPressed) {
-        // Small delay to allow the visual feedback, then reset
         setTimeout(() => {
           button.style.transform = '';
           button.style.transition = '';
-          button.blur(); // Remove focus
+          button.blur();
           isPressed = false;
         }, 150);
       }
     }, { passive: true });
     
-    // Handle touch cancel
-    button.addEventListener('touchcancel', (e) => {
+    // Touch cancel - immediate reset
+    button.addEventListener('touchcancel', () => {
       button.style.transform = '';
       button.style.transition = '';
       button.blur();
       isPressed = false;
     }, { passive: true });
     
-    // Handle focus loss
-    button.addEventListener('blur', (e) => {
-      if (isPressed) {
+    // Click handler (works for both mouse and touch)
+    button.addEventListener('click', () => {
+      setTimeout(() => {
+        button.blur();
         button.style.transform = '';
+      }, 150);
+    });
+    
+    // Blur - cleanup transforms
+    button.addEventListener('blur', () => {
+      button.style.transform = '';
+      if (isPressed) {
         button.style.transition = '';
         isPressed = false;
       }
     });
     
-    // Handle focus gain - make sure state is clean
-    button.addEventListener('focus', (e) => {
-      if (!isPressed) {
-        button.style.transform = '';
-        button.style.transition = '';
-      }
-    });
-    
-    // Additional safeguard: reset on mouse leave (for devices that support both touch and mouse)
-    button.addEventListener('mouseleave', (e) => {
+    // Mouse leave - reset if pressed (hybrid devices)
+    button.addEventListener('mouseleave', () => {
       if (isPressed) {
         button.style.transform = '';
         button.style.transition = '';
@@ -1447,15 +1644,14 @@ function initializeMobileButtonStates() {
     });
   });
   
-  // Global touch end handler as additional safeguard
+  // Global safeguard - reset any stuck buttons on touch end
   document.addEventListener('touchend', () => {
-    toolbarButtons.forEach(button => {
-      // Reset any stuck buttons
-      setTimeout(() => {
+    setTimeout(() => {
+      toolbarButtons.forEach(button => {
         button.style.transform = '';
         button.blur();
-      }, 200);
-    });
+      });
+    }, 200);
   }, { passive: true });
 }
 
@@ -1546,7 +1742,14 @@ getStatus = localStorage.getItem('settings');
       settingsPanel.classList.remove('visible');
     }
 
-	
+// ========================================
+// SETTINGS & FAVORITES UI
+// ========================================
+
+/**
+ * Toggles favorite status for current comic
+ * Updates UI and localStorage
+ */
 function Addfav()
 {
   let favs = loadFavs();
@@ -1577,7 +1780,10 @@ function Addfav()
   CompareDates();
   DisplayComic();
 }
-   
+
+/**
+ * Toggles the settings panel visibility
+ */   
 function HideSettings()
 {
   const panel = document.getElementById("settingsDIV");
@@ -1594,13 +1800,10 @@ function HideSettings()
   }
 }
 
-// Draggable settings panel functionality
-let isDragging = false;
-let dragStartX = 0;
-let dragStartY = 0;
-let panelStartX = 0;
-let panelStartY = 0;
-
+/**
+ * Initializes draggable settings panel
+ * Allows user to drag the settings panel by its header
+ */
 function initializeDraggableSettings() {
   const panel = document.getElementById("settingsDIV");
   const header = document.getElementById("settingsHeader");
