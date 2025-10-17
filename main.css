@@ -779,17 +779,18 @@ input[type="date"]#DatePicker:disabled {
   flex-direction: column;
   border: 2px solid rgba(240, 152, 25, 0.3);
   overflow: hidden;
+  /* Prevent animation glitches when position is set via JS */
+  transition: none;
 }
 
 .settings-panel.visible {
   display: flex;
-  animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: fadeIn 0.2s ease-out;
 }
 
-@keyframes slideIn {
+@keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translate(-50%, -45%) scale(0.95);
   }
   to {
     opacity: 1;

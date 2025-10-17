@@ -45,6 +45,7 @@ const CONFIG = Object.freeze({
     FAVS: 'favs',
     LAST_COMIC: 'lastcomic',
     TOOLBAR_POS: 'mainToolbarPosition',
+    SETTINGS_POS: 'settingsPosition',
     SWIPE: 'stat',
     DEVICE_ROTATION: 'deviceRotation',
     SHOW_FAVS: 'showfavs',
@@ -1899,6 +1900,15 @@ function initializeDraggableSettings() {
   
   if (!panel || !header) return;
   
+  // Load and apply saved position FIRST, before any events
+  const savedPosRaw = localStorage.getItem(CONFIG.STORAGE_KEYS.SETTINGS_POS);
+  const savedPos = UTILS.safeJSONParse(savedPosRaw, null);
+  if (savedPos && typeof savedPos.top === 'number' && typeof savedPos.left === 'number') {
+    panel.style.top = savedPos.top + 'px';
+    panel.style.left = savedPos.left + 'px';
+    panel.style.transform = 'none';
+  }
+  
   // Dragging state variables
   let isDragging = false;
   let dragStartX = 0;
@@ -1986,6 +1996,16 @@ function initializeDraggableSettings() {
   function dragEnd(e) {
     if (isDragging) {
       isDragging = false;
+      
+      // Save the current position
+      const currentLeft = parseFloat(panel.style.left) || 0;
+      const currentTop = parseFloat(panel.style.top) || 0;
+      try {
+        localStorage.setItem(CONFIG.STORAGE_KEYS.SETTINGS_POS, JSON.stringify({ 
+          top: currentTop, 
+          left: currentLeft 
+        }));
+      } catch(_) {}
       
       // Re-enable transitions for other animations
       setTimeout(() => {
