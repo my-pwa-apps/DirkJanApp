@@ -1088,7 +1088,7 @@ document.addEventListener('touchmove', handleTouchMove, { passive: false });
 document.addEventListener('touchend', handleTouchEnd, { passive: true });
 
 // Add click handler for comic rotation
-document.addEventListener('DOMContentLoaded', function() {
+function initializeComicRotation() {
   const comicElement = document.getElementById('comic');
   if (comicElement) {
     // Track if user is dragging/swiping to prevent accidental rotation
@@ -1119,26 +1119,35 @@ document.addEventListener('DOMContentLoaded', function() {
       isSwipeInProgress = false;
     });
   }
-  
-  // Add orientation change listener to adjust UI for rotated comics
-  window.addEventListener('orientationchange', function() {
-    // Check if we're in fullscreen/rotated mode
-    const rotatedComic = document.getElementById('rotated-comic');
-    if (rotatedComic) {
-      // Reposition comic and toolbar
-      setTimeout(() => {
-        maximizeRotatedImage(rotatedComic);
-        positionFullscreenToolbar();
-      }, 300); // Small delay to ensure orientation has completed
-    }
-  });
-  // Add event delegation for any fullscreen toolbar that might be created
-  document.body.addEventListener('touchstart', function(e) {
-    if (e.target.closest('#fullscreen-toolbar')) {
-      // If touch starts on toolbar or its children, don't initiate swipe
-      e.stopPropagation();
-    }
-  }, { capture: true });
+}
+
+// Initialize rotation handlers immediately or wait for DOM
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeComicRotation);
+} else {
+  initializeComicRotation();
+}
+
+// Add orientation change listener
+window.addEventListener('orientationchange', function() {
+  // Check if we're in fullscreen/rotated mode
+  const rotatedComic = document.getElementById('rotated-comic');
+  if (rotatedComic) {
+    // Reposition comic and toolbar
+    setTimeout(() => {
+      maximizeRotatedImage(rotatedComic);
+      positionFullscreenToolbar();
+    }, 300); // Small delay to ensure orientation has completed
+  }
+});
+
+// Add event delegation for any fullscreen toolbar that might be created
+document.body.addEventListener('touchstart', function(e) {
+  if (e.target.closest('#fullscreen-toolbar')) {
+    // If touch starts on toolbar or its children, don't initiate swipe
+    e.stopPropagation();
+  }
+}, { capture: true });
   
   document.body.addEventListener('touchmove', function(e) {
     if (e.target.closest('#fullscreen-toolbar')) {
@@ -1223,8 +1232,50 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     }, { passive: true });
   }
-  
-  // Make the main toolbar draggable
+
+// Initialize toolbar dragging and mobile button states when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', function() {
+    // Make the main toolbar draggable
+    const mainToolbar = document.querySelector('.toolbar:not(.fullscreen-toolbar)');
+    makeMainToolbarDraggable(mainToolbar);
+
+    const savedPosRaw = localStorage.getItem(STORAGE_KEYS.TOOLBAR_POS) || localStorage.getItem('mainToolbarPosition');
+    const savedPos = safeJSONParse(savedPosRaw, null);
+    if (!savedPos && mainToolbar) {
+      window.addEventListener('load', () => {
+        // Calculate initial position between logo and comic
+        const logo = document.querySelector('.logo');
+        const toolbarContainer = document.querySelector('.toolbar-container');
+        
+        if (logo && toolbarContainer) {
+          // Position toolbar right after the logo + its margin
+          const logoRect = logo.getBoundingClientRect();
+          const initialTop = logoRect.bottom + window.scrollY + 15; // 15px margin
+          mainToolbar.style.top = initialTop + 'px';
+        }
+        
+        // Center horizontally
+        const viewportWidth = window.innerWidth;
+        const rect = mainToolbar.getBoundingClientRect();
+        const centeredLeft = (viewportWidth - rect.width) / 2;
+        mainToolbar.style.left = centeredLeft + 'px';
+        mainToolbar.style.transform = 'none'; // Remove the translateX transform
+        
+        clampMainToolbarInView();
+      });
+    } else {
+      clampMainToolbarInView();
+    }
+
+    window.addEventListener('resize', clampMainToolbarInView);
+    window.addEventListener('orientationchange', clampMainToolbarInView);
+    
+    // Add mobile button state reset functionality
+    addMobileButtonStateReset();
+  });
+} else {
+  // DOM already loaded
   const mainToolbar = document.querySelector('.toolbar:not(.fullscreen-toolbar)');
   makeMainToolbarDraggable(mainToolbar);
 
@@ -1261,7 +1312,7 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Add mobile button state reset functionality
   addMobileButtonStateReset();
-});
+}
 
 // Function to handle mobile button state issues
 function addMobileButtonStateReset() {
@@ -1764,6 +1815,7 @@ function makeMainToolbarDraggable(toolbar) {
 
   const onMove = (e) => {
     if (!isDragging) return;
+    e.preventDefault(); // Prevent scrolling while dragging
 
     const event = e.touches ? e.touches[0] : e;
 
@@ -1772,16 +1824,18 @@ function makeMainToolbarDraggable(toolbar) {
     let newLeft = event.clientX - offsetX + window.scrollX;
     let newTop = event.clientY - offsetY + window.scrollY;
 
-    const toolbarRect = toolbar.getBoundingClientRect();
+    // Get fresh dimensions for bounds checking
+    const toolbarWidth = toolbar.offsetWidth;
+    const toolbarHeight = toolbar.offsetHeight;
 
     // Constrain within document bounds
     const docWidth = Math.max(document.documentElement.scrollWidth, window.innerWidth);
     const docHeight = Math.max(document.documentElement.scrollHeight, window.innerHeight);
 
     const minLeft = 0;
-    const maxLeft = docWidth - toolbarRect.width;
+    const maxLeft = docWidth - toolbarWidth;
     const minTop = 0;
-    const maxTop = docHeight - toolbarRect.height;
+    const maxTop = docHeight - toolbarHeight;
 
     newLeft = Math.max(minLeft, Math.min(newLeft, maxLeft));
     newTop = Math.max(minTop, Math.min(newTop, maxTop));
