@@ -811,19 +811,34 @@ function setButtonDisabled(id, disabled) {
   day = ("0"+day).slice(-2);
  }
 
+// Add a flag to prevent rapid calls
+let isRotating = false;
+
 function Rotate() {
-  console.log('Rotate() function called');
-  const element = document.getElementById('comic');
+  console.log('Rotate() function called, isRotating:', isRotating);
   
-  if (!element) {
-    console.error('Rotate: Comic element not found');
+  // Prevent rapid double-calls
+  if (isRotating) {
+    console.log('Already rotating, ignoring duplicate call');
     return;
   }
   
-  console.log('Comic element found, checking for existing overlay');
+  isRotating = true; // Set flag immediately
+  console.log('isRotating set to true');
   
-  // Check if we're already in fullscreen mode
-  const existingOverlay = document.getElementById('comic-overlay');
+  try {
+    const element = document.getElementById('comic');
+    
+    if (!element) {
+      console.error('Rotate: Comic element not found');
+      isRotating = false;
+      return;
+    }
+    
+    console.log('Comic element found, checking for existing overlay');
+    
+    // Check if we're already in fullscreen mode
+    const existingOverlay = document.getElementById('comic-overlay');
   if (existingOverlay) {
     console.log('Exiting fullscreen mode');
     // We're in fullscreen mode, exit it immediately
@@ -858,6 +873,8 @@ function Rotate() {
     
     return;
   }
+  
+  console.log('No existing overlay found, element.className:', element.className);
   
   if (element.className === "normal") {
     console.log('Entering fullscreen mode - element class is normal');
@@ -989,6 +1006,17 @@ function Rotate() {
   }
   else if (element.className === "rotate") {
     element.className = 'normal';
+  }
+  
+  } catch (error) {
+    console.error('Error in Rotate():', error);
+    isRotating = false;
+  } finally {
+    // Reset the flag after a short delay to prevent rapid re-triggering
+    setTimeout(() => {
+      isRotating = false;
+      console.log('isRotating reset to false');
+    }, 300);
   }
 }
 
