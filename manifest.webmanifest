@@ -2,8 +2,8 @@
     "name": "Daily DirkJan Comics",
     "short_name": "DirkJan",
     "description": "Lees dagelijks de nieuwste DirkJan strips met deze handige app. Inclusief favoriten, swipe navigatie en offline ondersteuning.",
-    "start_url": "./index.html",
-    "scope": "./",
+    "start_url": "/",
+    "scope": "/",
     "display": "standalone",
     "orientation": "any",
     "background_color": "#000000",
@@ -66,14 +66,14 @@
       "name": "Vandaag",
       "short_name": "Vandaag",
       "description": "Open vandaag's strip",
-      "url": "./index.html",
+      "url": "/",
       "icons": [{ "src": "./android-chrome-192x192.png", "sizes": "192x192" }]
     },
     {
       "name": "Random",
       "short_name": "Random",
       "description": "Open willekeurige strip",
-      "url": "./index.html?random=true",
+      "url": "/?random=true",
       "icons": [{ "src": "./android-chrome-192x192.png", "sizes": "192x192" }]
     }
   ],
