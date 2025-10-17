@@ -311,9 +311,14 @@ function invalidateFavsCache() { _cachedFavs = null; }
 function clampMainToolbarInView() {
   const toolbar = document.querySelector('.toolbar:not(.fullscreen-toolbar)');
   if (!toolbar) return;
+  
+  // Only clamp if toolbar has an explicit position set
+  const hasExplicitPosition = toolbar.style.top && toolbar.style.left;
+  if (!hasExplicitPosition) return;
+  
   const rect = toolbar.getBoundingClientRect();
-  let top = parseFloat(toolbar.style.top) || rect.top + window.scrollY;
-  let left = parseFloat(toolbar.style.left) || rect.left + window.scrollX;
+  let top = parseFloat(toolbar.style.top);
+  let left = parseFloat(toolbar.style.left);
   const maxLeft = document.documentElement.scrollWidth - rect.width;
   const maxTop = document.documentElement.scrollHeight - rect.height;
   let changed = false;
@@ -1501,13 +1506,21 @@ if (document.readyState === 'loading') {
       window.addEventListener('load', () => {
         // Calculate initial position between logo and comic
         const logo = document.querySelector('.logo');
-        const toolbarContainer = document.querySelector('.toolbar-container');
+        const comicElement = document.getElementById('comic');
         
-        if (logo && toolbarContainer) {
-          // Position toolbar right after the logo + its margin
+        if (logo && comicElement) {
+          // Get positions
           const logoRect = logo.getBoundingClientRect();
-          const initialTop = logoRect.bottom + window.scrollY + 15; // 15px margin
-          mainToolbar.style.top = initialTop + 'px';
+          const comicRect = comicElement.getBoundingClientRect();
+          
+          // Calculate vertical center between logo and comic
+          const logoBottom = logoRect.bottom + window.scrollY;
+          const comicTop = comicRect.top + window.scrollY;
+          const toolbarHeight = mainToolbar.offsetHeight;
+          const availableSpace = comicTop - logoBottom;
+          const centeredTop = logoBottom + (availableSpace - toolbarHeight) / 2;
+          
+          mainToolbar.style.top = Math.max(logoBottom + 10, centeredTop) + 'px';
         }
         
         // Center horizontally
@@ -1540,13 +1553,21 @@ if (document.readyState === 'loading') {
     window.addEventListener('load', () => {
       // Calculate initial position between logo and comic
       const logo = document.querySelector('.logo');
-      const toolbarContainer = document.querySelector('.toolbar-container');
+      const comicElement = document.getElementById('comic');
       
-      if (logo && toolbarContainer) {
-        // Position toolbar right after the logo + its margin
+      if (logo && comicElement) {
+        // Get positions
         const logoRect = logo.getBoundingClientRect();
-        const initialTop = logoRect.bottom + window.scrollY + 15; // 15px margin
-        mainToolbar.style.top = initialTop + 'px';
+        const comicRect = comicElement.getBoundingClientRect();
+        
+        // Calculate vertical center between logo and comic
+        const logoBottom = logoRect.bottom + window.scrollY;
+        const comicTop = comicRect.top + window.scrollY;
+        const toolbarHeight = mainToolbar.offsetHeight;
+        const availableSpace = comicTop - logoBottom;
+        const centeredTop = logoBottom + (availableSpace - toolbarHeight) / 2;
+        
+        mainToolbar.style.top = Math.max(logoBottom + 10, centeredTop) + 'px';
       }
       
       // Center horizontally
