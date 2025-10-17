@@ -1847,13 +1847,13 @@ function initializeDraggableSettings() {
     isDragging = true;
     panel.style.transition = 'none';
     
-    // Get current panel position (use computed left/top if already positioned)
-    const computedStyle = window.getComputedStyle(panel);
-    const currentLeft = parseFloat(computedStyle.left) || 0;
-    const currentTop = parseFloat(computedStyle.top) || 0;
+    // Get current panel position using getBoundingClientRect for accuracy
+    const rect = panel.getBoundingClientRect();
+    panelStartX = rect.left;
+    panelStartY = rect.top;
     
-    panelStartX = currentLeft;
-    panelStartY = currentTop;
+    // Remove the transform to prevent resize issues during drag
+    panel.style.transform = 'none';
     
     // Get touch/mouse starting position
     if (e.type === "touchstart") {
@@ -1890,13 +1890,19 @@ function initializeDraggableSettings() {
     const newLeft = panelStartX + deltaX;
     const newTop = panelStartY + deltaY;
     
-    // Update position - maintain the transform for centering
-    panel.style.left = `${newLeft}px`;
-    panel.style.top = `${newTop}px`;
-    // Keep the existing transform to maintain centering
-    if (!panel.style.transform) {
-      panel.style.transform = `translate(-50%, -50%)`;
-    }
+    // Constrain within viewport bounds
+    const panelWidth = panel.offsetWidth;
+    const panelHeight = panel.offsetHeight;
+    const maxLeft = window.innerWidth - panelWidth;
+    const maxTop = window.innerHeight - panelHeight;
+    
+    const constrainedLeft = Math.max(0, Math.min(newLeft, maxLeft));
+    const constrainedTop = Math.max(0, Math.min(newTop, maxTop));
+    
+    // Update position without transform
+    panel.style.left = `${constrainedLeft}px`;
+    panel.style.top = `${constrainedTop}px`;
+    panel.style.transform = 'none';
   }
   
   function dragEnd(e) {
