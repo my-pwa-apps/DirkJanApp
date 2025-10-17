@@ -1089,8 +1089,36 @@ document.addEventListener('touchstart', handleTouchStart, { passive: false });
 document.addEventListener('touchmove', handleTouchMove, { passive: false });
 document.addEventListener('touchend', handleTouchEnd, { passive: true });
 
-// Add event to prevent toolbar buttons from triggering swipes
+// Add click handler for comic rotation
 document.addEventListener('DOMContentLoaded', function() {
+  const comicElement = document.getElementById('comic');
+  if (comicElement) {
+    // Add click event listener for rotation
+    comicElement.addEventListener('click', function(e) {
+      // Only trigger rotation if not dragging/swiping
+      if (!isDragging) {
+        Rotate();
+      }
+    });
+    
+    // Track if user is dragging/swiping to prevent accidental rotation
+    let isSwipeInProgress = false;
+    comicElement.addEventListener('touchstart', function() {
+      isSwipeInProgress = false;
+    });
+    comicElement.addEventListener('touchmove', function() {
+      isSwipeInProgress = true;
+    });
+    comicElement.addEventListener('touchend', function(e) {
+      // Only trigger rotation if no swipe occurred
+      if (!isSwipeInProgress) {
+        e.preventDefault();
+        Rotate();
+      }
+      isSwipeInProgress = false;
+    });
+  }
+  
   // Add orientation change listener to adjust UI for rotated comics
   window.addEventListener('orientationchange', function() {
     // Check if we're in fullscreen/rotated mode
@@ -1483,10 +1511,10 @@ function HideSettings()
 
 // Draggable settings panel functionality
 let isDragging = false;
-let currentX;
-let currentY;
-let initialX;
-let initialY;
+let currentX = 0;
+let currentY = 0;
+let initialX = 0;
+let initialY = 0;
 let xOffset = 0;
 let yOffset = 0;
 
@@ -1510,17 +1538,22 @@ function initializeDraggableSettings() {
     // Don't drag if clicking the close button
     if (e.target.closest('.settings-close')) return;
     
+    // Get the current transform values
+    const style = window.getComputedStyle(panel);
+    const matrix = new DOMMatrix(style.transform);
+    
     if (e.type === "touchstart") {
-      initialX = e.touches[0].clientX - xOffset;
-      initialY = e.touches[0].clientY - yOffset;
+      initialX = e.touches[0].clientX - matrix.m41;
+      initialY = e.touches[0].clientY - matrix.m42;
     } else {
-      initialX = e.clientX - xOffset;
-      initialY = e.clientY - yOffset;
+      initialX = e.clientX - matrix.m41;
+      initialY = e.clientY - matrix.m42;
     }
     
     if (e.target === header || header.contains(e.target)) {
       isDragging = true;
       panel.style.transition = 'none';
+      e.preventDefault(); // Prevent text selection
     }
   }
   
@@ -1539,17 +1572,19 @@ function initializeDraggableSettings() {
       xOffset = currentX;
       yOffset = currentY;
       
-      // Update position
-      const newX = `calc(-50% + ${currentX}px)`;
-      const newY = `calc(-50% + ${currentY}px)`;
-      panel.style.transform = `translate(${newX}, ${newY})`;
+      // Calculate position relative to center
+      const centerX = window.innerWidth / 2;
+      const centerY = window.innerHeight / 2;
+      
+      // Update position directly in pixels from center
+      panel.style.left = `${centerX + currentX}px`;
+      panel.style.top = `${centerY + currentY}px`;
+      panel.style.transform = `translate(-50%, -50%)`;
     }
   }
   
   function dragEnd(e) {
     if (isDragging) {
-      initialX = currentX;
-      initialY = currentY;
       isDragging = false;
       
       // Re-enable transitions for other animations
