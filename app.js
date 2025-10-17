@@ -1031,10 +1031,11 @@ let isRotating = false;
 
 /**
  * Toggles comic rotation to fullscreen mode
- * Handles both entering and exiting fullscreen with 90-degree rotation
+ * Handles both entering and exiting fullscreen with optional 90-degree rotation
  * Includes tap detection and swipe support in fullscreen mode
+ * @param {boolean} applyRotation - Whether to apply 90-degree rotation (default: true)
  */
-function Rotate() {
+function Rotate(applyRotation = true) {
   // Prevent rapid double-calls
   if (isRotating) {
     return;
@@ -1108,7 +1109,9 @@ function Rotate() {
     overlay.style.zIndex = '10000';    // Clone the comic image
     const clonedComic = element.cloneNode(true);
     clonedComic.id = 'rotated-comic';
-    clonedComic.className = "rotate";
+    // Apply rotation class only if requested (for portrait mode)
+    // In landscape mode, we show fullscreen without rotation
+    clonedComic.className = applyRotation ? "rotate" : "fullscreen-landscape";
     clonedComic.style.display = 'block'; // Ensure visible
     
     // Add click handler to rotated comic to exit fullscreen
@@ -1397,6 +1400,26 @@ window.addEventListener('orientationchange', function() {
       maximizeRotatedImage(rotatedComic);
       positionFullscreenToolbar();
     }, 300); // Small delay to ensure orientation has completed
+  } else {
+    // Not in fullscreen mode - detect if device rotated to landscape
+    setTimeout(() => {
+      const orientation = screen.orientation?.type || '';
+      const isLandscape = orientation.includes('landscape') || Math.abs(window.orientation) === 90;
+      
+      // Enter fullscreen mode when device goes to landscape
+      if (isLandscape) {
+        const comic = document.getElementById('comic');
+        if (comic && comic.className.includes('normal')) {
+          Rotate(false); // Enter fullscreen WITHOUT rotation (device is already landscape)
+        }
+      } else {
+        // Device rotated back to portrait - exit fullscreen if in landscape mode
+        const rotatedComicCheck = document.getElementById('rotated-comic');
+        if (rotatedComicCheck && rotatedComicCheck.className.includes('fullscreen-landscape')) {
+          Rotate(); // Exit fullscreen
+        }
+      }
+    }, 300);
   }
 });
 

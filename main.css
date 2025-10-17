@@ -662,6 +662,24 @@ input[type="date"]:focus-visible {
     cursor: pointer; /* Make it clear the image is clickable */
     pointer-events: auto; /* Ensure click events work */
 }
+
+/* Fullscreen mode without rotation (for landscape device orientation) */
+.fullscreen-landscape {
+    max-height: 95vh;
+    max-width: 95vw;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
+    border-radius: 4px;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%); /* Center without rotation */
+    z-index: 10001;
+    cursor: pointer;
+    pointer-events: auto;
+}
   
 .normal {
     -ms-transform: rotate(0deg);
