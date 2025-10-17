@@ -92,7 +92,7 @@ input[type=checkbox]:checked:after
 
 .logo
 {
-    padding: 8px 5px; /* Reduced padding - less right padding */
+    padding: 8px 0px 8px 5px; /* Reduced right padding to 0 */
     margin-bottom: 5px;
     width: 100%; /* Full width */
     box-sizing: border-box; /* Include padding in width calculation */
@@ -1383,7 +1383,7 @@ img#comic.loaded {
   
   /* Logo adjustments for mobile */
   .logo {
-    padding: 6px 5px; /* Reduced padding on mobile */
+    padding: 6px 0px 6px 5px; /* Reduced right padding to 0 on mobile */
     margin-bottom: 0;
     width: 100%;
   }

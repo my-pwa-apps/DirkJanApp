@@ -998,6 +998,7 @@ function handleTouchStart(e) {
 	touchStartX = touch.clientX;
 	touchStartY = touch.clientY;
 	touchStartTime = Date.now();
+	console.log('Touch start - target:', e.target.id, 'x:', touchStartX, 'y:', touchStartY);
 	
 	// Early return for swipe gesture handling, but keep tracking for tap detection
 	if (!document.getElementById("swipe").checked) return;
@@ -1034,7 +1035,9 @@ function handleTouchEnd(e) {
 	// If it's a tap on the comic image (not in fullscreen), trigger rotation
 	// This works regardless of swipe setting
 	const targetIsComic = e.target.id === 'comic' || e.target.closest('#comic');
+	console.log('Touch end - isTap:', isTap, 'targetIsComic:', targetIsComic, 'target:', e.target.id, 'absX:', absX, 'absY:', absY, 'deltaTime:', deltaTime);
 	if (isTap && targetIsComic && !document.getElementById('rotated-comic')) {
+		console.log('Triggering rotation!');
 		Rotate();
 		return;
 	}
