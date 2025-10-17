@@ -1150,9 +1150,6 @@ function Rotate(applyRotation = true) {
       <button id="rotated-Current" class="toolbar-button" onclick="CurrentClick(); return false;" title="Vandaag">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><circle cx="12" cy="16" r="2"/></svg>
       </button>
-      <button class="toolbar-button" onclick="Rotate(); return false;" title="Sluiten">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-      </button>
     `;
     // Add overlay, comic, and toolbar in order
     document.body.appendChild(overlay);
@@ -1369,76 +1366,34 @@ document.addEventListener('touchmove', handleTouchMove, { passive: false });
 document.addEventListener('touchend', handleTouchEnd, { passive: true });
 
 // Add click handler for comic rotation
-function initializeComicRotation() {
-  const comicElement = document.getElementById('comic');
-  if (!comicElement) {
-    console.error('initializeComicRotation: Comic element not found');
-    return;
-  }
-  
-  // Add click event listener for rotation (for mouse clicks)
-  // Touch events are handled by the global touch handlers (handleTouchEnd)
-  comicElement.addEventListener('click', function(e) {
-    // Check if not in fullscreen already and not from a touch event
-    // (touch events trigger both touchend and click, we handle them in touchend)
-    if (!document.getElementById('rotated-comic') && e.detail > 0) {
-      Rotate();
-    }
-  });
-}
-
-// Initialize rotation handlers immediately or wait for DOM
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initializeComicRotation);
-} else {
-  initializeComicRotation();
-}
-
 // Add orientation change listener
 window.addEventListener('orientationchange', function() {
-  // Check if we're in fullscreen/rotated mode
-  const rotatedComic = document.getElementById('rotated-comic');
-  if (rotatedComic) {
-    // Check if user manually rotated (has 'rotate' class)
-    const isManuallyRotated = rotatedComic.className.includes('rotate');
+  setTimeout(() => {
+    const orientation = screen.orientation?.type || '';
+    const isLandscape = orientation.includes('landscape') || Math.abs(window.orientation) === 90;
+    const rotatedComic = document.getElementById('rotated-comic');
     
-    if (isManuallyRotated) {
-      // User manually clicked to rotate - keep it in rotated mode, just reposition
-      setTimeout(() => {
-        maximizeRotatedImage(rotatedComic);
-        positionFullscreenToolbar();
-      }, 300);
-    } else {
-      // In landscape fullscreen mode - check if device rotated back to portrait
-      setTimeout(() => {
-        const orientation = screen.orientation?.type || '';
-        const isLandscape = orientation.includes('landscape') || Math.abs(window.orientation) === 90;
-        
-        if (!isLandscape) {
-          // Device rotated back to portrait - exit fullscreen
-          Rotate(); // Exit fullscreen
-        } else {
-          // Still landscape - just reposition
-          maximizeRotatedImage(rotatedComic);
-          positionFullscreenToolbar();
-        }
-      }, 300);
-    }
-  } else {
-    // Not in fullscreen mode - detect if device rotated to landscape
-    setTimeout(() => {
-      const orientation = screen.orientation?.type || '';
-      const isLandscape = orientation.includes('landscape') || Math.abs(window.orientation) === 90;
-      
-      // Enter fullscreen mode when device goes to landscape
-      if (isLandscape) {
+    if (isLandscape) {
+      // Device is in landscape
+      if (!rotatedComic) {
+        // Not in fullscreen yet - enter landscape fullscreen mode
         const comic = document.getElementById('comic');
         if (comic && comic.className.includes('normal')) {
           Rotate(false); // Enter fullscreen WITHOUT rotation (device is already landscape)
         }
+      } else {
+        // Already in fullscreen - just reposition
+        maximizeRotatedImage(rotatedComic);
+        positionFullscreenToolbar();
       }
-    }, 300);
-  }
+    } else {
+      // Device is in portrait
+      if (rotatedComic) {
+        // In fullscreen mode - exit it
+        Rotate(); // Exit fullscreen
+      }
+    }
+  }, 300);
 });
 
 // Add event delegation for any fullscreen toolbar that might be created
