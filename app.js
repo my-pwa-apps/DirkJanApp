@@ -1926,7 +1926,30 @@ if (document.readyState === 'loading') {
     
 let deferredPrompt;
 
+// Check if app is already installed/running in standalone mode
+function isAppInstalled() {
+  // Check if running as standalone PWA
+  if (window.matchMedia('(display-mode: standalone)').matches) {
+    return true;
+  }
+  // Check for iOS standalone mode
+  if (window.navigator.standalone === true) {
+    return true;
+  }
+  // Check if running from Windows Store or other app context
+  if (document.referrer.includes('android-app://') || 
+      document.referrer.includes('ms-appx://')) {
+    return true;
+  }
+  return false;
+}
+
 window.addEventListener('beforeinstallprompt', (e) => {
+  // Don't show install prompt if already installed
+  if (isAppInstalled()) {
+    return;
+  }
+  
   // Prevent the mini-infobar from appearing on mobile
   e.preventDefault();
   // Stash the event so it can be triggered later.
@@ -1936,11 +1959,26 @@ window.addEventListener('beforeinstallprompt', (e) => {
 });
 
 function showInstallPromotion() {
+  // Don't show if already installed
+  if (isAppInstalled()) {
+    return;
+  }
+  
   const installButton = document.createElement('button');
   installButton.innerText = 'Install App';
+  installButton.id = 'pwa-install-button';
   installButton.style.position = 'fixed';
   installButton.style.bottom = '10px';
   installButton.style.right = '10px';
+  installButton.style.padding = '10px 20px';
+  installButton.style.backgroundColor = '#F09819';
+  installButton.style.color = 'white';
+  installButton.style.border = 'none';
+  installButton.style.borderRadius = '5px';
+  installButton.style.cursor = 'pointer';
+  installButton.style.zIndex = '9999';
+  installButton.style.fontWeight = 'bold';
+  installButton.style.boxShadow = '0 2px 5px rgba(0,0,0,0.3)';
   document.body.appendChild(installButton);
 
   installButton.addEventListener('click', () => {
@@ -1950,10 +1988,23 @@ function showInstallPromotion() {
     deferredPrompt.prompt();
     // Wait for the user to respond to the prompt
     deferredPrompt.userChoice.then((choiceResult) => {
+      if (choiceResult.outcome === 'accepted') {
+        console.log('User accepted the install prompt');
+      }
       deferredPrompt = null;
     });
   });
 }
+
+// Hide install button if app is already installed
+window.addEventListener('DOMContentLoaded', () => {
+  if (isAppInstalled()) {
+    const installButton = document.getElementById('pwa-install-button');
+    if (installButton) {
+      installButton.style.display = 'none';
+    }
+  }
+});
 
 // Helper function to maximize image size for rotated images
 function maximizeRotatedImage(imgElement) {
@@ -1970,9 +2021,13 @@ function maximizeRotatedImage(imgElement) {
     return;
   }
   
+  // Check if this is a landscape fullscreen (no rotation) or rotated mode
+  const isLandscapeMode = imgElement.className.includes('fullscreen-landscape');
+  
   // For a rotated image, the visual width is the original height, and vice versa
-  const rotatedWidth = naturalHeight;
-  const rotatedHeight = naturalWidth;
+  // But for landscape mode, use natural dimensions
+  const rotatedWidth = isLandscapeMode ? naturalWidth : naturalHeight;
+  const rotatedHeight = isLandscapeMode ? naturalHeight : naturalWidth;
   
   // Calculate the scale factor needed to fit the image within the viewport
   let scale;
@@ -1995,7 +2050,14 @@ function maximizeRotatedImage(imgElement) {
   imgElement.style.position = 'fixed';
   imgElement.style.top = '50%';
   imgElement.style.left = '50%';
-  imgElement.style.transform = 'translate(-50%, -50%) rotate(90deg)';
+  
+  // Apply rotation only if NOT in landscape mode
+  if (isLandscapeMode) {
+    imgElement.style.transform = 'translate(-50%, -50%)'; // No rotation
+  } else {
+    imgElement.style.transform = 'translate(-50%, -50%) rotate(90deg)'; // With rotation
+  }
+  
   imgElement.style.transformOrigin = 'center center';
   imgElement.style.maxWidth = 'none';
   imgElement.style.maxHeight = 'none';
