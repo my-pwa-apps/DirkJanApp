@@ -27,37 +27,6 @@ body
     padding: 0;
 }
 
-/* Force portrait orientation when device rotation is disabled */
-body.force-portrait,
-html.force-portrait {
-    width: 100vw !important;
-    height: 100vh !important;
-    max-width: 100vw !important;
-    max-height: 100vh !important;
-    position: fixed !important;
-    overflow: hidden !important;
-    transform: none !important;
-}
-
-/* Override any orientation-based styles when rotation is disabled */
-body.force-portrait *,
-html.force-portrait * {
-    max-width: 100vw !important;
-    max-height: 100vh !important;
-}
-
-/* Prevent content from rotating in landscape mode when disabled */
-@media (orientation: landscape) {
-    body.force-portrait {
-        transform: none !important;
-    }
-    
-    body.force-portrait main,
-    body.force-portrait #main {
-        transform: none !important;
-    }
-}
-
 html {
     /* Ensure html also covers full height */
     height: 100%;

@@ -47,47 +47,11 @@ const CONFIG = Object.freeze({
     TOOLBAR_POS: 'mainToolbarPosition',
     SETTINGS_POS: 'settingsPosition',
     SWIPE: 'stat',
-    DEVICE_ROTATION: 'deviceRotation',
     SHOW_FAVS: 'showfavs',
     LAST_DATE: 'lastdate',
     SETTINGS_VISIBLE: 'settings'
   })
 });
-
-// ========================================
-// EARLY ORIENTATION LOCK
-// ========================================
-// Apply orientation lock immediately to prevent any rotation before DOM is ready
-(function() {
-  const deviceRotationEnabled = localStorage.getItem('deviceRotation');
-  if (deviceRotationEnabled === "false") {
-    // Add class immediately
-    if (document.documentElement) {
-      document.documentElement.classList.add('force-portrait');
-    }
-    if (document.body) {
-      document.body.classList.add('force-portrait');
-    }
-    // Add classes when body is available if not already added
-    const applyEarlyLock = () => {
-      if (document.body && !document.body.classList.contains('force-portrait')) {
-        document.body.classList.add('force-portrait');
-        document.body.style.overflow = 'hidden';
-      }
-      if (document.documentElement && !document.documentElement.classList.contains('force-portrait')) {
-        document.documentElement.classList.add('force-portrait');
-        document.documentElement.style.overflow = 'hidden';
-      }
-    };
-    // Try now
-    applyEarlyLock();
-    // And when DOM is ready
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', applyEarlyLock);
-    }
-  }
-})();
-
 // ========================================
 // SERVICE WORKER REGISTRATION & PWA SETUP
 // ========================================
@@ -366,51 +330,6 @@ function clampMainToolbarInView() {
     toolbar.style.left = left + 'px';
     toolbar.style.top = top + 'px';
     try { localStorage.setItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS, JSON.stringify({ top, left })); } catch(_) {}
-  }
-}
-
-// ========================================
-// ORIENTATION MANAGEMENT
-// ========================================
-
-/**
- * Applies screen orientation lock based on user settings
- * Locks to portrait when device rotation is disabled
- */
-function applyOrientationLock() {
-  const deviceRotationEnabled = localStorage.getItem(CONFIG.STORAGE_KEYS.DEVICE_ROTATION);
-  const body = document.body;
-  const html = document.documentElement;
-  
-  if (deviceRotationEnabled === "false") {
-    // Add class to body and html to force portrait orientation via CSS
-    body.classList.add('force-portrait');
-    html.classList.add('force-portrait');
-    
-    // Prevent scrolling and fix viewport
-    document.body.style.overflow = 'hidden';
-    document.documentElement.style.overflow = 'hidden';
-    
-    // Try to use Screen Orientation API if available (works in fullscreen/installed PWA)
-    if ('orientation' in screen && 'lock' in screen.orientation) {
-      screen.orientation.lock('portrait-primary').catch(err => {
-        // Orientation lock might fail in non-fullscreen contexts
-        // This is expected behavior in some browsers
-      });
-    }
-  } else {
-    // Remove force portrait class
-    body.classList.remove('force-portrait');
-    html.classList.remove('force-portrait');
-    
-    // Restore scrolling
-    document.body.style.overflow = '';
-    document.documentElement.style.overflow = '';
-    
-    // Unlock orientation when device rotation is enabled
-    if ('orientation' in screen && 'unlock' in screen.orientation) {
-      screen.orientation.unlock();
-    }
   }
 }
 
@@ -1441,13 +1360,6 @@ document.addEventListener('touchend', handleTouchEnd, { passive: true });
 // Add orientation change listener
 window.addEventListener('orientationchange', function() {
   setTimeout(() => {
-    // Check if device rotation is enabled
-    const deviceRotationEnabled = localStorage.getItem(CONFIG.STORAGE_KEYS.DEVICE_ROTATION);
-    if (deviceRotationEnabled === "false") {
-      // Device rotation is disabled - do nothing
-      return;
-    }
-    
     const orientation = screen.orientation?.type || '';
     const isLandscape = orientation.includes('landscape') || Math.abs(window.orientation) === 90;
     const rotatedComic = document.getElementById('rotated-comic');
@@ -1575,7 +1487,7 @@ if (document.readyState === 'loading') {
     makeMainToolbarDraggable(mainToolbar);
 
     const savedPosRaw = localStorage.getItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS) || localStorage.getItem('mainToolbarPosition');
-    const savedPos = safeJSONParse(savedPosRaw, null);
+    const savedPos = UTILS.safeJSONParse(savedPosRaw, null);
     if (!savedPos && mainToolbar) {
       // Position toolbar after all content is loaded
       const positionToolbar = () => {
@@ -1605,8 +1517,11 @@ if (document.readyState === 'loading') {
         }
       };
       
+      // Position immediately
+      positionToolbar();
       // Try multiple times to ensure elements are rendered
       window.addEventListener('load', () => {
+        positionToolbar();
         setTimeout(positionToolbar, 50);
         setTimeout(positionToolbar, 200);
         setTimeout(positionToolbar, 500);
@@ -1630,7 +1545,7 @@ if (document.readyState === 'loading') {
   makeMainToolbarDraggable(mainToolbar);
 
   const savedPosRaw = localStorage.getItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS) || localStorage.getItem('mainToolbarPosition');
-  const savedPos = safeJSONParse(savedPosRaw, null);
+  const savedPos = UTILS.safeJSONParse(savedPosRaw, null);
   if (!savedPos && mainToolbar) {
     // Position toolbar after all content is loaded
     const positionToolbar = () => {
@@ -1660,8 +1575,11 @@ if (document.readyState === 'loading') {
       }
     };
     
+    // Position immediately
+    positionToolbar();
     // Try multiple times to ensure elements are rendered
     window.addEventListener('load', () => {
+      positionToolbar();
       setTimeout(positionToolbar, 50);
       setTimeout(positionToolbar, 200);
       setTimeout(positionToolbar, 500);
@@ -1782,21 +1700,6 @@ setStatus.onclick = function()
 	}
 }
 
-setStatus = document.getElementById('deviceRotation');
-setStatus.onclick = function()
-{
-  if(document.getElementById('deviceRotation').checked) 
-  {
-    localStorage.setItem(CONFIG.STORAGE_KEYS.DEVICE_ROTATION, "true");
-  }
-  else
-  {
-    localStorage.setItem(CONFIG.STORAGE_KEYS.DEVICE_ROTATION, "false");
-  }
-  // Apply orientation lock based on new setting
-  applyOrientationLock();
-}
-
 setStatus = document.getElementById('lastdate');
 setStatus.onclick = function()
 {
@@ -1835,19 +1738,6 @@ getStatus = localStorage.getItem('stat');
   {
     document.getElementById("swipe").checked = false;
   }
-
-getStatus = localStorage.getItem(CONFIG.STORAGE_KEYS.DEVICE_ROTATION);
-  if (getStatus === null || getStatus == "true")
-  {
-    document.getElementById("deviceRotation").checked = true;
-  }
-  else
-  {
-    document.getElementById("deviceRotation").checked = false;
-  }
-  
-  // Apply orientation lock based on current setting
-  applyOrientationLock();
 
 getStatus = localStorage.getItem('showfavs');
   if (getStatus == "true")
