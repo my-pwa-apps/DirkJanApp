@@ -51,7 +51,9 @@ input[type="checkbox"], label
     font-size: small;
 }
 
-input[type=checkbox]
+/* Old checkbox styles - only for legacy elements, not settings panel */
+.buttongrid input[type=checkbox],
+#settingsDIV.legacy input[type=checkbox]
 {
 	position: relative;
 	cursor: pointer;
@@ -60,7 +62,8 @@ input[type=checkbox]
 	margin-bottom: 20px;
 }
 
-input[type=checkbox]:before
+.buttongrid input[type=checkbox]:before,
+#settingsDIV.legacy input[type=checkbox]:before
 {
 	content: "";
 	display: block;
@@ -74,7 +77,8 @@ input[type=checkbox]:before
 	background-color: lightgray;
 }
 
-input[type=checkbox]:checked:after
+.buttongrid input[type=checkbox]:checked:after,
+#settingsDIV.legacy input[type=checkbox]:checked:after
 {
 	content: "";
 	display: block;
@@ -837,8 +841,12 @@ input[type="date"]#DatePicker:disabled {
 .setting-item input[type="checkbox"] {
   width: 20px;
   height: 20px;
+  min-width: 20px;
+  min-height: 20px;
   cursor: pointer;
   accent-color: #F09819;
+  margin: 0;
+  flex-shrink: 0;
 }
 
 .setting-item label {
