@@ -46,6 +46,7 @@ const CONFIG = Object.freeze({
     LAST_COMIC: 'lastcomic',
     TOOLBAR_POS: 'mainToolbarPosition',
     SWIPE: 'stat',
+    DEVICE_ROTATION: 'deviceRotation',
     SHOW_FAVS: 'showfavs',
     LAST_DATE: 'lastdate',
     SETTINGS_VISIBLE: 'settings'
@@ -330,6 +331,34 @@ function clampMainToolbarInView() {
     toolbar.style.left = left + 'px';
     toolbar.style.top = top + 'px';
     try { localStorage.setItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS, JSON.stringify({ top, left })); } catch(_) {}
+  }
+}
+
+// ========================================
+// ORIENTATION MANAGEMENT
+// ========================================
+
+/**
+ * Applies screen orientation lock based on user settings
+ * Locks to portrait when device rotation is disabled
+ */
+function applyOrientationLock() {
+  const deviceRotationEnabled = localStorage.getItem(CONFIG.STORAGE_KEYS.DEVICE_ROTATION);
+  
+  // Check if Screen Orientation API is supported
+  if ('orientation' in screen && 'lock' in screen.orientation) {
+    if (deviceRotationEnabled === "false") {
+      // Lock to portrait when device rotation is disabled
+      screen.orientation.lock('portrait').catch(err => {
+        // Orientation lock might fail in non-fullscreen contexts
+        // This is expected behavior in some browsers
+      });
+    } else {
+      // Unlock orientation when device rotation is enabled
+      if ('unlock' in screen.orientation) {
+        screen.orientation.unlock();
+      }
+    }
   }
 }
 
@@ -1291,18 +1320,10 @@ function handleTouchEnd(e) {
 	const deltaY = touchEndY - touchStartY;
 	const deltaTime = Date.now() - touchStartTime;
 	
-	// Check if this was a tap (not a swipe) on the comic element
+	// Check if this was a tap (not a swipe)
 	const absX = Math.abs(deltaX);
 	const absY = Math.abs(deltaY);
 	const isTap = absX < CONFIG.TAP_MAX_MOVEMENT && absY < CONFIG.TAP_MAX_MOVEMENT && deltaTime < CONFIG.TAP_MAX_TIME;
-	
-	// If it's a tap on the comic image (not in fullscreen), trigger rotation
-	// This works regardless of swipe setting
-	const targetIsComic = e.target.id === 'comic' || e.target.closest('#comic');
-	if (isTap && targetIsComic && !document.getElementById('rotated-comic')) {
-		Rotate();
-		return;
-	}
 	
 	// For swipe navigation, check if swipe is enabled
 	if (!document.getElementById("swipe").checked) return;
@@ -1368,6 +1389,13 @@ document.addEventListener('touchend', handleTouchEnd, { passive: true });
 // Add orientation change listener
 window.addEventListener('orientationchange', function() {
   setTimeout(() => {
+    // Check if device rotation is enabled
+    const deviceRotationEnabled = localStorage.getItem(CONFIG.STORAGE_KEYS.DEVICE_ROTATION);
+    if (deviceRotationEnabled === "false") {
+      // Device rotation is disabled - do nothing
+      return;
+    }
+    
     const orientation = screen.orientation?.type || '';
     const isLandscape = orientation.includes('landscape') || Math.abs(window.orientation) === 90;
     const rotatedComic = document.getElementById('rotated-comic');
@@ -1497,34 +1525,39 @@ if (document.readyState === 'loading') {
     const savedPosRaw = localStorage.getItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS) || localStorage.getItem('mainToolbarPosition');
     const savedPos = safeJSONParse(savedPosRaw, null);
     if (!savedPos && mainToolbar) {
+      // Use a longer delay to ensure comic and logo are fully rendered
       window.addEventListener('load', () => {
-        // Calculate initial position between logo and comic
-        const logo = document.querySelector('.logo');
-        const comicElement = document.getElementById('comic');
-        
-        if (logo && comicElement) {
-          // Get positions
-          const logoRect = logo.getBoundingClientRect();
-          const comicRect = comicElement.getBoundingClientRect();
+        setTimeout(() => {
+          // Calculate initial position between logo and comic
+          const logo = document.querySelector('.logo');
+          const toolbarContainer = document.querySelector('.toolbar-container');
           
-          // Calculate vertical center between logo and comic
-          const logoBottom = logoRect.bottom + window.scrollY;
-          const comicTop = comicRect.top + window.scrollY;
-          const toolbarHeight = mainToolbar.offsetHeight;
-          const availableSpace = comicTop - logoBottom;
-          const centeredTop = logoBottom + (availableSpace - toolbarHeight) / 2;
+          if (logo && toolbarContainer) {
+            // Get positions
+            const logoRect = logo.getBoundingClientRect();
+            const toolbarContainerRect = toolbarContainer.getBoundingClientRect();
+            
+            // Position toolbar at the toolbar container's position
+            // This is the space designed for it in the layout
+            const containerTop = toolbarContainerRect.top + window.scrollY;
+            const containerHeight = toolbarContainerRect.height;
+            const toolbarHeight = mainToolbar.offsetHeight;
+            
+            // Center toolbar vertically within its container
+            const centeredTop = containerTop + (containerHeight - toolbarHeight) / 2;
+            
+            mainToolbar.style.top = centeredTop + 'px';
+          }
           
-          mainToolbar.style.top = Math.max(logoBottom + 10, centeredTop) + 'px';
-        }
-        
-        // Center horizontally
-        const viewportWidth = window.innerWidth;
-        const rect = mainToolbar.getBoundingClientRect();
-        const centeredLeft = (viewportWidth - rect.width) / 2;
-        mainToolbar.style.left = centeredLeft + 'px';
-        mainToolbar.style.transform = 'none'; // Remove the translateX transform
-        
-        clampMainToolbarInView();
+          // Center horizontally
+          const viewportWidth = window.innerWidth;
+          const toolbarWidth = mainToolbar.offsetWidth;
+          const centeredLeft = (viewportWidth - toolbarWidth) / 2;
+          mainToolbar.style.left = centeredLeft + 'px';
+          mainToolbar.style.transform = 'none'; // Remove the translateX transform
+          
+          clampMainToolbarInView();
+        }, 100);
       });
     } else {
       clampMainToolbarInView();
@@ -1544,34 +1577,39 @@ if (document.readyState === 'loading') {
   const savedPosRaw = localStorage.getItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS) || localStorage.getItem('mainToolbarPosition');
   const savedPos = safeJSONParse(savedPosRaw, null);
   if (!savedPos && mainToolbar) {
+    // Use a longer delay to ensure comic and logo are fully rendered
     window.addEventListener('load', () => {
-      // Calculate initial position between logo and comic
-      const logo = document.querySelector('.logo');
-      const comicElement = document.getElementById('comic');
-      
-      if (logo && comicElement) {
-        // Get positions
-        const logoRect = logo.getBoundingClientRect();
-        const comicRect = comicElement.getBoundingClientRect();
+      setTimeout(() => {
+        // Calculate initial position between logo and comic
+        const logo = document.querySelector('.logo');
+        const toolbarContainer = document.querySelector('.toolbar-container');
         
-        // Calculate vertical center between logo and comic
-        const logoBottom = logoRect.bottom + window.scrollY;
-        const comicTop = comicRect.top + window.scrollY;
-        const toolbarHeight = mainToolbar.offsetHeight;
-        const availableSpace = comicTop - logoBottom;
-        const centeredTop = logoBottom + (availableSpace - toolbarHeight) / 2;
+        if (logo && toolbarContainer) {
+          // Get positions
+          const logoRect = logo.getBoundingClientRect();
+          const toolbarContainerRect = toolbarContainer.getBoundingClientRect();
+          
+          // Position toolbar at the toolbar container's position
+          // This is the space designed for it in the layout
+          const containerTop = toolbarContainerRect.top + window.scrollY;
+          const containerHeight = toolbarContainerRect.height;
+          const toolbarHeight = mainToolbar.offsetHeight;
+          
+          // Center toolbar vertically within its container
+          const centeredTop = containerTop + (containerHeight - toolbarHeight) / 2;
+          
+          mainToolbar.style.top = centeredTop + 'px';
+        }
         
-        mainToolbar.style.top = Math.max(logoBottom + 10, centeredTop) + 'px';
-      }
-      
-      // Center horizontally
-      const viewportWidth = window.innerWidth;
-      const rect = mainToolbar.getBoundingClientRect();
-      const centeredLeft = (viewportWidth - rect.width) / 2;
-      mainToolbar.style.left = centeredLeft + 'px';
-      mainToolbar.style.transform = 'none'; // Remove the translateX transform
-      
-      clampMainToolbarInView();
+        // Center horizontally
+        const viewportWidth = window.innerWidth;
+        const toolbarWidth = mainToolbar.offsetWidth;
+        const centeredLeft = (viewportWidth - toolbarWidth) / 2;
+        mainToolbar.style.left = centeredLeft + 'px';
+        mainToolbar.style.transform = 'none'; // Remove the translateX transform
+        
+        clampMainToolbarInView();
+      }, 100);
     });
   } else {
     clampMainToolbarInView();
@@ -1686,6 +1724,21 @@ setStatus.onclick = function()
 	}
 }
 
+setStatus = document.getElementById('deviceRotation');
+setStatus.onclick = function()
+{
+  if(document.getElementById('deviceRotation').checked) 
+  {
+    localStorage.setItem(CONFIG.STORAGE_KEYS.DEVICE_ROTATION, "true");
+  }
+  else
+  {
+    localStorage.setItem(CONFIG.STORAGE_KEYS.DEVICE_ROTATION, "false");
+  }
+  // Apply orientation lock based on new setting
+  applyOrientationLock();
+}
+
 setStatus = document.getElementById('lastdate');
 setStatus.onclick = function()
 {
@@ -1724,6 +1777,19 @@ getStatus = localStorage.getItem('stat');
   {
     document.getElementById("swipe").checked = false;
   }
+
+getStatus = localStorage.getItem(CONFIG.STORAGE_KEYS.DEVICE_ROTATION);
+  if (getStatus === null || getStatus == "true")
+  {
+    document.getElementById("deviceRotation").checked = true;
+  }
+  else
+  {
+    document.getElementById("deviceRotation").checked = false;
+  }
+  
+  // Apply orientation lock based on current setting
+  applyOrientationLock();
 
 getStatus = localStorage.getItem('showfavs');
   if (getStatus == "true")
