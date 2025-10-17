@@ -6,6 +6,19 @@
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    
+    <!-- Early orientation lock script - runs before CSS to prevent rotation flicker -->
+    <script>
+      (function() {
+        try {
+          var rotationEnabled = localStorage.getItem('deviceRotation');
+          if (rotationEnabled === 'false') {
+            document.documentElement.classList.add('force-portrait');
+          }
+        } catch(e) {}
+      })();
+    </script>
+    
     <meta name="keywords" content="dirkjan, bert, bello, van, druten, kutschool, dirkjan.nl, comic, comics, strip, strips, cartoon, cartoons, mark, retera, webapp, mobile, responsive, pwa, progressive, web, app, ios, android, windows, platform, multi, platforms, online, unofficial, independent, nederlandse strip, dagelijkse strip, gratis comics">
     <meta name="description" content="Lees dagelijks de nieuwste DirkJan strip van Mark Retera. Ontdek ook willekeurige comics, favorieten en navigeer eenvoudig door het hele archief sinds 2015. Gratis Nederlandse strip webapp.">
     <meta name="author" content="Daily DirkJan App">

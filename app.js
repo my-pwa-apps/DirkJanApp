@@ -55,6 +55,40 @@ const CONFIG = Object.freeze({
 });
 
 // ========================================
+// EARLY ORIENTATION LOCK
+// ========================================
+// Apply orientation lock immediately to prevent any rotation before DOM is ready
+(function() {
+  const deviceRotationEnabled = localStorage.getItem('deviceRotation');
+  if (deviceRotationEnabled === "false") {
+    // Add class immediately
+    if (document.documentElement) {
+      document.documentElement.classList.add('force-portrait');
+    }
+    if (document.body) {
+      document.body.classList.add('force-portrait');
+    }
+    // Add classes when body is available if not already added
+    const applyEarlyLock = () => {
+      if (document.body && !document.body.classList.contains('force-portrait')) {
+        document.body.classList.add('force-portrait');
+        document.body.style.overflow = 'hidden';
+      }
+      if (document.documentElement && !document.documentElement.classList.contains('force-portrait')) {
+        document.documentElement.classList.add('force-portrait');
+        document.documentElement.style.overflow = 'hidden';
+      }
+    };
+    // Try now
+    applyEarlyLock();
+    // And when DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', applyEarlyLock);
+    }
+  }
+})();
+
+// ========================================
 // SERVICE WORKER REGISTRATION & PWA SETUP
 // ========================================
 
@@ -346,14 +380,20 @@ function clampMainToolbarInView() {
 function applyOrientationLock() {
   const deviceRotationEnabled = localStorage.getItem(CONFIG.STORAGE_KEYS.DEVICE_ROTATION);
   const body = document.body;
+  const html = document.documentElement;
   
   if (deviceRotationEnabled === "false") {
-    // Add class to body to force portrait orientation via CSS
+    // Add class to body and html to force portrait orientation via CSS
     body.classList.add('force-portrait');
+    html.classList.add('force-portrait');
     
-    // Try to use Screen Orientation API if available
+    // Prevent scrolling and fix viewport
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+    
+    // Try to use Screen Orientation API if available (works in fullscreen/installed PWA)
     if ('orientation' in screen && 'lock' in screen.orientation) {
-      screen.orientation.lock('portrait').catch(err => {
+      screen.orientation.lock('portrait-primary').catch(err => {
         // Orientation lock might fail in non-fullscreen contexts
         // This is expected behavior in some browsers
       });
@@ -361,6 +401,11 @@ function applyOrientationLock() {
   } else {
     // Remove force portrait class
     body.classList.remove('force-portrait');
+    html.classList.remove('force-portrait');
+    
+    // Restore scrolling
+    document.body.style.overflow = '';
+    document.documentElement.style.overflow = '';
     
     // Unlock orientation when device rotation is enabled
     if ('orientation' in screen && 'unlock' in screen.orientation) {
@@ -1885,6 +1930,15 @@ function HideSettings()
     panel.classList.remove('visible');
     localStorage.setItem('settings', "false");
   } else {
+    // Before showing, ensure saved position is applied
+    const savedPosRaw = localStorage.getItem(CONFIG.STORAGE_KEYS.SETTINGS_POS);
+    const savedPos = UTILS.safeJSONParse(savedPosRaw, null);
+    if (savedPos && typeof savedPos.top === 'number' && typeof savedPos.left === 'number') {
+      panel.style.top = savedPos.top + 'px';
+      panel.style.left = savedPos.left + 'px';
+      panel.style.transform = 'none';
+    }
+    
     panel.classList.add('visible');
     localStorage.setItem('settings', "true");
   }
@@ -1904,9 +1958,16 @@ function initializeDraggableSettings() {
   const savedPosRaw = localStorage.getItem(CONFIG.STORAGE_KEYS.SETTINGS_POS);
   const savedPos = UTILS.safeJSONParse(savedPosRaw, null);
   if (savedPos && typeof savedPos.top === 'number' && typeof savedPos.left === 'number') {
+    // Disable animation temporarily
+    panel.style.animation = 'none';
     panel.style.top = savedPos.top + 'px';
     panel.style.left = savedPos.left + 'px';
     panel.style.transform = 'none';
+    
+    // Re-enable animation after a brief delay
+    requestAnimationFrame(() => {
+      panel.style.animation = '';
+    });
   }
   
   // Dragging state variables
