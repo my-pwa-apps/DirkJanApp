@@ -92,10 +92,10 @@ input[type=checkbox]:checked:after
 
 .logo
 {
-    padding: 8px 0px 8px 8px; /* More left padding for spacing */
+    padding: 8px 0px 8px 10px; /* More left padding for spacing */
     margin-bottom: 5px;
-    margin-right: -12px; /* Extend further beyond container edge */
-    width: calc(100% + 12px); /* Compensate for negative margin */
+    margin-right: -14px; /* Extend further beyond container edge */
+    width: calc(100% + 14px); /* Compensate for negative margin */
     box-sizing: border-box; /* Include padding in width calculation */
 }
 
@@ -939,11 +939,6 @@ input[type="date"]#DatePicker:disabled {
   stroke: #000000;
 }
 
-#settings .fa-cog {
-  font-size: 28px;
-  color: #000000;
-}
-
 /* Heart button - white icon */
 #favheart svg {
   stroke: #ffffff;
@@ -955,8 +950,7 @@ input[type="date"]#DatePicker:disabled {
 }
 
 /* Settings button with rotate animation */
-#settings:hover svg,
-#settings:hover .fa-cog {
+#settings:hover svg {
   animation: rotate-smooth 0.6s ease;
 }
 
@@ -1390,10 +1384,10 @@ img#comic.loaded {
   
   /* Logo adjustments for mobile */
   .logo {
-    padding: 6px 0px 6px 6px; /* More left padding on mobile */
+    padding: 6px 0px 6px 8px; /* More left padding on mobile */
     margin-bottom: 0;
-    margin-right: -12px; /* Extend further beyond container edge */
-    width: calc(100% + 12px); /* Compensate for negative margin */
+    margin-right: -14px; /* Extend further beyond container edge */
+    width: calc(100% + 14px); /* Compensate for negative margin */
   }
   
   .logo img {
