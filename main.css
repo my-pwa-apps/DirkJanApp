@@ -1193,6 +1193,26 @@ input[type="date"]#DatePicker:disabled {
   transform: none;
 }
 
+/* Landscape toolbar (device is landscape, no rotation needed) */
+.fullscreen-toolbar.landscape-toolbar {
+    flex-direction: row;
+    padding: 10px 15px;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    top: auto;
+    max-width: 90vw;
+    gap: 8px;
+}
+
+.fullscreen-toolbar.landscape-toolbar .toolbar-button {
+    margin: 0;
+}
+
+.fullscreen-toolbar.landscape-toolbar .toolbar-svg {
+    transform: none; /* No rotation needed in landscape mode */
+}
+
 /* Additional responsive styles for the rotated toolbar on small height screens */
 @media (max-height: 420px) {
     .fullscreen-toolbar.rotated {

@@ -1159,8 +1159,12 @@ function Rotate(applyRotation = true) {
     document.body.appendChild(clonedComic);
     document.body.appendChild(fullscreenToolbar);
 
-    // Add rotated class to toolbar for SVG rotation
-    fullscreenToolbar.classList.add('rotated');
+    // Add rotated class to toolbar for SVG rotation only if in rotated mode (not landscape)
+    if (applyRotation) {
+      fullscreenToolbar.classList.add('rotated');
+    } else {
+      fullscreenToolbar.classList.add('landscape-toolbar');
+    }
 
     // Call CompareDates to set initial button states
     CompareDates();
