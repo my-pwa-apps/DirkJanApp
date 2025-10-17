@@ -94,8 +94,8 @@ input[type=checkbox]:checked:after
 {
     padding: 8px 0px 8px 10px; /* More left padding for spacing */
     margin-bottom: 5px;
-    margin-right: -14px; /* Extend further beyond container edge */
-    width: calc(100% + 14px); /* Compensate for negative margin */
+    margin-right: -16px; /* Extend further beyond container edge */
+    width: calc(100% + 16px); /* Compensate for negative margin */
     box-sizing: border-box; /* Include padding in width calculation */
 }
 
@@ -1386,8 +1386,8 @@ img#comic.loaded {
   .logo {
     padding: 6px 0px 6px 8px; /* More left padding on mobile */
     margin-bottom: 0;
-    margin-right: -14px; /* Extend further beyond container edge */
-    width: calc(100% + 14px); /* Compensate for negative margin */
+    margin-right: -16px; /* Extend further beyond container edge */
+    width: calc(100% + 16px); /* Compensate for negative margin */
   }
   
   .logo img {
