@@ -1810,6 +1810,13 @@ function initializeDraggableSettings() {
   
   if (!panel || !header) return;
   
+  // Dragging state variables
+  let isDragging = false;
+  let dragStartX = 0;
+  let dragStartY = 0;
+  let panelStartX = 0;
+  let panelStartY = 0;
+  
   // Mouse events
   header.addEventListener('mousedown', dragStart);
   document.addEventListener('mousemove', drag);
