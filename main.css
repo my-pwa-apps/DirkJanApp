@@ -702,8 +702,130 @@ input[type="date"]#DatePicker:disabled {
 }
 
 /* Settings menu styling */
-#settingsDIV {
-    padding: 8px 12px 12px 15px; /* Decreased padding values - Top Right Bottom Left */
+/* Floating Draggable Settings Panel */
+.settings-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3),
+              0 10px 30px rgba(0, 0, 0, 0.15),
+              inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  z-index: 10000;
+  min-width: 320px;
+  max-width: 90vw;
+  display: none;
+  flex-direction: column;
+  border: 2px solid rgba(240, 152, 25, 0.3);
+  overflow: hidden;
+}
+
+.settings-panel.visible {
+  display: flex;
+  animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -45%) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+.settings-header {
+  background: linear-gradient(135deg, #F09819 0%, #FFD700 100%);
+  padding: 16px 20px;
+  cursor: move;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  -webkit-user-select: none;
+  user-select: none;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.settings-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #333;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+}
+
+.settings-close {
+  background: rgba(0, 0, 0, 0.1);
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  color: #333;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 300;
+}
+
+.settings-close:hover {
+  background: rgba(0, 0, 0, 0.2);
+  transform: rotate(90deg);
+}
+
+.settings-close:active {
+  transform: rotate(90deg) scale(0.95);
+}
+
+.settings-content {
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.setting-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(240, 152, 25, 0.05);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.setting-item:hover {
+  background: rgba(240, 152, 25, 0.1);
+  transform: translateX(4px);
+}
+
+.setting-item input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  accent-color: #F09819;
+}
+
+.setting-item label {
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 500;
+  color: #333;
+  margin: 0;
+  flex: 1;
+}
+
+/* Old settings div styling (hidden by default when panel is used) */
+#settingsDIV.legacy {
+    padding: 8px 12px 12px 15px;
     margin: 5px 0;
 }
 
@@ -1249,7 +1371,19 @@ img#comic.loaded {
     padding: 0 10px;
   }
   
-  /* Icon container already handled by base responsive styles */
+  /* Settings panel responsive */
+  .settings-panel {
+    min-width: 280px;
+    max-width: 85vw;
+  }
+  
+  .settings-content {
+    padding: 20px 16px;
+  }
+  
+  .settings-header h3 {
+    font-size: 16px;
+  }
 }
 
 /* Small mobile devices */
@@ -1262,6 +1396,33 @@ img#comic.loaded {
   .icon-button {
     width: 44px;
     height: 44px;
+  }
+  
+  /* Smaller settings panel on very small screens */
+  .settings-panel {
+    min-width: 260px;
+    max-width: 90vw;
+  }
+  
+  .settings-header {
+    padding: 12px 16px;
+  }
+  
+  .settings-header h3 {
+    font-size: 15px;
+  }
+  
+  .settings-content {
+    padding: 16px 12px;
+    gap: 16px;
+  }
+  
+  .setting-item {
+    padding: 10px;
+  }
+  
+  .setting-item label {
+    font-size: 14px;
   }
   
   .icon-button svg {

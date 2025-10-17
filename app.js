@@ -1426,13 +1426,11 @@ getStatus = localStorage.getItem('lastdate');
     }
 
 getStatus = localStorage.getItem('settings');
-    if (getStatus == "true")
-    {
-      document.getElementById("settingsDIV").style.display = "block";
-    }
-    else
-    {
-      document.getElementById("settingsDIV").style.display = "none";
+    const settingsPanel = document.getElementById("settingsDIV");
+    if (getStatus == "true" && settingsPanel) {
+      settingsPanel.classList.add('visible');
+    } else if (settingsPanel) {
+      settingsPanel.classList.remove('visible');
     }
 
 	
@@ -1469,45 +1467,104 @@ function Addfav()
    
 function HideSettings()
 {
-  const x = document.getElementById("settingsDIV");
+  const panel = document.getElementById("settingsDIV");
   
-  // Save current scroll position
-  const scrollPos = window.scrollY;
+  if (!panel) return;
   
-  // Toggle settings display with minimal reflow
-  if (x.style.display === "none") {
-    // Add a style element that preserves the background
-    if (!document.getElementById('settings-style-fix')) {
-      const fixStyle = document.createElement('style');
-      fixStyle.id = 'settings-style-fix';
-      fixStyle.textContent = `
-        html {
-          background-attachment: fixed !important;
-          min-height: 100vh !important;
-        }
-        body {
-          background-attachment: fixed !important;
-          min-height: 100vh !important;
-        }
-      `;
-      document.head.appendChild(fixStyle);
+  // Toggle visibility using class
+  if (panel.classList.contains('visible')) {
+    panel.classList.remove('visible');
+    localStorage.setItem('settings', "false");
+  } else {
+    panel.classList.add('visible');
+    localStorage.setItem('settings', "true");
+  }
+}
+
+// Draggable settings panel functionality
+let isDragging = false;
+let currentX;
+let currentY;
+let initialX;
+let initialY;
+let xOffset = 0;
+let yOffset = 0;
+
+function initializeDraggableSettings() {
+  const panel = document.getElementById("settingsDIV");
+  const header = document.getElementById("settingsHeader");
+  
+  if (!panel || !header) return;
+  
+  // Mouse events
+  header.addEventListener('mousedown', dragStart);
+  document.addEventListener('mousemove', drag);
+  document.addEventListener('mouseup', dragEnd);
+  
+  // Touch events
+  header.addEventListener('touchstart', dragStart, { passive: false });
+  document.addEventListener('touchmove', drag, { passive: false });
+  document.addEventListener('touchend', dragEnd);
+  
+  function dragStart(e) {
+    // Don't drag if clicking the close button
+    if (e.target.closest('.settings-close')) return;
+    
+    if (e.type === "touchstart") {
+      initialX = e.touches[0].clientX - xOffset;
+      initialY = e.touches[0].clientY - yOffset;
+    } else {
+      initialX = e.clientX - xOffset;
+      initialY = e.clientY - yOffset;
     }
     
-    // Use RAF for smoother visual update
-    requestAnimationFrame(() => {
-      x.style.display = "block";
-      localStorage.setItem('settings', "true");
-      // Maintain scroll position
-      window.scrollTo(0, scrollPos);
-    });
-  } else {
-    requestAnimationFrame(() => {
-      x.style.display = "none";
-      localStorage.setItem('settings', "false");
-      // Maintain scroll position
-      window.scrollTo(0, scrollPos);
-    });
+    if (e.target === header || header.contains(e.target)) {
+      isDragging = true;
+      panel.style.transition = 'none';
+    }
   }
+  
+  function drag(e) {
+    if (isDragging) {
+      e.preventDefault();
+      
+      if (e.type === "touchmove") {
+        currentX = e.touches[0].clientX - initialX;
+        currentY = e.touches[0].clientY - initialY;
+      } else {
+        currentX = e.clientX - initialX;
+        currentY = e.clientY - initialY;
+      }
+      
+      xOffset = currentX;
+      yOffset = currentY;
+      
+      // Update position
+      const newX = `calc(-50% + ${currentX}px)`;
+      const newY = `calc(-50% + ${currentY}px)`;
+      panel.style.transform = `translate(${newX}, ${newY})`;
+    }
+  }
+  
+  function dragEnd(e) {
+    if (isDragging) {
+      initialX = currentX;
+      initialY = currentY;
+      isDragging = false;
+      
+      // Re-enable transitions for other animations
+      setTimeout(() => {
+        panel.style.transition = '';
+      }, 50);
+    }
+  }
+}
+
+// Initialize draggable when DOM is loaded
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeDraggableSettings);
+} else {
+  initializeDraggableSettings();
 }
     
 let deferredPrompt;

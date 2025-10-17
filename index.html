@@ -134,11 +134,11 @@
   <br>
   <br>
   <div class="settings-icons-container" role="group" aria-label="Acties">
-    <!-- Settings Icon - Simple Clean Gear -->
+    <!-- Settings Icon - Classic Gear -->
     <button id="settings" onclick="HideSettings()" class="icon-button" aria-label="Instellingen" title="Instellingen">
       <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
         <circle cx="12" cy="12" r="3"/>
-        <path d="M12 1v6m0 6v6m-5.196-3.804l4.243 4.243m0-8.486l4.243-4.243M1 12h6m6 0h6m-3.804 5.196l4.243-4.243m-8.486 0l-4.243-4.243"/>
       </svg>
     </button>
     
@@ -162,17 +162,26 @@
   </div>
   <br>
 	<br>
-  <div id="settingsDIV" aria-label="Instellingen" role="region">
-    <input type="checkbox" id="swipe" checked cursor="pointer">
-    <label for="swipe" class="labels" cursor="pointer">Swipen ingeschakeld</label>	
-  <br>
-	<br>
-	  <input type="checkbox" id="showfavs" cursor="pointer">
-	  <label for="showfavs" class="labels" cursor="pointer">Alleen favorieten tonen</label>
-	<br>
-  <br>
-	  <input type="checkbox" id="lastdate" checked cursor="pointer">
-    <label for="lastdate" class="labels" cursor="pointer">Onthou laatste comic bij exit/refresh</label>
+  <!-- Draggable Floating Settings Menu -->
+  <div id="settingsDIV" class="settings-panel" aria-label="Instellingen" role="region">
+    <div class="settings-header" id="settingsHeader">
+      <h3>Instellingen</h3>
+      <button class="settings-close" onclick="HideSettings()" aria-label="Sluiten">&times;</button>
+    </div>
+    <div class="settings-content">
+      <div class="setting-item">
+        <input type="checkbox" id="swipe" checked>
+        <label for="swipe" class="labels">Swipen ingeschakeld</label>
+      </div>
+      <div class="setting-item">
+        <input type="checkbox" id="showfavs">
+        <label for="showfavs" class="labels">Alleen favorieten tonen</label>
+      </div>
+      <div class="setting-item">
+        <input type="checkbox" id="lastdate" checked>
+        <label for="lastdate" class="labels">Onthou laatste comic bij exit/refresh</label>
+      </div>
+    </div>
   </div>
   </main>
   <script src="./app.js"></script>
