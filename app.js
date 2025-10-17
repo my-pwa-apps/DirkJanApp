@@ -1119,12 +1119,6 @@ function Rotate(applyRotation = true) {
     clonedComic.className = applyRotation ? "rotate" : "fullscreen-landscape";
     clonedComic.style.display = 'block'; // Ensure visible
     
-    // Add click handler to rotated comic to exit fullscreen
-    clonedComic.onclick = function(e) {
-      e.stopPropagation();
-      Rotate(); // Exit fullscreen mode
-    };
-    
     // Create the fullscreen toolbar
     const fullscreenToolbar = document.createElement('div');
     fullscreenToolbar.id = 'fullscreen-toolbar';
