@@ -76,7 +76,7 @@ input[type=checkbox]:checked:after
 
 .logo
 {
-    padding: 10px 15px; /* Small padding left/right for breathing room */
+    padding: 8px 5px; /* Reduced padding - less right padding */
     margin-bottom: 5px;
     width: 100%; /* Full width */
     box-sizing: border-box; /* Include padding in width calculation */
@@ -1355,7 +1355,7 @@ img#comic.loaded {
   
   /* Logo adjustments for mobile */
   .logo {
-    padding: 8px 12px;
+    padding: 6px 5px; /* Reduced padding on mobile */
     margin-bottom: 0;
     width: 100%;
   }

@@ -1511,12 +1511,10 @@ function HideSettings()
 
 // Draggable settings panel functionality
 let isDragging = false;
-let currentX = 0;
-let currentY = 0;
-let initialX = 0;
-let initialY = 0;
-let xOffset = 0;
-let yOffset = 0;
+let dragStartX = 0;
+let dragStartY = 0;
+let panelStartX = 0;
+let panelStartY = 0;
 
 function initializeDraggableSettings() {
   const panel = document.getElementById("settingsDIV");
@@ -1538,49 +1536,55 @@ function initializeDraggableSettings() {
     // Don't drag if clicking the close button
     if (e.target.closest('.settings-close')) return;
     
-    // Get the current transform values
-    const style = window.getComputedStyle(panel);
-    const matrix = new DOMMatrix(style.transform);
+    if (!(e.target === header || header.contains(e.target))) return;
     
+    isDragging = true;
+    panel.style.transition = 'none';
+    
+    // Get current panel position
+    const rect = panel.getBoundingClientRect();
+    panelStartX = rect.left + rect.width / 2;  // Center X
+    panelStartY = rect.top + rect.height / 2;   // Center Y
+    
+    // Get touch/mouse starting position
     if (e.type === "touchstart") {
-      initialX = e.touches[0].clientX - matrix.m41;
-      initialY = e.touches[0].clientY - matrix.m42;
+      dragStartX = e.touches[0].clientX;
+      dragStartY = e.touches[0].clientY;
     } else {
-      initialX = e.clientX - matrix.m41;
-      initialY = e.clientY - matrix.m42;
+      dragStartX = e.clientX;
+      dragStartY = e.clientY;
     }
     
-    if (e.target === header || header.contains(e.target)) {
-      isDragging = true;
-      panel.style.transition = 'none';
-      e.preventDefault(); // Prevent text selection
-    }
+    e.preventDefault(); // Prevent text selection
   }
   
   function drag(e) {
-    if (isDragging) {
-      e.preventDefault();
-      
-      if (e.type === "touchmove") {
-        currentX = e.touches[0].clientX - initialX;
-        currentY = e.touches[0].clientY - initialY;
-      } else {
-        currentX = e.clientX - initialX;
-        currentY = e.clientY - initialY;
-      }
-      
-      xOffset = currentX;
-      yOffset = currentY;
-      
-      // Calculate position relative to center
-      const centerX = window.innerWidth / 2;
-      const centerY = window.innerHeight / 2;
-      
-      // Update position directly in pixels from center
-      panel.style.left = `${centerX + currentX}px`;
-      panel.style.top = `${centerY + currentY}px`;
-      panel.style.transform = `translate(-50%, -50%)`;
+    if (!isDragging) return;
+    
+    e.preventDefault();
+    
+    let currentX, currentY;
+    
+    if (e.type === "touchmove") {
+      currentX = e.touches[0].clientX;
+      currentY = e.touches[0].clientY;
+    } else {
+      currentX = e.clientX;
+      currentY = e.clientY;
     }
+    
+    // Calculate how far we've moved from start
+    const deltaX = currentX - dragStartX;
+    const deltaY = currentY - dragStartY;
+    
+    // Calculate new panel center position
+    const newCenterX = panelStartX + deltaX;
+    const newCenterY = panelStartY + deltaY;
+    
+    // Update position directly using left/top at center point
+    panel.style.left = `${newCenterX}px`;
+    panel.style.top = `${newCenterY}px`;
+    panel.style.transform = `translate(-50%, -50%)`;
   }
   
   function dragEnd(e) {
