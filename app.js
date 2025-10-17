@@ -619,14 +619,12 @@ function DisplayComic()
 
   localStorage.setItem('lastcomic', currentselectedDate);
   
-  // Show loading state with spinner
+  // Show loading state
   const comicImg = document.getElementById("comic");
   const rotatedComic = document.getElementById('rotated-comic');
-  const loadingIndicator = document.getElementById('loading-indicator');
   
   comicImg.classList.add('loading');
   comicImg.classList.remove('loaded');
-  if (loadingIndicator) loadingIndicator.classList.add('active');
   
   fetchWithFallback(url)
     .then(function(response)
@@ -652,7 +650,6 @@ function DisplayComic()
           comicImg.alt = `DirkJan strip van ${day}-${month}-${year} door Mark Retera`;
           comicImg.classList.remove('loading');
           comicImg.classList.add('loaded');
-          if (loadingIndicator) loadingIndicator.classList.remove('active');
           
           // Also update the rotated comic if it exists
           if (rotatedComic) {
@@ -663,14 +660,12 @@ function DisplayComic()
           comicImg.classList.remove('loading');
           comicImg.src = "";
           comicImg.alt = "Failed to load comic image.";
-          if (loadingIndicator) loadingIndicator.classList.remove('active');
         };
         tempImg.src = pictureUrl;
       }
       else
       {
         comicImg.classList.remove('loading');
-        if (loadingIndicator) loadingIndicator.classList.remove('active');
         if (nextclicked)
         {
           NextClick();
@@ -683,7 +678,6 @@ function DisplayComic()
     })
     .catch(function(error) {
       comicImg.classList.remove('loading');
-      if (loadingIndicator) loadingIndicator.classList.remove('active');
       comicImg.src = ""; // Clear the image
       comicImg.alt = "Failed to load comic. Please try again later.";
     });
@@ -1769,25 +1763,26 @@ function makeMainToolbarDraggable(toolbar) {
 
     const event = e.touches ? e.touches[0] : e;
 
-    // New intended absolute position in the document coordinate space
-    let newLeft = event.clientX - offsetX + window.scrollX;
-    let newTop = event.clientY - offsetY + window.scrollY;
+    // Calculate new position: use clientX/Y minus offset to get toolbar's top-left position
+    // Then add scroll to convert to document coordinates
+    let newLeft = event.clientX - offsetX;
+    let newTop = event.clientY - offsetY;
 
     const toolbarRect = toolbar.getBoundingClientRect();
 
-    // Constrain within document/body dimensions (allow some horizontal freedom but keep fully visible)
-    const docWidth = Math.max(document.documentElement.scrollWidth, document.body.scrollWidth, window.innerWidth);
-    const docHeight = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight, window.innerHeight);
+    // Constrain within viewport dimensions
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
 
     const minLeft = 0;
-    const maxLeft = docWidth - toolbarRect.width;
-    const minTop = 0; // Allow placement at the very top
-    const maxTop = docHeight - toolbarRect.height; // Prevent going below bottom content
+    const maxLeft = viewportWidth - toolbarRect.width;
+    const minTop = 0;
+    const maxTop = viewportHeight - toolbarRect.height;
 
     newLeft = Math.max(minLeft, Math.min(newLeft, maxLeft));
     newTop = Math.max(minTop, Math.min(newTop, maxTop));
 
-    // Apply directly (absolute relative to document). We remove initial centering transform once user drags.
+    // Apply position (fixed positioning, so no need for scroll offset)
     toolbar.style.left = `${newLeft}px`;
     toolbar.style.top = `${newTop}px`;
     toolbar.style.transform = 'none';
