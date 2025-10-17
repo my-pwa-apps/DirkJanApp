@@ -815,32 +815,24 @@ function setButtonDisabled(id, disabled) {
 let isRotating = false;
 
 function Rotate() {
-  console.log('Rotate() function called, isRotating:', isRotating);
-  
   // Prevent rapid double-calls
   if (isRotating) {
-    console.log('Already rotating, ignoring duplicate call');
     return;
   }
   
   isRotating = true; // Set flag immediately
-  console.log('isRotating set to true');
   
   try {
     const element = document.getElementById('comic');
     
     if (!element) {
-      console.error('Rotate: Comic element not found');
       isRotating = false;
       return;
     }
     
-    console.log('Comic element found, checking for existing overlay');
-    
     // Check if we're already in fullscreen mode
     const existingOverlay = document.getElementById('comic-overlay');
   if (existingOverlay) {
-    console.log('Exiting fullscreen mode');
     // We're in fullscreen mode, exit it immediately
     document.body.removeChild(existingOverlay);
     
@@ -874,20 +866,16 @@ function Rotate() {
     return;
   }
   
-  console.log('No existing overlay found, element.className:', element.className);
-  
-  if (element.className === "normal") {
-    console.log('Entering fullscreen mode - element class is normal');
+  // Check if element has 'normal' class (it might have multiple classes like "normal loaded")
+  if (element.className.includes("normal")) {
     // First hide all elements to prevent flickering
     const elementsToHideInitial = document.querySelectorAll('body > *');
-    console.log('Hiding', elementsToHideInitial.length, 'elements');
     elementsToHideInitial.forEach(el => {
       el.dataset.originalDisplay = window.getComputedStyle(el).display;
       el.dataset.wasHidden = "true";
       el.style.setProperty('display', 'none', 'important');
     });
 
-    console.log('Creating overlay');
     // Create an overlay without any layout constraints
     const overlay = document.createElement('div');
     overlay.id = 'comic-overlay';
@@ -944,11 +932,8 @@ function Rotate() {
       </button>
     `;
     // Add overlay, comic, and toolbar in order
-    console.log('Appending overlay to body');
     document.body.appendChild(overlay);
-    console.log('Appending cloned comic to body');
     document.body.appendChild(clonedComic);
-    console.log('Appending fullscreen toolbar to body');
     document.body.appendChild(fullscreenToolbar);
 
     // Add rotated class to toolbar for SVG rotation
@@ -958,12 +943,10 @@ function Rotate() {
     CompareDates();
 
     // Show the comic and toolbar
-    console.log('Setting display properties');
     clonedComic.style.display = 'block';
     fullscreenToolbar.style.display = 'flex';
 
     // Position toolbar at the bottom always
-    console.log('Positioning fullscreen toolbar');
     positionFullscreenToolbar();
 
     // Add resize and orientation change listeners
@@ -971,18 +954,13 @@ function Rotate() {
     window.addEventListener('orientationchange', handleRotatedViewResize);
     
     // Apply sizing when image is loaded
-    console.log('Checking if cloned comic is loaded, complete:', clonedComic.complete);
     if (clonedComic.complete) {
-      console.log('Image already loaded, calling maximizeRotatedImage');
       maximizeRotatedImage(clonedComic);
     } else {
-      console.log('Waiting for image to load');
       clonedComic.onload = function() {
-        console.log('Image loaded, calling maximizeRotatedImage');
         maximizeRotatedImage(clonedComic);
       };
     }
-    console.log('Rotate() function completed');
     
     // Prevent toolbar buttons from closing fullscreen
     fullscreenToolbar.addEventListener('click', function(e) {
@@ -1004,7 +982,7 @@ function Rotate() {
       Rotate(); // Call Rotate again to exit fullscreen
     });
   }
-  else if (element.className === "rotate") {
+  else if (element.className.includes("rotate")) {
     element.className = 'normal';
   }
   
@@ -1015,7 +993,6 @@ function Rotate() {
     // Reset the flag after a short delay to prevent rapid re-triggering
     setTimeout(() => {
       isRotating = false;
-      console.log('isRotating reset to false');
     }, 300);
   }
 }
