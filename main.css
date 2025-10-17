@@ -1402,7 +1402,7 @@ img#comic.loaded {
   .logo {
     width: 100%;
     margin-bottom: 0;
-    padding: 8px 12px;
+    padding: 8px 0; /* Remove horizontal padding on mobile for full width */
   }
   
   .logo img {
@@ -1433,8 +1433,14 @@ img#comic.loaded {
 
 /* Small mobile devices */
 @media (max-width: 480px) {
+  .logo {
+    width: 100%;
+    padding: 8px 0; /* No horizontal padding for full width */
+  }
+  
   .logo img {
-    max-width: 95%;
+    width: 100%;
+    max-width: 100%;
   }
   
   /* Adjust icon spacing for very small screens */
