@@ -344,20 +344,26 @@ function clampMainToolbarInView() {
  */
 function applyOrientationLock() {
   const deviceRotationEnabled = localStorage.getItem(CONFIG.STORAGE_KEYS.DEVICE_ROTATION);
+  const body = document.body;
   
-  // Check if Screen Orientation API is supported
-  if ('orientation' in screen && 'lock' in screen.orientation) {
-    if (deviceRotationEnabled === "false") {
-      // Lock to portrait when device rotation is disabled
+  if (deviceRotationEnabled === "false") {
+    // Add class to body to force portrait orientation via CSS
+    body.classList.add('force-portrait');
+    
+    // Try to use Screen Orientation API if available
+    if ('orientation' in screen && 'lock' in screen.orientation) {
       screen.orientation.lock('portrait').catch(err => {
         // Orientation lock might fail in non-fullscreen contexts
         // This is expected behavior in some browsers
       });
-    } else {
-      // Unlock orientation when device rotation is enabled
-      if ('unlock' in screen.orientation) {
-        screen.orientation.unlock();
-      }
+    }
+  } else {
+    // Remove force portrait class
+    body.classList.remove('force-portrait');
+    
+    // Unlock orientation when device rotation is enabled
+    if ('orientation' in screen && 'unlock' in screen.orientation) {
+      screen.orientation.unlock();
     }
   }
 }
@@ -1525,46 +1531,49 @@ if (document.readyState === 'loading') {
     const savedPosRaw = localStorage.getItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS) || localStorage.getItem('mainToolbarPosition');
     const savedPos = safeJSONParse(savedPosRaw, null);
     if (!savedPos && mainToolbar) {
-      // Use a longer delay to ensure comic and logo are fully rendered
-      window.addEventListener('load', () => {
-        setTimeout(() => {
-          // Calculate initial position between logo and comic
-          const logo = document.querySelector('.logo');
-          const toolbarContainer = document.querySelector('.toolbar-container');
+      // Position toolbar after all content is loaded
+      const positionToolbar = () => {
+        const logo = document.querySelector('.logo');
+        const comic = document.getElementById('comic');
+        
+        if (logo && comic && mainToolbar.offsetHeight > 0) {
+          const logoRect = logo.getBoundingClientRect();
+          const comicRect = comic.getBoundingClientRect();
           
-          if (logo && toolbarContainer) {
-            // Get positions
-            const logoRect = logo.getBoundingClientRect();
-            const toolbarContainerRect = toolbarContainer.getBoundingClientRect();
-            
-            // Position toolbar at the toolbar container's position
-            // This is the space designed for it in the layout
-            const containerTop = toolbarContainerRect.top + window.scrollY;
-            const containerHeight = toolbarContainerRect.height;
-            const toolbarHeight = mainToolbar.offsetHeight;
-            
-            // Center toolbar vertically within its container
-            const centeredTop = containerTop + (containerHeight - toolbarHeight) / 2;
-            
-            mainToolbar.style.top = centeredTop + 'px';
-          }
+          // Calculate position between logo bottom and comic top
+          const logoBottom = logoRect.bottom + window.scrollY;
+          const comicTop = comicRect.top + window.scrollY;
+          const toolbarHeight = mainToolbar.offsetHeight;
+          const availableSpace = comicTop - logoBottom;
+          
+          // Center vertically in available space
+          const centeredTop = logoBottom + (availableSpace - toolbarHeight) / 2;
+          mainToolbar.style.top = Math.max(logoBottom + 10, centeredTop) + 'px';
           
           // Center horizontally
           const viewportWidth = window.innerWidth;
           const toolbarWidth = mainToolbar.offsetWidth;
           const centeredLeft = (viewportWidth - toolbarWidth) / 2;
           mainToolbar.style.left = centeredLeft + 'px';
-          mainToolbar.style.transform = 'none'; // Remove the translateX transform
-          
-          clampMainToolbarInView();
-        }, 100);
+          mainToolbar.style.transform = 'none';
+        }
+      };
+      
+      // Try multiple times to ensure elements are rendered
+      window.addEventListener('load', () => {
+        setTimeout(positionToolbar, 50);
+        setTimeout(positionToolbar, 200);
+        setTimeout(positionToolbar, 500);
       });
-    } else {
-      clampMainToolbarInView();
+    } else if (savedPos && mainToolbar) {
+      // Apply saved position immediately
+      mainToolbar.style.top = savedPos.top + 'px';
+      mainToolbar.style.left = savedPos.left + 'px';
+      mainToolbar.style.transform = 'none';
     }
 
+    // Only clamp on resize, not on orientation change to prevent toolbar movement
     window.addEventListener('resize', clampMainToolbarInView);
-    window.addEventListener('orientationchange', clampMainToolbarInView);
     
     // Initialize mobile button state management
     initializeMobileButtonStates();
@@ -1577,46 +1586,49 @@ if (document.readyState === 'loading') {
   const savedPosRaw = localStorage.getItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS) || localStorage.getItem('mainToolbarPosition');
   const savedPos = safeJSONParse(savedPosRaw, null);
   if (!savedPos && mainToolbar) {
-    // Use a longer delay to ensure comic and logo are fully rendered
-    window.addEventListener('load', () => {
-      setTimeout(() => {
-        // Calculate initial position between logo and comic
-        const logo = document.querySelector('.logo');
-        const toolbarContainer = document.querySelector('.toolbar-container');
+    // Position toolbar after all content is loaded
+    const positionToolbar = () => {
+      const logo = document.querySelector('.logo');
+      const comic = document.getElementById('comic');
+      
+      if (logo && comic && mainToolbar.offsetHeight > 0) {
+        const logoRect = logo.getBoundingClientRect();
+        const comicRect = comic.getBoundingClientRect();
         
-        if (logo && toolbarContainer) {
-          // Get positions
-          const logoRect = logo.getBoundingClientRect();
-          const toolbarContainerRect = toolbarContainer.getBoundingClientRect();
-          
-          // Position toolbar at the toolbar container's position
-          // This is the space designed for it in the layout
-          const containerTop = toolbarContainerRect.top + window.scrollY;
-          const containerHeight = toolbarContainerRect.height;
-          const toolbarHeight = mainToolbar.offsetHeight;
-          
-          // Center toolbar vertically within its container
-          const centeredTop = containerTop + (containerHeight - toolbarHeight) / 2;
-          
-          mainToolbar.style.top = centeredTop + 'px';
-        }
+        // Calculate position between logo bottom and comic top
+        const logoBottom = logoRect.bottom + window.scrollY;
+        const comicTop = comicRect.top + window.scrollY;
+        const toolbarHeight = mainToolbar.offsetHeight;
+        const availableSpace = comicTop - logoBottom;
+        
+        // Center vertically in available space
+        const centeredTop = logoBottom + (availableSpace - toolbarHeight) / 2;
+        mainToolbar.style.top = Math.max(logoBottom + 10, centeredTop) + 'px';
         
         // Center horizontally
         const viewportWidth = window.innerWidth;
         const toolbarWidth = mainToolbar.offsetWidth;
         const centeredLeft = (viewportWidth - toolbarWidth) / 2;
         mainToolbar.style.left = centeredLeft + 'px';
-        mainToolbar.style.transform = 'none'; // Remove the translateX transform
-        
-        clampMainToolbarInView();
-      }, 100);
+        mainToolbar.style.transform = 'none';
+      }
+    };
+    
+    // Try multiple times to ensure elements are rendered
+    window.addEventListener('load', () => {
+      setTimeout(positionToolbar, 50);
+      setTimeout(positionToolbar, 200);
+      setTimeout(positionToolbar, 500);
     });
-  } else {
-    clampMainToolbarInView();
+  } else if (savedPos && mainToolbar) {
+    // Apply saved position immediately
+    mainToolbar.style.top = savedPos.top + 'px';
+    mainToolbar.style.left = savedPos.left + 'px';
+    mainToolbar.style.transform = 'none';
   }
 
+  // Only clamp on resize, not on orientation change to prevent toolbar movement
   window.addEventListener('resize', clampMainToolbarInView);
-  window.addEventListener('orientationchange', clampMainToolbarInView);
   
   // Initialize mobile button state management
   initializeMobileButtonStates();

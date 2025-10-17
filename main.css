@@ -27,6 +27,15 @@ body
     padding: 0;
 }
 
+/* Force portrait orientation when device rotation is disabled */
+body.force-portrait {
+    width: 100vw !important;
+    height: 100vh !important;
+    position: fixed !important;
+    overflow: hidden !important;
+    transform: none !important;
+}
+
 html {
     /* Ensure html also covers full height */
     height: 100%;
@@ -198,6 +207,7 @@ input
     box-sizing: border-box;
     position: absolute;
     /* Initial position set by JavaScript after logo is loaded */
+    top: 0;
     left: 50%;
     transform: translateX(-50%); /* Initial centering before user moves it or JS calculates position */
     cursor: grab;
