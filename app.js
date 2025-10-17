@@ -1499,7 +1499,7 @@ if (document.readyState === 'loading') {
     const mainToolbar = document.querySelector('.toolbar:not(.fullscreen-toolbar)');
     makeMainToolbarDraggable(mainToolbar);
 
-    const savedPosRaw = localStorage.getItem(STORAGE_KEYS.TOOLBAR_POS) || localStorage.getItem('mainToolbarPosition');
+    const savedPosRaw = localStorage.getItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS) || localStorage.getItem('mainToolbarPosition');
     const savedPos = safeJSONParse(savedPosRaw, null);
     if (!savedPos && mainToolbar) {
       window.addEventListener('load', () => {
@@ -1538,7 +1538,7 @@ if (document.readyState === 'loading') {
   const mainToolbar = document.querySelector('.toolbar:not(.fullscreen-toolbar)');
   makeMainToolbarDraggable(mainToolbar);
 
-  const savedPosRaw = localStorage.getItem(STORAGE_KEYS.TOOLBAR_POS) || localStorage.getItem('mainToolbarPosition');
+  const savedPosRaw = localStorage.getItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS) || localStorage.getItem('mainToolbarPosition');
   const savedPos = safeJSONParse(savedPosRaw, null);
   if (!savedPos && mainToolbar) {
     window.addEventListener('load', () => {
@@ -2004,24 +2004,21 @@ function positionFullscreenToolbar() {
 // Make the main toolbar draggable
 function makeMainToolbarDraggable(toolbar) {
   if (!toolbar) {
-    console.error('makeMainToolbarDraggable: toolbar element not found');
     return;
   }
-
-  console.log('makeMainToolbarDraggable: Initializing toolbar dragging', toolbar);
 
   let isDragging = false;
   let offsetX, offsetY;
 
   // Restore saved absolute position on load (document coordinates)
-  const savedPosRaw = localStorage.getItem(STORAGE_KEYS.TOOLBAR_POS) || localStorage.getItem('mainToolbarPosition');
+  const savedPosRaw = localStorage.getItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS) || localStorage.getItem('mainToolbarPosition');
   const savedPos = safeJSONParse(savedPosRaw, null);
   if (savedPos && typeof savedPos.top === 'number' && typeof savedPos.left === 'number') {
     toolbar.style.top = savedPos.top + 'px';
     toolbar.style.left = savedPos.left + 'px';
     toolbar.style.transform = 'none';
-    if (!localStorage.getItem(STORAGE_KEYS.TOOLBAR_POS)) {
-      try { localStorage.setItem(STORAGE_KEYS.TOOLBAR_POS, JSON.stringify(savedPos)); localStorage.removeItem('mainToolbarPosition'); } catch(_) {}
+    if (!localStorage.getItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS)) {
+      try { localStorage.setItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS, JSON.stringify(savedPos)); localStorage.removeItem('mainToolbarPosition'); } catch(_) {}
     }
   }
 
@@ -2036,7 +2033,6 @@ function makeMainToolbarDraggable(toolbar) {
       return;
     }
 
-    console.log('Toolbar drag started'); // Debug log
     isDragging = true;
     toolbar.style.cursor = 'grabbing';
     toolbar.style.transition = 'none'; // No transition during drag
@@ -2102,7 +2098,7 @@ function makeMainToolbarDraggable(toolbar) {
       toolbar.style.transition = '';
       const numericTop = parseFloat(toolbar.style.top) || 0;
       const numericLeft = parseFloat(toolbar.style.left) || 0;
-      try { localStorage.setItem(STORAGE_KEYS.TOOLBAR_POS, JSON.stringify({ top: numericTop, left: numericLeft })); } catch(_) {}
+      try { localStorage.setItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS, JSON.stringify({ top: numericTop, left: numericLeft })); } catch(_) {}
       clampMainToolbarInView();
     }
 
