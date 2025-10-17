@@ -1530,8 +1530,8 @@ if (document.readyState === 'loading') {
     window.addEventListener('resize', clampMainToolbarInView);
     window.addEventListener('orientationchange', clampMainToolbarInView);
     
-    // Add mobile button state reset functionality
-    addMobileButtonStateReset();
+    // Initialize mobile button state management
+    initializeMobileButtonStates();
   });
 } else {
   // DOM already loaded
@@ -2033,6 +2033,7 @@ function makeMainToolbarDraggable(toolbar) {
       return;
     }
 
+    console.log('Toolbar drag started'); // Debug log
     isDragging = true;
     toolbar.style.cursor = 'grabbing';
     toolbar.style.transition = 'none'; // No transition during drag
