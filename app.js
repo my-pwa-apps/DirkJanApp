@@ -994,12 +994,13 @@ let touchStartTime = 0;
 // (Duplicate swipe constants removed; using SWIPE_MIN_DISTANCE and SWIPE_MAX_TIME defined earlier)
 
 function handleTouchStart(e) {
-	if (!document.getElementById("swipe").checked) return;
-	
 	const touch = e.touches[0];
 	touchStartX = touch.clientX;
 	touchStartY = touch.clientY;
 	touchStartTime = Date.now();
+	
+	// Early return for swipe gesture handling, but keep tracking for tap detection
+	if (!document.getElementById("swipe").checked) return;
 }
 
 function handleTouchMove(e) {
@@ -1017,8 +1018,6 @@ function handleTouchMove(e) {
 }
 
 function handleTouchEnd(e) {
-	if (!document.getElementById("swipe").checked) return;
-	
 	const touch = e.changedTouches[0];
 	touchEndX = touch.clientX;
 	touchEndY = touch.clientY;
@@ -1033,10 +1032,15 @@ function handleTouchEnd(e) {
 	const isTap = absX < 10 && absY < 10 && deltaTime < 300;
 	
 	// If it's a tap on the comic image (not in fullscreen), trigger rotation
-	if (isTap && e.target.id === 'comic' && !document.getElementById('rotated-comic')) {
+	// This works regardless of swipe setting
+	const targetIsComic = e.target.id === 'comic' || e.target.closest('#comic');
+	if (isTap && targetIsComic && !document.getElementById('rotated-comic')) {
 		Rotate();
 		return;
 	}
+	
+	// For swipe navigation, check if swipe is enabled
+	if (!document.getElementById("swipe").checked) return;
 	
 	// Check if the swipe is valid (meets distance and time requirements)
   if (deltaTime > SWIPE_MAX_TIME) return;
@@ -1103,15 +1107,13 @@ function initializeComicRotation() {
     return;
   }
   
-  // Add click event listener for rotation (for mouse clicks only)
+  // Add click event listener for rotation (for mouse clicks)
   // Touch events are handled by the global touch handlers (handleTouchEnd)
   comicElement.addEventListener('click', function(e) {
-    // Only handle mouse clicks (not touch)
-    if (e.pointerType === 'mouse' || e.detail > 0) {
-      // Check if not in fullscreen already
-      if (!document.getElementById('rotated-comic')) {
-        Rotate();
-      }
+    // Check if not in fullscreen already and not from a touch event
+    // (touch events trigger both touchend and click, we handle them in touchend)
+    if (!document.getElementById('rotated-comic') && e.detail > 0) {
+      Rotate();
     }
   });
 }
