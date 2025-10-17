@@ -5,8 +5,6 @@ if ("serviceWorker" in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register("./serviceworker.js")
       .then(registration => {
-        console.log('ServiceWorker registered successfully');
-        
         // Check for updates periodically (every hour)
         setInterval(() => {
           registration.update();
@@ -25,8 +23,8 @@ if ("serviceWorker" in navigator) {
           }
         });
       })
-      .catch(error => {
-        console.error('ServiceWorker registration failed:', error);
+      .catch(() => {
+        // ServiceWorker registration failed - app will work without offline support
       });
   });
 }
@@ -624,9 +622,11 @@ function DisplayComic()
   // Show loading state with spinner
   const comicImg = document.getElementById("comic");
   const rotatedComic = document.getElementById('rotated-comic');
+  const loadingIndicator = document.getElementById('loading-indicator');
   
   comicImg.classList.add('loading');
   comicImg.classList.remove('loaded');
+  if (loadingIndicator) loadingIndicator.classList.add('active');
   
   fetchWithFallback(url)
     .then(function(response)
@@ -652,6 +652,7 @@ function DisplayComic()
           comicImg.alt = `DirkJan strip van ${day}-${month}-${year} door Mark Retera`;
           comicImg.classList.remove('loading');
           comicImg.classList.add('loaded');
+          if (loadingIndicator) loadingIndicator.classList.remove('active');
           
           // Also update the rotated comic if it exists
           if (rotatedComic) {
@@ -662,12 +663,14 @@ function DisplayComic()
           comicImg.classList.remove('loading');
           comicImg.src = "";
           comicImg.alt = "Failed to load comic image.";
+          if (loadingIndicator) loadingIndicator.classList.remove('active');
         };
         tempImg.src = pictureUrl;
       }
       else
       {
         comicImg.classList.remove('loading');
+        if (loadingIndicator) loadingIndicator.classList.remove('active');
         if (nextclicked)
         {
           NextClick();
@@ -680,6 +683,7 @@ function DisplayComic()
     })
     .catch(function(error) {
       comicImg.classList.remove('loading');
+      if (loadingIndicator) loadingIndicator.classList.remove('active');
       comicImg.src = ""; // Clear the image
       comicImg.alt = "Failed to load comic. Please try again later.";
     });
@@ -1105,10 +1109,10 @@ document.addEventListener('DOMContentLoaded', function() {
     let isSwipeInProgress = false;
     comicElement.addEventListener('touchstart', function() {
       isSwipeInProgress = false;
-    });
+    }, { passive: true });
     comicElement.addEventListener('touchmove', function() {
       isSwipeInProgress = true;
-    });
+    }, { passive: true });
     comicElement.addEventListener('touchend', function(e) {
       // Only trigger rotation if no swipe occurred
       if (!isSwipeInProgress) {
@@ -1220,7 +1224,7 @@ document.addEventListener('DOMContentLoaded', function() {
           focusedButton.blur();
         }
       }
-    });
+    }, { passive: true });
   }
   
   // Make the main toolbar draggable
@@ -1882,6 +1886,7 @@ document.addEventListener('keydown', function(e) {
 // ========================================
 // COMIC PRELOADING FOR SMOOTHER NAVIGATION
 // ========================================
+const MAX_PRELOAD_CACHE = 20; // Limit memory usage
 let preloadedComics = new Map();
 
 function preloadAdjacentComics() {
@@ -1899,6 +1904,12 @@ function preloadAdjacentComics() {
   const prevDate = new Date(currentDate);
   prevDate.setDate(prevDate.getDate() - 1);
   preloadComic(prevDate);
+  
+  // Clean up old preloaded comics if cache is too large
+  if (preloadedComics.size > MAX_PRELOAD_CACHE) {
+    const keysToDelete = Array.from(preloadedComics.keys()).slice(0, preloadedComics.size - MAX_PRELOAD_CACHE);
+    keysToDelete.forEach(key => preloadedComics.delete(key));
+  }
 }
 
 function preloadComic(date) {
@@ -1939,12 +1950,6 @@ function preloadComic(date) {
         
         // Cache it
         preloadedComics.set(preloadFormattedDate, tempPictureUrl);
-        
-        // Limit cache size to prevent memory issues
-        if (preloadedComics.size > 10) {
-          const firstKey = preloadedComics.keys().next().value;
-          preloadedComics.delete(firstKey);
-        }
       }
     })
     .catch(() => {

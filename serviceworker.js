@@ -29,13 +29,10 @@ const MAX_RUNTIME_CACHE_SIZE = 30;
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => {
-        console.log('[ServiceWorker] Pre-caching essential assets');
-        return cache.addAll(PRECACHE_ASSETS);
-      })
+      .then(cache => cache.addAll(PRECACHE_ASSETS))
       .then(() => self.skipWaiting())
-      .catch(error => {
-        console.error('[ServiceWorker] Pre-cache failed:', error);
+      .catch(() => {
+        // Pre-cache failed - app will work without offline support
       })
   );
 });
@@ -49,16 +46,12 @@ self.addEventListener('activate', event => {
           cacheNames.map(cache => {
             // Delete old caches that don't match current version
             if (cache !== CACHE_NAME && cache !== RUNTIME_CACHE && cache !== IMAGE_CACHE) {
-              console.log('[ServiceWorker] Deleting old cache:', cache);
               return caches.delete(cache);
             }
           })
         );
       })
-      .then(() => {
-        console.log('[ServiceWorker] Activated and claimed clients');
-        return self.clients.claim();
-      })
+      .then(() => self.clients.claim())
   );
 });
 
@@ -169,7 +162,6 @@ self.addEventListener('sync', event => {
 
 async function syncFavorites() {
   // Placeholder for syncing favorites when back online
-  console.log('[ServiceWorker] Syncing favorites');
 }
 
 // Listen for messages from the app
