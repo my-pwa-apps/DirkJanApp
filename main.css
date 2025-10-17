@@ -847,6 +847,10 @@ input[type="date"]#DatePicker:disabled {
   accent-color: #F09819;
   margin: 0;
   flex-shrink: 0;
+  -webkit-appearance: checkbox;
+  -moz-appearance: checkbox;
+  appearance: auto;
+  position: static;
 }
 
 .setting-item label {
