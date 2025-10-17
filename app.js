@@ -1091,22 +1091,25 @@ document.addEventListener('touchend', handleTouchEnd, { passive: true });
 document.addEventListener('DOMContentLoaded', function() {
   const comicElement = document.getElementById('comic');
   if (comicElement) {
-    // Add click event listener for rotation
+    // Track if user is dragging/swiping to prevent accidental rotation
+    let isSwipeInProgress = false;
+    
+    // Add click event listener for rotation (for mouse clicks)
     comicElement.addEventListener('click', function(e) {
-      // Only trigger rotation if not dragging/swiping
-      if (!isDragging) {
+      // Only trigger rotation if not swiping
+      if (!isSwipeInProgress) {
         Rotate();
       }
     });
     
-    // Track if user is dragging/swiping to prevent accidental rotation
-    let isSwipeInProgress = false;
     comicElement.addEventListener('touchstart', function() {
       isSwipeInProgress = false;
     }, { passive: true });
+    
     comicElement.addEventListener('touchmove', function() {
       isSwipeInProgress = true;
     }, { passive: true });
+    
     comicElement.addEventListener('touchend', function(e) {
       // Only trigger rotation if no swipe occurred
       if (!isSwipeInProgress) {
@@ -1742,9 +1745,10 @@ function makeMainToolbarDraggable(toolbar) {
 
     const event = e.touches ? e.touches[0] : e;
     
-    // Calculate offset from the top-left of the toolbar itself
+    // Get the toolbar's current position
     const rect = toolbar.getBoundingClientRect();
-    // Account for scroll position since we're using absolute positioning
+    
+    // Calculate offset: distance from click point to toolbar's top-left corner
     offsetX = event.clientX - rect.left;
     offsetY = event.clientY - rect.top;
 
@@ -1763,29 +1767,29 @@ function makeMainToolbarDraggable(toolbar) {
 
     const event = e.touches ? e.touches[0] : e;
 
-    // Calculate new position: use clientX/Y minus offset to get toolbar's top-left position
-    // Then add scroll to convert to document coordinates
-    let newLeft = event.clientX - offsetX;
-    let newTop = event.clientY - offsetY;
+    // Calculate where the toolbar's top-left should be
+    // This keeps the toolbar under the cursor/finger exactly where grabbed
+    let newLeft = event.clientX - offsetX + window.scrollX;
+    let newTop = event.clientY - offsetY + window.scrollY;
 
     const toolbarRect = toolbar.getBoundingClientRect();
 
-    // Constrain within viewport dimensions
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
+    // Constrain within document bounds
+    const docWidth = Math.max(document.documentElement.scrollWidth, window.innerWidth);
+    const docHeight = Math.max(document.documentElement.scrollHeight, window.innerHeight);
 
     const minLeft = 0;
-    const maxLeft = viewportWidth - toolbarRect.width;
+    const maxLeft = docWidth - toolbarRect.width;
     const minTop = 0;
-    const maxTop = viewportHeight - toolbarRect.height;
+    const maxTop = docHeight - toolbarRect.height;
 
     newLeft = Math.max(minLeft, Math.min(newLeft, maxLeft));
     newTop = Math.max(minTop, Math.min(newTop, maxTop));
 
-    // Apply position (fixed positioning, so no need for scroll offset)
+    // Apply position (absolute positioning relative to document)
     toolbar.style.left = `${newLeft}px`;
     toolbar.style.top = `${newTop}px`;
-    toolbar.style.transform = 'none';
+    toolbar.style.transform = 'none'; // Remove any transform
   };
 
   const onUp = () => {
