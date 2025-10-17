@@ -339,10 +339,6 @@ function clampMainToolbarInView() {
  */
 async function Share() 
 {
-	console.log('Share() function called');
-	console.log('pictureUrl:', pictureUrl);
-	console.log('navigator.share available:', !!navigator.share);
-	
 	if(!pictureUrl) {
 		alert('Sorry, no comic is available to share at this moment.');
 		return;
@@ -354,16 +350,12 @@ async function Share()
 
 	// Detect Android for special handling
 	const isAndroid = /Android/i.test(navigator.userAgent);
-	console.log('isAndroid:', isAndroid);
 
 	// Check if Web Share API is supported
 	if(!navigator.share) {
-		console.log('Web Share API not supported, using fallback');
 		fallbackShare(shareText, shareUrl);
 		return;
 	}
-
-	console.log('Web Share API supported, attempting to share');
 
 	// Show immediate feedback to user
 	const originalShareButton = document.getElementById('share');
@@ -373,11 +365,8 @@ async function Share()
 	}
 
 	try {
-		console.log('Attempting shareWithImage...');
 		await shareWithImage(shareText, shareUrl);
-		console.log('shareWithImage succeeded');
 	} catch (error) {
-		console.log('shareWithImage failed:', error);
 		// Enhanced fallback for Android - try different approaches
 		if (isAndroid) {
 			try {
@@ -799,6 +788,7 @@ function DateChange()
  */
 function DisplayComic()
 {
+  try {
     formatDate(currentselectedDate);
 
   formattedDate = year+"-"+month+"-"+day;
@@ -905,6 +895,16 @@ function DisplayComic()
   setTimeout(() => {
     preloadAdjacentComics();
   }, 500);
+  
+  } catch (error) {
+    console.error('Error in DisplayComic():', error);
+    const comicImg = document.getElementById("comic");
+    if (comicImg) {
+      comicImg.classList.remove('loading');
+      comicImg.src = "";
+      comicImg.alt = "Failed to display comic. Please try again.";
+    }
+  }
 }
 
 /**
@@ -1392,10 +1392,26 @@ window.addEventListener('orientationchange', function() {
   // Check if we're in fullscreen/rotated mode
   const rotatedComic = document.getElementById('rotated-comic');
   if (rotatedComic) {
-    // Reposition comic and toolbar
+    // Reposition comic and toolbar in fullscreen mode
     setTimeout(() => {
       maximizeRotatedImage(rotatedComic);
       positionFullscreenToolbar();
+    }, 300); // Small delay to ensure orientation has completed
+  } else {
+    // Not in fullscreen mode - trigger comic rotation when device rotates to landscape
+    setTimeout(() => {
+      const orientation = screen.orientation?.type || window.orientation;
+      const isLandscape = orientation === 'landscape-primary' || 
+                          orientation === 'landscape-secondary' || 
+                          Math.abs(window.orientation) === 90;
+      
+      // Only trigger rotation if device is in landscape and comic is not already rotated
+      if (isLandscape) {
+        const comic = document.getElementById('comic');
+        if (comic && !comic.className.includes('rotate')) {
+          Rotate(); // Trigger comic rotation
+        }
+      }
     }, 300); // Small delay to ensure orientation has completed
   }
 });
