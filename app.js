@@ -1399,11 +1399,31 @@ window.addEventListener('orientationchange', function() {
   // Check if we're in fullscreen/rotated mode
   const rotatedComic = document.getElementById('rotated-comic');
   if (rotatedComic) {
-    // Reposition comic and toolbar in fullscreen mode
-    setTimeout(() => {
-      maximizeRotatedImage(rotatedComic);
-      positionFullscreenToolbar();
-    }, 300); // Small delay to ensure orientation has completed
+    // Check if user manually rotated (has 'rotate' class)
+    const isManuallyRotated = rotatedComic.className.includes('rotate');
+    
+    if (isManuallyRotated) {
+      // User manually clicked to rotate - keep it in rotated mode, just reposition
+      setTimeout(() => {
+        maximizeRotatedImage(rotatedComic);
+        positionFullscreenToolbar();
+      }, 300);
+    } else {
+      // In landscape fullscreen mode - check if device rotated back to portrait
+      setTimeout(() => {
+        const orientation = screen.orientation?.type || '';
+        const isLandscape = orientation.includes('landscape') || Math.abs(window.orientation) === 90;
+        
+        if (!isLandscape) {
+          // Device rotated back to portrait - exit fullscreen
+          Rotate(); // Exit fullscreen
+        } else {
+          // Still landscape - just reposition
+          maximizeRotatedImage(rotatedComic);
+          positionFullscreenToolbar();
+        }
+      }, 300);
+    }
   } else {
     // Not in fullscreen mode - detect if device rotated to landscape
     setTimeout(() => {
@@ -1415,12 +1435,6 @@ window.addEventListener('orientationchange', function() {
         const comic = document.getElementById('comic');
         if (comic && comic.className.includes('normal')) {
           Rotate(false); // Enter fullscreen WITHOUT rotation (device is already landscape)
-        }
-      } else {
-        // Device rotated back to portrait - exit fullscreen if in landscape mode
-        const rotatedComicCheck = document.getElementById('rotated-comic');
-        if (rotatedComicCheck && rotatedComicCheck.className.includes('fullscreen-landscape')) {
-          Rotate(); // Exit fullscreen
         }
       }
     }, 300);
@@ -2055,8 +2069,8 @@ function maximizeRotatedImage(imgElement) {
   
   // Apply rotation only if NOT in landscape mode
   if (isLandscapeMode) {
-    // In landscape mode, position slightly higher to avoid toolbar overlap
-    imgElement.style.top = '45%';
+    // In landscape mode, position higher to avoid toolbar overlap
+    imgElement.style.top = '42%';
     imgElement.style.left = '50%';
     imgElement.style.transform = 'translate(-50%, -50%)'; // No rotation
   } else {

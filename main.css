@@ -1152,7 +1152,7 @@ input[type="date"]#DatePicker:disabled {
 /* Landscape fullscreen comic positioning (avoid toolbar overlap) */
 #rotated-comic.fullscreen-landscape {
     left: 50% !important; /* Centered horizontally */
-    top: 45% !important; /* Slightly higher to avoid toolbar at bottom */
+    top: 42% !important; /* Higher to avoid toolbar at bottom */
     transform: translate(-50%, -50%) !important; /* Center the comic */
 }
 
