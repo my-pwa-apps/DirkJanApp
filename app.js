@@ -2052,13 +2052,17 @@ function maximizeRotatedImage(imgElement) {
   
   // Position element in the center of the viewport
   imgElement.style.position = 'fixed';
-  imgElement.style.top = '50%';
-  imgElement.style.left = '50%';
   
   // Apply rotation only if NOT in landscape mode
   if (isLandscapeMode) {
+    // In landscape mode, position slightly higher to avoid toolbar overlap
+    imgElement.style.top = '45%';
+    imgElement.style.left = '50%';
     imgElement.style.transform = 'translate(-50%, -50%)'; // No rotation
   } else {
+    // In rotated mode, keep centered
+    imgElement.style.top = '50%';
+    imgElement.style.left = '50%';
     imgElement.style.transform = 'translate(-50%, -50%) rotate(90deg)'; // With rotation
   }
   

@@ -1149,6 +1149,13 @@ input[type="date"]#DatePicker:disabled {
     margin-bottom: 0 !important;
 }
 
+/* Landscape fullscreen comic positioning (avoid toolbar overlap) */
+#rotated-comic.fullscreen-landscape {
+    left: 50% !important; /* Centered horizontally */
+    top: 45% !important; /* Slightly higher to avoid toolbar at bottom */
+    transform: translate(-50%, -50%) !important; /* Center the comic */
+}
+
 /* --- ROTATED MODE: Rotate toolbar SVGs for proper direction --- */
 /* Since the comic is rotated 90° clockwise, we need to rotate the navigation arrows accordingly */
 /* For a vertical toolbar on the left, Up = Previous/First, Down = Next */
