@@ -1027,11 +1027,19 @@ function handleTouchEnd(e) {
 	const deltaY = touchEndY - touchStartY;
 	const deltaTime = Date.now() - touchStartTime;
 	
-	// Check if the swipe is valid (meets distance and time requirements)
-  if (deltaTime > SWIPE_MAX_TIME) return;
-	
+	// Check if this was a tap (not a swipe) on the comic element
 	const absX = Math.abs(deltaX);
 	const absY = Math.abs(deltaY);
+	const isTap = absX < 10 && absY < 10 && deltaTime < 300;
+	
+	// If it's a tap on the comic image (not in fullscreen), trigger rotation
+	if (isTap && e.target.id === 'comic' && !document.getElementById('rotated-comic')) {
+		Rotate();
+		return;
+	}
+	
+	// Check if the swipe is valid (meets distance and time requirements)
+  if (deltaTime > SWIPE_MAX_TIME) return;
 	
 	// Check if we're in fullscreen/rotated mode
   const isInFullscreen = document.getElementById('rotated-comic') !== null;
@@ -1090,35 +1098,22 @@ document.addEventListener('touchend', handleTouchEnd, { passive: true });
 // Add click handler for comic rotation
 function initializeComicRotation() {
   const comicElement = document.getElementById('comic');
-  if (comicElement) {
-    // Track if user is dragging/swiping to prevent accidental rotation
-    let isSwipeInProgress = false;
-    
-    // Add click event listener for rotation (for mouse clicks)
-    comicElement.addEventListener('click', function(e) {
-      // Only trigger rotation if not swiping
-      if (!isSwipeInProgress) {
-        Rotate();
-      }
-    });
-    
-    comicElement.addEventListener('touchstart', function() {
-      isSwipeInProgress = false;
-    }, { passive: true });
-    
-    comicElement.addEventListener('touchmove', function() {
-      isSwipeInProgress = true;
-    }, { passive: true });
-    
-    comicElement.addEventListener('touchend', function(e) {
-      // Only trigger rotation if no swipe occurred
-      if (!isSwipeInProgress) {
-        e.preventDefault();
-        Rotate();
-      }
-      isSwipeInProgress = false;
-    });
+  if (!comicElement) {
+    console.error('initializeComicRotation: Comic element not found');
+    return;
   }
+  
+  // Add click event listener for rotation (for mouse clicks only)
+  // Touch events are handled by the global touch handlers (handleTouchEnd)
+  comicElement.addEventListener('click', function(e) {
+    // Only handle mouse clicks (not touch)
+    if (e.pointerType === 'mouse' || e.detail > 0) {
+      // Check if not in fullscreen already
+      if (!document.getElementById('rotated-comic')) {
+        Rotate();
+      }
+    }
+  });
 }
 
 // Initialize rotation handlers immediately or wait for DOM
@@ -1796,12 +1791,14 @@ function makeMainToolbarDraggable(toolbar) {
 
     const event = e.touches ? e.touches[0] : e;
     
-    // Get the toolbar's current position
-    const rect = toolbar.getBoundingClientRect();
+    // Calculate offset from touch/click point to toolbar's top-left corner in document coordinates
+    // We need the toolbar's absolute position (document coordinates)
+    const toolbarLeft = parseFloat(toolbar.style.left) || 0;
+    const toolbarTop = parseFloat(toolbar.style.top) || 0;
     
-    // Calculate offset: distance from click point to toolbar's top-left corner
-    offsetX = event.clientX - rect.left;
-    offsetY = event.clientY - rect.top;
+    // Calculate offset: distance from touch point to toolbar's top-left in document space
+    offsetX = event.clientX + window.scrollX - toolbarLeft;
+    offsetY = event.clientY + window.scrollY - toolbarTop;
 
     // Add move and up listeners
     document.addEventListener('mousemove', onMove, { passive: false });
