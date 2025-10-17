@@ -205,7 +205,6 @@ input
     gap: 8px; /* Add default gap between buttons */
     -webkit-user-select: none;
     user-select: none;
-    touch-action: none; /* Prevent default touch actions for dragging */
 }
 
 /* Mobile responsive styles for toolbar */

@@ -2004,8 +2004,11 @@ function positionFullscreenToolbar() {
 // Make the main toolbar draggable
 function makeMainToolbarDraggable(toolbar) {
   if (!toolbar) {
+    console.error('makeMainToolbarDraggable: toolbar element not found');
     return;
   }
+
+  console.log('makeMainToolbarDraggable: Initializing toolbar dragging', toolbar);
 
   let isDragging = false;
   let offsetX, offsetY;
