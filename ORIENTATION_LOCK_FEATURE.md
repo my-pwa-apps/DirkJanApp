@@ -1,7 +1,7 @@
-# Orientation Lock & Device Rotation Feature
+# Orientation Lock Feature
 
 ## Overview
-The app now locks to portrait orientation and automatically triggers the comic rotation feature when the device is rotated to landscape.
+The app now locks to portrait orientation, preventing the entire UI from rotating when the device is tilted. This provides a stable, consistent interface while users can still manually rotate comics for better viewing.
 
 ## Changes Made
 
@@ -11,18 +11,15 @@ The app now locks to portrait orientation and automatically triggers the comic r
 ```
 - **Purpose**: Prevents the entire app from rotating
 - **Effect**: App UI stays in portrait mode regardless of device orientation
+- **Benefit**: Stable interface, no layout shifts or UI disruption
 
-### 2. Smart Orientation Handler (`app.js`)
-Enhanced the `orientationchange` event listener with intelligent behavior:
+### 2. Orientation Handler (`app.js`)
+Enhanced the `orientationchange` event listener for fullscreen comic mode:
 
 #### When in Fullscreen/Rotated Comic Mode:
-- Repositions the rotated comic and toolbar
-- Ensures optimal viewing in the rotated view
-
-#### When in Normal Mode (NOT rotated):
-- Detects when device rotates to landscape
-- Automatically triggers `Rotate()` function to enter comic fullscreen mode
-- Only activates if comic is not already rotated
+- Repositions the rotated comic and toolbar when device orientation changes
+- Ensures optimal viewing in the fullscreen rotated view
+- Adapts to both landscape and portrait device orientations
 
 ```javascript
 window.addEventListener('orientationchange', function() {
@@ -33,21 +30,6 @@ window.addEventListener('orientationchange', function() {
       maximizeRotatedImage(rotatedComic);
       positionFullscreenToolbar();
     }, 300);
-  } else {
-    // Trigger comic rotation when device goes to landscape
-    setTimeout(() => {
-      const orientation = screen.orientation?.type || window.orientation;
-      const isLandscape = orientation === 'landscape-primary' || 
-                          orientation === 'landscape-secondary' || 
-                          Math.abs(window.orientation) === 90;
-      
-      if (isLandscape) {
-        const comic = document.getElementById('comic');
-        if (comic && !comic.className.includes('rotate')) {
-          Rotate(); // Trigger comic rotation
-        }
-      }
-    }, 300);
   }
 });
 ```
@@ -56,66 +38,68 @@ window.addEventListener('orientationchange', function() {
 
 ### Before:
 - Entire app would rotate when device rotated
-- UI elements would reflow and potentially cause layout issues
-- User had to manually tap comic to rotate
+- UI elements would reflow causing layout issues
+- Navigation became confusing in landscape mode
+- Buttons and controls would shift positions
 
 ### After:
-- App stays in portrait orientation (stable UI)
-- Device rotation to landscape **automatically** enters comic fullscreen mode
-- Provides intuitive, natural interaction pattern
-- Users can still manually tap comic to rotate (preserves existing functionality)
+- App stays locked in portrait orientation (stable UI)
+- Device rotation doesn't affect main interface
+- User manually taps comic to enter fullscreen rotated view
+- In fullscreen mode, device rotation adjusts the comic positioning optimally
+- Predictable, stable interface at all times
 
 ## Technical Details
 
-### Orientation Detection:
-- Uses modern `screen.orientation.type` API (primary)
-- Falls back to legacy `window.orientation` API (compatibility)
-- Detects both `landscape-primary` and `landscape-secondary`
-- Legacy support: `Math.abs(window.orientation) === 90`
-
-### Timing:
-- 300ms delay after orientation change
-- Ensures device has completed orientation transition
+### Orientation Detection in Fullscreen:
+- Listens for `orientationchange` events
+- Only repositions when in fullscreen/rotated comic mode
+- 300ms delay ensures device completes orientation transition
 - Prevents race conditions with browser rendering
 
-### State Management:
-- Checks for existing rotated comic to prevent conflicts
-- Validates comic element exists before triggering
-- Only rotates if comic is in normal (non-rotated) state
+### Comic Rotation:
+- Manual tap/click on comic enters fullscreen mode
+- Comic rotates 90 degrees using CSS transform
+- Fullscreen toolbar remains accessible
+- Swipe gestures work in fullscreen mode
+- Click anywhere to exit fullscreen
 
 ## Browser Support
 
-### Modern Browsers (Recommended):
+### Modern Browsers:
 - Chrome/Edge 38+
 - Firefox 43+
 - Safari 13+
 - Opera 25+
 
-### Legacy Support:
-- Falls back to `window.orientation` for older mobile browsers
-- Gracefully degrades - manual rotation still works everywhere
+### PWA Mode:
+- Orientation lock applies when installed as PWA
+- Browser mode may vary based on browser settings
 
 ## Benefits
 
-1. **Better UX**: Natural interaction - rotate device to see comic larger
-2. **Stable UI**: App interface doesn't rotate, preventing layout shifts
-3. **Intuitive**: Follows user expectations from media viewing apps
-4. **Dual Mode**: Works with both device rotation AND manual tap
+1. **Stable UI**: App interface never rotates, preventing layout shifts
+2. **Predictable Navigation**: Buttons and controls stay in same position
+3. **Better UX**: No jarring transitions when device tilts
+4. **Manual Control**: User decides when to view comic in fullscreen/rotated mode
 5. **PWA Compliant**: Proper manifest configuration for standalone mode
+6. **Performance**: No unnecessary reflows or repaints from orientation changes
 
 ## Testing Checklist
 
-- [ ] Device rotation to landscape triggers comic rotation
-- [ ] Device rotation back to portrait exits fullscreen
-- [ ] Manual tap rotation still works
+- [ ] App stays in portrait when device rotates
+- [ ] Manual tap on comic enters fullscreen rotated mode
+- [ ] In fullscreen, device rotation repositions comic optimally
+- [ ] Toolbar remains accessible in fullscreen
+- [ ] Can exit fullscreen by tapping comic or overlay
 - [ ] Works in both PWA installed mode and browser
-- [ ] Toolbar remains accessible in rotated view
-- [ ] No conflicts between device rotation and manual rotation
-- [ ] Settings panel behaves correctly during rotations
+- [ ] Settings panel not affected by orientation lock
+- [ ] Navigation buttons stay in consistent positions
 
 ## Notes
 
-- The 300ms delay is intentional to allow orientation change to complete
-- Comic rotation can still be triggered manually by tapping the comic
-- The app manifest orientation setting applies to PWA installed mode
-- Browser mode may have different orientation behaviors depending on browser
+- The orientation lock applies primarily in PWA installed mode
+- Browser mode behavior depends on browser implementation
+- Manual comic rotation (tap to rotate) still works as before
+- The 300ms delay in fullscreen repositioning is intentional
+- Orientation lock provides a more app-like, stable experience

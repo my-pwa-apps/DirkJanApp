@@ -1397,22 +1397,6 @@ window.addEventListener('orientationchange', function() {
       maximizeRotatedImage(rotatedComic);
       positionFullscreenToolbar();
     }, 300); // Small delay to ensure orientation has completed
-  } else {
-    // Not in fullscreen mode - trigger comic rotation when device rotates to landscape
-    setTimeout(() => {
-      const orientation = screen.orientation?.type || window.orientation;
-      const isLandscape = orientation === 'landscape-primary' || 
-                          orientation === 'landscape-secondary' || 
-                          Math.abs(window.orientation) === 90;
-      
-      // Only trigger rotation if device is in landscape and comic is not already rotated
-      if (isLandscape) {
-        const comic = document.getElementById('comic');
-        if (comic && !comic.className.includes('rotate')) {
-          Rotate(); // Trigger comic rotation
-        }
-      }
-    }, 300); // Small delay to ensure orientation has completed
   }
 });
 
