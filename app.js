@@ -1877,10 +1877,13 @@ function initializeDraggableSettings() {
     isDragging = true;
     panel.style.transition = 'none';
     
-    // Get current panel position
-    const rect = panel.getBoundingClientRect();
-    panelStartX = rect.left + rect.width / 2;  // Center X
-    panelStartY = rect.top + rect.height / 2;   // Center Y
+    // Get current panel position (use computed left/top if already positioned)
+    const computedStyle = window.getComputedStyle(panel);
+    const currentLeft = parseFloat(computedStyle.left) || 0;
+    const currentTop = parseFloat(computedStyle.top) || 0;
+    
+    panelStartX = currentLeft;
+    panelStartY = currentTop;
     
     // Get touch/mouse starting position
     if (e.type === "touchstart") {
@@ -1913,14 +1916,17 @@ function initializeDraggableSettings() {
     const deltaX = currentX - dragStartX;
     const deltaY = currentY - dragStartY;
     
-    // Calculate new panel center position
-    const newCenterX = panelStartX + deltaX;
-    const newCenterY = panelStartY + deltaY;
+    // Calculate new panel position
+    const newLeft = panelStartX + deltaX;
+    const newTop = panelStartY + deltaY;
     
-    // Update position directly using left/top at center point
-    panel.style.left = `${newCenterX}px`;
-    panel.style.top = `${newCenterY}px`;
-    panel.style.transform = `translate(-50%, -50%)`;
+    // Update position - maintain the transform for centering
+    panel.style.left = `${newLeft}px`;
+    panel.style.top = `${newTop}px`;
+    // Keep the existing transform to maintain centering
+    if (!panel.style.transform) {
+      panel.style.transform = `translate(-50%, -50%)`;
+    }
   }
   
   function dragEnd(e) {
@@ -2068,19 +2074,20 @@ function maximizeRotatedImage(imgElement) {
   // Position element - but let CSS handle the transform for rotation
   imgElement.style.position = 'fixed';
   
-  // Set positioning based on mode, but don't override transform
+  // Set positioning based on mode
   if (isLandscapeMode) {
     // In landscape mode, position higher to avoid toolbar overlap
+    // Set explicit positioning for landscape mode
     imgElement.style.top = '40%';
     imgElement.style.left = '50%';
+    imgElement.style.transformOrigin = 'center center';
   } else if (isRotatedMode) {
-    // In rotated mode, keep centered
-    imgElement.style.top = '50%';
-    imgElement.style.left = '50%';
+    // In rotated mode, let CSS handle positioning completely
+    // Don't set top/left inline to avoid conflicts with CSS transform
+    imgElement.style.top = '';
+    imgElement.style.left = '';
+    imgElement.style.transformOrigin = '';
   }
-  
-  // Don't set transform here - let CSS classes handle it
-  imgElement.style.transformOrigin = 'center center';
   imgElement.style.maxWidth = 'none';
   imgElement.style.maxHeight = 'none';
   imgElement.style.zIndex = '10001'; // Higher than the overlay
