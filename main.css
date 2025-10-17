@@ -644,9 +644,6 @@ input[type="date"]:focus-visible {
 }
 
 .rotate {
-    -ms-transform: rotate(90deg);
-    -webkit-transform: rotate(90deg);
-    transform: rotate(90deg);
     max-height: 95vh; /* Use most of the viewport height */
     max-width: 95vw; /* Use most of the viewport width */
     width: auto;
@@ -661,6 +658,7 @@ input[type="date"]:focus-visible {
     z-index: 10001;
     cursor: pointer; /* Make it clear the image is clickable */
     pointer-events: auto; /* Ensure click events work */
+    transform-origin: center center;
 }
 
 /* Fullscreen mode without rotation (for landscape device orientation) */
@@ -1152,7 +1150,7 @@ input[type="date"]#DatePicker:disabled {
 /* Landscape fullscreen comic positioning (avoid toolbar overlap) */
 #rotated-comic.fullscreen-landscape {
     left: 50% !important; /* Centered horizontally */
-    top: 42% !important; /* Higher to avoid toolbar at bottom */
+    top: 40% !important; /* Higher to avoid toolbar at bottom */
     transform: translate(-50%, -50%) !important; /* Center the comic */
 }
 

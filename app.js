@@ -2041,6 +2041,7 @@ function maximizeRotatedImage(imgElement) {
   
   // Check if this is a landscape fullscreen (no rotation) or rotated mode
   const isLandscapeMode = imgElement.className.includes('fullscreen-landscape');
+  const isRotatedMode = imgElement.className.includes('rotate');
   
   // For a rotated image, the visual width is the original height, and vice versa
   // But for landscape mode, use natural dimensions
@@ -2064,22 +2065,21 @@ function maximizeRotatedImage(imgElement) {
   imgElement.style.width = `${naturalWidth * scale}px`;
   imgElement.style.height = `${naturalHeight * scale}px`;
   
-  // Position element in the center of the viewport
+  // Position element - but let CSS handle the transform for rotation
   imgElement.style.position = 'fixed';
   
-  // Apply rotation only if NOT in landscape mode
+  // Set positioning based on mode, but don't override transform
   if (isLandscapeMode) {
     // In landscape mode, position higher to avoid toolbar overlap
-    imgElement.style.top = '42%';
+    imgElement.style.top = '40%';
     imgElement.style.left = '50%';
-    imgElement.style.transform = 'translate(-50%, -50%)'; // No rotation
-  } else {
+  } else if (isRotatedMode) {
     // In rotated mode, keep centered
     imgElement.style.top = '50%';
     imgElement.style.left = '50%';
-    imgElement.style.transform = 'translate(-50%, -50%) rotate(90deg)'; // With rotation
   }
   
+  // Don't set transform here - let CSS classes handle it
   imgElement.style.transformOrigin = 'center center';
   imgElement.style.maxWidth = 'none';
   imgElement.style.maxHeight = 'none';
