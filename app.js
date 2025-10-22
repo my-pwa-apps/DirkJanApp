@@ -558,8 +558,10 @@ function makeDraggable(element, dragHandle, storageKey, onDragStart = null, onDr
     if (storageKey === CONFIG.STORAGE_KEYS.TOOLBAR_POS) {
       const comic = document.getElementById('comic');
       if (comic) {
+        const elementRect = element.getBoundingClientRect();
         const comicRect = comic.getBoundingClientRect();
-        isBelowComic = numericTop > comicRect.bottom;
+        // Toolbar is below comic if its top edge is below comic's bottom edge
+        isBelowComic = elementRect.top > comicRect.bottom;
       }
     }
     
@@ -1371,8 +1373,16 @@ function Rotate(applyRotation = true) {
           if (comic) {
             const comicRect = comic.getBoundingClientRect();
             
-            // Use the belowComic flag from saved position
-            const toolbarWasBelowComic = savedPos.belowComic === true;
+            // Determine if toolbar was below comic
+            // 1. Check explicit flag if it exists
+            // 2. Otherwise, check if saved position was below comic's bottom edge
+            let toolbarWasBelowComic = false;
+            if (savedPos.belowComic !== undefined) {
+              toolbarWasBelowComic = savedPos.belowComic === true;
+            } else {
+              // Fallback: check if saved top position is below comic bottom
+              toolbarWasBelowComic = savedPos.top > comicRect.bottom;
+            }
             
             if (toolbarWasBelowComic) {
               // Toolbar was below comic - position it below comic now
