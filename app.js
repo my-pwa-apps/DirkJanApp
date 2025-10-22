@@ -1645,19 +1645,19 @@ if (document.readyState === 'loading') {
       // Position toolbar after all content is loaded
       const positionToolbar = () => {
         const logo = document.querySelector('.logo');
-        const comic = document.getElementById('comic');
+        const main = document.getElementById('main');
         
-        if (logo && comic && mainToolbar.offsetHeight > 0) {
+        if (logo && main && mainToolbar.offsetHeight > 0) {
           const logoRect = logo.getBoundingClientRect();
-          const comicRect = comic.getBoundingClientRect();
+          const mainRect = main.getBoundingClientRect();
           
-          // Calculate position between logo bottom and comic top
+          // Calculate position between logo bottom and main content start
           const logoBottom = logoRect.bottom + window.scrollY;
-          const comicTop = comicRect.top + window.scrollY;
+          const mainTop = mainRect.top + window.scrollY;
           const toolbarHeight = mainToolbar.offsetHeight;
-          const availableSpace = comicTop - logoBottom;
+          const availableSpace = mainTop - logoBottom;
           
-          // Center vertically in available space
+          // Center vertically in available space (with minimum 10px gap from logo)
           const centeredTop = logoBottom + (availableSpace - toolbarHeight) / 2;
           mainToolbar.style.top = Math.max(logoBottom + 10, centeredTop) + 'px';
           
@@ -1703,19 +1703,19 @@ if (document.readyState === 'loading') {
     // Position toolbar after all content is loaded
     const positionToolbar = () => {
       const logo = document.querySelector('.logo');
-      const comic = document.getElementById('comic');
+      const main = document.getElementById('main');
       
-      if (logo && comic && mainToolbar.offsetHeight > 0) {
+      if (logo && main && mainToolbar.offsetHeight > 0) {
         const logoRect = logo.getBoundingClientRect();
-        const comicRect = comic.getBoundingClientRect();
+        const mainRect = main.getBoundingClientRect();
         
-        // Calculate position between logo bottom and comic top
+        // Calculate position between logo bottom and main content start
         const logoBottom = logoRect.bottom + window.scrollY;
-        const comicTop = comicRect.top + window.scrollY;
+        const mainTop = mainRect.top + window.scrollY;
         const toolbarHeight = mainToolbar.offsetHeight;
-        const availableSpace = comicTop - logoBottom;
+        const availableSpace = mainTop - logoBottom;
         
-        // Center vertically in available space
+        // Center vertically in available space (with minimum 10px gap from logo)
         const centeredTop = logoBottom + (availableSpace - toolbarHeight) / 2;
         mainToolbar.style.top = Math.max(logoBottom + 10, centeredTop) + 'px';
         
