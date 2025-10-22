@@ -1371,55 +1371,61 @@ function Rotate(applyRotation = true) {
         const savedPos = UTILS.safeJSONParse(savedPosRaw, null);
         
         if (savedPos && typeof savedPos.top === 'number' && typeof savedPos.left === 'number') {
-          // First restore the left position
-          toolbar.style.left = savedPos.left + 'px';
+          // Hide toolbar during repositioning to avoid visual jump
+          toolbar.style.opacity = '0';
           
           const comicRect = comic.getBoundingClientRect();
           
-          // Check if toolbar should be below comic based on saved flag
+          // Determine correct position based on saved flag
           const shouldBeBelow = savedPos.belowComic === true;
+          let newTop, newLeft;
+          
+          newLeft = savedPos.left;
           
           if (shouldBeBelow) {
             // Toolbar should be below comic - position it relative to comic's bottom
-            const newTop = comicRect.bottom + 15;
-            toolbar.style.top = newTop + 'px';
-            // Update saved position with new coordinates
-            localStorage.setItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS, JSON.stringify({ 
-              top: newTop, 
-              left: savedPos.left, 
-              belowComic: true 
-            }));
+            newTop = comicRect.bottom + 15;
           } else {
-            // Toolbar should be above comic - restore saved absolute position
-            toolbar.style.top = savedPos.top + 'px';
+            // Toolbar should be above comic - check if saved position is still valid
+            const toolbarHeight = toolbar.offsetHeight;
+            const wouldOverlap = (savedPos.top + toolbarHeight > comicRect.top) && 
+                                 (savedPos.top < comicRect.bottom);
             
-            // Check if restored position now overlaps comic
-            const toolbarRect = toolbar.getBoundingClientRect();
-            const overlaps = toolbarRect.bottom > comicRect.top && 
-                           toolbarRect.top < comicRect.bottom &&
-                           toolbarRect.right > comicRect.left && 
-                           toolbarRect.left < comicRect.right;
-            
-            if (overlaps) {
+            if (wouldOverlap) {
               // Position between logo and comic
               const logo = document.querySelector('.logo');
               if (logo) {
                 const logoRect = logo.getBoundingClientRect();
                 const availableSpace = comicRect.top - logoRect.bottom;
-                const toolbarHeight = toolbarRect.height;
-                const newTop = logoRect.bottom + Math.max(15, (availableSpace - toolbarHeight) / 2);
-                toolbar.style.top = newTop + 'px';
-                localStorage.setItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS, JSON.stringify({ 
-                  top: newTop, 
-                  left: savedPos.left, 
-                  belowComic: false 
-                }));
+                newTop = logoRect.bottom + Math.max(15, (availableSpace - toolbarHeight) / 2);
+              } else {
+                newTop = savedPos.top;
               }
+            } else {
+              // Use saved position
+              newTop = savedPos.top;
             }
           }
           
-          // Finally clamp to viewport bounds
-          clampMainToolbarInView();
+          // Clamp to viewport bounds
+          const maxLeft = window.innerWidth - toolbar.offsetWidth;
+          const maxTop = window.innerHeight - toolbar.offsetHeight;
+          newLeft = Math.max(0, Math.min(newLeft, maxLeft));
+          newTop = Math.max(0, Math.min(newTop, maxTop));
+          
+          // Apply position
+          toolbar.style.left = newLeft + 'px';
+          toolbar.style.top = newTop + 'px';
+          
+          // Update saved position
+          localStorage.setItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS, JSON.stringify({ 
+            top: newTop, 
+            left: newLeft, 
+            belowComic: shouldBeBelow 
+          }));
+          
+          // Show toolbar after positioning
+          toolbar.style.opacity = '1';
         }
       }
     }, 250);
