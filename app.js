@@ -1554,49 +1554,74 @@ function handleTouchEnd(e) {
 	// Check if the swipe is valid (meets distance and time requirements)
   if (deltaTime > CONFIG.SWIPE_MAX_TIME) return;
 	
-	// Check if we're in fullscreen/rotated mode
-  const isInFullscreen = document.getElementById('rotated-comic') !== null;
+	// Check if we're in fullscreen/rotated mode and which type
+  const rotatedComic = document.getElementById('rotated-comic');
+  const isInFullscreen = rotatedComic !== null;
+  const isRotated = isInFullscreen && rotatedComic.className.includes('rotate');
+  const isLandscapeFullscreen = isInFullscreen && rotatedComic.className.includes('fullscreen-landscape');
 	
 	// Determine swipe direction based on mode
-	if (isInFullscreen) {
-    // Rotated mode: Vertical for Next/Prev, Horizontal for Random/Today
+	if (isRotated) {
+    // Rotated mode (90° clockwise): Swipe gestures follow the rotation
+    // Physical up/down becomes logical left/right, physical left/right becomes logical up/down
     if (absY > absX && absY > CONFIG.SWIPE_MIN_DISTANCE) {
-      // Vertical swipe
+      // Vertical swipe (becomes horizontal navigation due to rotation)
       if (deltaY < 0) {
-        // Swipe Up -> Previous
-        PreviousClick();
-      } else {
-        // Swipe Down -> Next
+        // Swipe Up -> visually moves right -> Next
         NextClick();
+      } else {
+        // Swipe Down -> visually moves left -> Previous
+        PreviousClick();
       }
     } else if (absX > absY && absX > CONFIG.SWIPE_MIN_DISTANCE) {
-      // Horizontal swipe
+      // Horizontal swipe (becomes vertical navigation due to rotation)
       if (deltaX < 0) {
-        // Swipe Left -> Random
+        // Swipe Left -> visually moves down -> Random
         RandomClick();
       } else {
-        // Swipe Right -> Today
+        // Swipe Right -> visually moves up -> Today
         CurrentClick();
       }
     }
+  } else if (isLandscapeFullscreen) {
+    // Landscape fullscreen (no rotation): Normal horizontal/vertical mapping
+    if (absX > absY && absX > CONFIG.SWIPE_MIN_DISTANCE) {
+      // Horizontal swipe
+      if (deltaX < 0) {
+        // Swipe Left -> Next
+        NextClick();
+      } else {
+        // Swipe Right -> Previous
+        PreviousClick();
+      }
+    } else if (absY > absX && absY > CONFIG.SWIPE_MIN_DISTANCE) {
+      // Vertical swipe
+      if (deltaY < 0) {
+        // Swipe Up -> Today
+        CurrentClick();
+      } else {
+        // Swipe Down -> Random
+        RandomClick();
+      }
+    }
   } else {
-    // Normal mode: Horizontal for Next/Prev, Vertical for Random/Today
+    // Normal portrait mode: Horizontal for Next/Prev, Vertical for Random/Today
     if (absX > absY && absX > CONFIG.SWIPE_MIN_DISTANCE) {
       // Horizontal swipe
       if (deltaX > 0) {
-        // Swipe right
+        // Swipe right -> Previous
         PreviousClick();
       } else {
-        // Swipe left
+        // Swipe left -> Next
         NextClick();
       }
     } else if (absY > absX && absY > CONFIG.SWIPE_MIN_DISTANCE) {
       // Vertical swipe
       if (deltaY > 0) {
-        // Swipe down
+        // Swipe down -> Random
         RandomClick();
       } else {
-        // Swipe up
+        // Swipe up -> Today
         CurrentClick();
       }
     }
@@ -1726,10 +1751,15 @@ function initializeToolbar() {
       mainToolbar.style.transform = 'translateX(-50%)';
     }
     
-    // Then position correctly after elements load
+    // Then position correctly after elements load and save the position
     const tryPosition = () => {
       mainToolbar.style.transform = 'none'; // Clear transform before positioning
-      positionToolbarCentered(mainToolbar);
+      positionToolbarCentered(mainToolbar, false); // Don't save yet during intermediate attempts
+    };
+    
+    const finalPosition = () => {
+      mainToolbar.style.transform = 'none';
+      positionToolbarCentered(mainToolbar, true); // Save position on final attempt
     };
     
     // Try positioning multiple times as elements load
@@ -1739,7 +1769,7 @@ function initializeToolbar() {
     window.addEventListener('load', () => {
       tryPosition();
       setTimeout(tryPosition, 100);
-      setTimeout(tryPosition, 300);
+      setTimeout(finalPosition, 300); // Save position after final positioning
     });
   }
 
@@ -2208,8 +2238,9 @@ function positionFullscreenToolbar() {
 /**
  * Positions the main toolbar centered between logo and comic image
  * @param {HTMLElement} toolbar - The toolbar element to position
+ * @param {boolean} savePosition - Whether to save the calculated position to localStorage
  */
-function positionToolbarCentered(toolbar) {
+function positionToolbarCentered(toolbar, savePosition = false) {
   if (!toolbar || toolbar.offsetHeight === 0) return;
   
   const logo = document.querySelector('.logo');
@@ -2237,6 +2268,16 @@ function positionToolbarCentered(toolbar) {
   const centeredLeft = (viewportWidth - toolbarWidth) / 2;
   toolbar.style.left = centeredLeft + 'px';
   toolbar.style.transform = 'none';
+  
+  // Save position if requested
+  if (savePosition) {
+    try {
+      localStorage.setItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS, JSON.stringify({ 
+        top: centeredTop, 
+        left: centeredLeft 
+      }));
+    } catch(_) {}
+  }
 }
 
 /**
