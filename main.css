@@ -196,11 +196,8 @@ input
     -webkit-backdrop-filter: blur(20px);
     backdrop-filter: blur(20px);
     box-sizing: border-box;
-    position: absolute;
-    /* Initial position set by JavaScript after logo is loaded */
-    top: 0;
-    left: 50%;
-    transform: translateX(-50%); /* Initial centering before user moves it or JS calculates position */
+    position: fixed; /* Use fixed positioning for consistent placement */
+    /* Position will be set by JavaScript */
     cursor: grab;
     z-index: 100;
     gap: 8px; /* Add default gap between buttons */

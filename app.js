@@ -1684,66 +1684,50 @@ window.addEventListener('orientationchange', function() {
   }
 })();
 
-// Initialize toolbar dragging and mobile button states when DOM is ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', function() {
-    // Make the main toolbar draggable
-    const mainToolbar = document.querySelector('.toolbar:not(.fullscreen-toolbar)');
-    makeMainToolbarDraggable(mainToolbar);
-
-    const savedPosRaw = localStorage.getItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS) || localStorage.getItem('mainToolbarPosition');
-    const savedPos = UTILS.safeJSONParse(savedPosRaw, null);
-    if (!savedPos && mainToolbar) {
-      // Position toolbar after all content is loaded
-      const tryPosition = () => positionToolbarCentered(mainToolbar);
-      
-      // Position immediately
-      tryPosition();
-      // Try multiple times to ensure elements are rendered
-      window.addEventListener('load', () => {
-        tryPosition();
-        setTimeout(tryPosition, 50);
-        setTimeout(tryPosition, 200);
-        setTimeout(tryPosition, 500);
-      });
-    } else if (savedPos && mainToolbar) {
-      // Apply saved position immediately
-      mainToolbar.style.top = savedPos.top + 'px';
-      mainToolbar.style.left = savedPos.left + 'px';
-      mainToolbar.style.transform = 'none';
-    }
-
-    // Only clamp on resize, not on orientation change to prevent toolbar movement
-    window.addEventListener('resize', clampMainToolbarInView);
-    
-    // Initialize mobile button state management
-    initializeMobileButtonStates();
-  });
-} else {
-  // DOM already loaded
+/**
+ * Initialize toolbar positioning and dragging
+ */
+function initializeToolbar() {
   const mainToolbar = document.querySelector('.toolbar:not(.fullscreen-toolbar)');
+  if (!mainToolbar) return;
+  
+  // Make toolbar draggable
   makeMainToolbarDraggable(mainToolbar);
 
   const savedPosRaw = localStorage.getItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS) || localStorage.getItem('mainToolbarPosition');
   const savedPos = UTILS.safeJSONParse(savedPosRaw, null);
-  if (!savedPos && mainToolbar) {
-    // Position toolbar after all content is loaded
-    const tryPosition = () => positionToolbarCentered(mainToolbar);
-    
-    // Position immediately
-    tryPosition();
-    // Try multiple times to ensure elements are rendered
-    window.addEventListener('load', () => {
-      tryPosition();
-      setTimeout(tryPosition, 50);
-      setTimeout(tryPosition, 200);
-      setTimeout(tryPosition, 500);
-    });
-  } else if (savedPos && mainToolbar) {
+  
+  if (savedPos && typeof savedPos.top === 'number' && typeof savedPos.left === 'number') {
     // Apply saved position immediately
     mainToolbar.style.top = savedPos.top + 'px';
     mainToolbar.style.left = savedPos.left + 'px';
     mainToolbar.style.transform = 'none';
+  } else {
+    // No saved position - calculate centered position
+    // Set a safe default first to avoid showing over comic
+    const logo = document.querySelector('.logo');
+    if (logo) {
+      const logoRect = logo.getBoundingClientRect();
+      mainToolbar.style.top = (logoRect.bottom + 15) + 'px';
+      mainToolbar.style.left = '50%';
+      mainToolbar.style.transform = 'translateX(-50%)';
+    }
+    
+    // Then position correctly after elements load
+    const tryPosition = () => {
+      mainToolbar.style.transform = 'none'; // Clear transform before positioning
+      positionToolbarCentered(mainToolbar);
+    };
+    
+    // Try positioning multiple times as elements load
+    setTimeout(tryPosition, 0);
+    setTimeout(tryPosition, 50);
+    setTimeout(tryPosition, 100);
+    window.addEventListener('load', () => {
+      tryPosition();
+      setTimeout(tryPosition, 100);
+      setTimeout(tryPosition, 300);
+    });
   }
 
   // Only clamp on resize, not on orientation change to prevent toolbar movement
@@ -1751,6 +1735,13 @@ if (document.readyState === 'loading') {
   
   // Initialize mobile button state management
   initializeMobileButtonStates();
+}
+
+// Initialize toolbar when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeToolbar);
+} else {
+  initializeToolbar();
 }
 
 // ========================================
