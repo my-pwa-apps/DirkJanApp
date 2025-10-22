@@ -16,9 +16,7 @@ const CONFIG = Object.freeze({
   // CORS Proxies (in priority order)
   CORS_PROXIES: [
     'https://api.codetabs.com/v1/proxy?quest=',
-    'https://corsproxy.io/?',
-    'https://thingproxy.freeboard.io/fetch/',
-    'https://proxy.cors.sh/'
+    'https://corsproxy.io/?'
   ],
   
   // Fetch timeouts
@@ -142,8 +140,8 @@ function dismissUpdate() {
 
 // Track which proxy is currently working best
 let workingProxyIndex = 0;
-let proxyFailureCount = [0, 0, 0, 0]; // One for each proxy
-let proxyResponseTimes = [0, 0, 0, 0]; // Track average response times in ms
+let proxyFailureCount = [0, 0]; // One for each proxy
+let proxyResponseTimes = [0, 0]; // Track average response times in ms
 
 /**
  * Fetches a URL with intelligent CORS proxy fallback
