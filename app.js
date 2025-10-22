@@ -562,7 +562,6 @@ function makeDraggable(element, dragHandle, storageKey, onDragStart = null, onDr
         const comicRect = comic.getBoundingClientRect();
         // Toolbar is below comic if its top edge is below comic's bottom edge
         isBelowComic = elementRect.top > comicRect.bottom;
-        console.log('[DEBUG] Saving toolbar position - elementRect.top:', elementRect.top, 'comicRect.bottom:', comicRect.bottom, 'isBelowComic:', isBelowComic);
       }
     }
     
@@ -571,7 +570,6 @@ function makeDraggable(element, dragHandle, storageKey, onDragStart = null, onDr
       if (storageKey === CONFIG.STORAGE_KEYS.TOOLBAR_POS) {
         positionData.belowComic = isBelowComic;
       }
-      console.log('[DEBUG] Saving position data:', positionData);
       localStorage.setItem(storageKey, JSON.stringify(positionData));
     } catch(_) {}
     
@@ -1360,86 +1358,71 @@ function Rotate(applyRotation = true) {
     window.removeEventListener('resize', handleRotatedViewResize);
     window.removeEventListener('orientationchange', handleRotatedViewResize);
     
+    // Reset rotation flag
+    isRotating = false;
+    
     // Restore toolbar position from localStorage after layout changes
+    // Use longer delay to ensure layout is complete
     setTimeout(() => {
       const toolbar = document.querySelector('.toolbar:not(.fullscreen-toolbar)');
       const comic = document.getElementById('comic');
-      if (toolbar) {
+      if (toolbar && comic) {
         const savedPosRaw = localStorage.getItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS);
         const savedPos = UTILS.safeJSONParse(savedPosRaw, null);
-        
-        console.log('[DEBUG] Restoring toolbar position:', savedPos);
         
         if (savedPos && typeof savedPos.top === 'number' && typeof savedPos.left === 'number') {
           // First restore the left position
           toolbar.style.left = savedPos.left + 'px';
           
-          // Check if toolbar should be repositioned relative to comic
-          if (comic) {
-            const comicRect = comic.getBoundingClientRect();
-            console.log('[DEBUG] Comic rect:', { top: comicRect.top, bottom: comicRect.bottom });
+          const comicRect = comic.getBoundingClientRect();
+          
+          // Check if toolbar should be below comic based on saved flag
+          const shouldBeBelow = savedPos.belowComic === true;
+          
+          if (shouldBeBelow) {
+            // Toolbar should be below comic - position it relative to comic's bottom
+            const newTop = comicRect.bottom + 15;
+            toolbar.style.top = newTop + 'px';
+            // Update saved position with new coordinates
+            localStorage.setItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS, JSON.stringify({ 
+              top: newTop, 
+              left: savedPos.left, 
+              belowComic: true 
+            }));
+          } else {
+            // Toolbar should be above comic - restore saved absolute position
+            toolbar.style.top = savedPos.top + 'px';
             
-            // Determine if toolbar was below comic
-            // 1. Check explicit flag if it exists
-            // 2. Otherwise, check if saved position was below comic's bottom edge
-            let toolbarWasBelowComic = false;
-            if (savedPos.belowComic !== undefined) {
-              toolbarWasBelowComic = savedPos.belowComic === true;
-              console.log('[DEBUG] Using saved flag, belowComic:', toolbarWasBelowComic);
-            } else {
-              // Fallback: check if saved top position is below comic bottom
-              toolbarWasBelowComic = savedPos.top > comicRect.bottom;
-              console.log('[DEBUG] Using fallback, savedPos.top:', savedPos.top, 'comicRect.bottom:', comicRect.bottom, 'belowComic:', toolbarWasBelowComic);
-            }
+            // Check if restored position now overlaps comic
+            const toolbarRect = toolbar.getBoundingClientRect();
+            const overlaps = toolbarRect.bottom > comicRect.top && 
+                           toolbarRect.top < comicRect.bottom &&
+                           toolbarRect.right > comicRect.left && 
+                           toolbarRect.left < comicRect.right;
             
-            if (toolbarWasBelowComic) {
-              // Toolbar was below comic - position it below comic now
-              const comicBottom = comicRect.bottom;
-              const newTop = comicBottom + 15;
-              console.log('[DEBUG] Positioning below comic at:', newTop);
-              toolbar.style.top = newTop + 'px';
-              localStorage.setItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS, JSON.stringify({ 
-                top: newTop, 
-                left: savedPos.left, 
-                belowComic: true 
-              }));
-            } else {
-              // Toolbar was above comic - restore saved position and check for overlap
-              console.log('[DEBUG] Positioning above comic at:', savedPos.top);
-              toolbar.style.top = savedPos.top + 'px';
-              const toolbarRect = toolbar.getBoundingClientRect();
-              
-              // If toolbar overlaps comic after restoring position, move it above
-              if (toolbarRect.bottom > comicRect.top && toolbarRect.top < comicRect.bottom &&
-                  toolbarRect.right > comicRect.left && toolbarRect.left < comicRect.right) {
-                
-                console.log('[DEBUG] Overlap detected, repositioning...');
-                const logo = document.querySelector('.logo');
-                if (logo) {
-                  const logoRect = logo.getBoundingClientRect();
-                  const logoBottom = logoRect.bottom;
-                  const comicTop = comicRect.top;
-                  const availableSpace = comicTop - logoBottom;
-                  const toolbarHeight = toolbarRect.height;
-                  const newTop = logoBottom + Math.max(15, (availableSpace - toolbarHeight) / 2);
-                  toolbar.style.top = newTop + 'px';
-                  localStorage.setItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS, JSON.stringify({ 
-                    top: newTop, 
-                    left: savedPos.left, 
-                    belowComic: false 
-                  }));
-                }
+            if (overlaps) {
+              // Position between logo and comic
+              const logo = document.querySelector('.logo');
+              if (logo) {
+                const logoRect = logo.getBoundingClientRect();
+                const availableSpace = comicRect.top - logoRect.bottom;
+                const toolbarHeight = toolbarRect.height;
+                const newTop = logoRect.bottom + Math.max(15, (availableSpace - toolbarHeight) / 2);
+                toolbar.style.top = newTop + 'px';
+                localStorage.setItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS, JSON.stringify({ 
+                  top: newTop, 
+                  left: savedPos.left, 
+                  belowComic: false 
+                }));
               }
             }
-          } else {
-            // No comic element, just restore saved position
-            toolbar.style.top = savedPos.top + 'px';
           }
+          
+          // Finally clamp to viewport bounds
+          clampMainToolbarInView();
         }
-        // Then clamp to ensure it's within bounds
-        clampMainToolbarInView();
       }
-    }, 100);
+    }, 250);
     
     return;
   }
