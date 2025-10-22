@@ -21,8 +21,9 @@ const CONFIG = Object.freeze({
   ],
   
   // Fetch timeouts
-  FETCH_TIMEOUT: 15000,                // 15 second timeout
-  IMAGE_FETCH_TIMEOUT: 12000,          // 12 second timeout for images
+  FETCH_TIMEOUT: 8000,                 // 8 second timeout for HTML
+  FETCH_TIMEOUT_FAST: 4000,            // 4 second fast attempt timeout
+  IMAGE_FETCH_TIMEOUT: 6000,           // 6 second timeout for images
   
   // Swipe detection
   SWIPE_MIN_DISTANCE: 50,              // Minimum swipe distance in px
@@ -141,65 +142,167 @@ function dismissUpdate() {
 // Track which proxy is currently working best
 let workingProxyIndex = 0;
 let proxyFailureCount = [0, 0, 0];
+let proxyResponseTimes = [0, 0, 0]; // Track average response times in ms
 
 /**
  * Fetches a URL with intelligent CORS proxy fallback
- * Automatically tries multiple proxies and tracks which ones are working
+ * Uses parallel racing for faster fallback and tracks proxy performance
  * @param {string} url - The URL to fetch
+ * @param {boolean} enableRacing - If true, races proxies after a delay for faster fallback
  * @returns {Promise<Response>} The fetch response
  * @throws {Error} If all fetch attempts fail
  */
-async function fetchWithFallback(url) {
-  let lastError;
-  const maxRetries = CONFIG.CORS_PROXIES.length;
+async function fetchWithFallback(url, enableRacing = true) {
+  const startTime = performance.now();
+  const bestProxyIndex = getBestProxyIndex();
   
-  // Start with the last known working proxy for better performance
-  const startIndex = workingProxyIndex;
+  // Try the best performing proxy first
+  const primaryAttempt = tryProxy(url, bestProxyIndex, startTime);
   
-  for (let i = 0; i < maxRetries; i++) {
-    const proxyIndex = (startIndex + i) % CONFIG.CORS_PROXIES.length;
-    const proxy = CONFIG.CORS_PROXIES[proxyIndex];
-    
+  if (!enableRacing) {
+    // Simple mode: just try primary then fallback
     try {
-      const proxyUrl = `${proxy}${encodeURIComponent(url)}`;
-      const response = await fetch(proxyUrl, { 
-        signal: AbortSignal.timeout(CONFIG.FETCH_TIMEOUT)
-      });
-      
-      if (response.ok) {
-        // Success! Update working proxy and reset failure count
-        workingProxyIndex = proxyIndex;
-        proxyFailureCount[proxyIndex] = 0;
-        return response;
-      }
-      
-      // Non-OK response, count as failure
-      proxyFailureCount[proxyIndex]++;
-      
+      return await primaryAttempt;
     } catch (error) {
-      lastError = error;
-      proxyFailureCount[proxyIndex]++;
-      
-      // If this proxy has failed multiple times, deprioritize it
-      if (proxyFailureCount[proxyIndex] >= 3) {
-        // Skip to next proxy
-        continue;
-      }
+      return await tryRemainingProxies(url, bestProxyIndex, startTime);
     }
   }
   
-  // If all proxies failed, try direct access with no-cors as last resort
+  // Racing mode: if primary is slow, start backup attempts
   try {
-    const response = await fetch(url, { mode: 'no-cors' });
-    return response;
+    return await Promise.race([
+      primaryAttempt,
+      // Start racing with other proxies after a delay if primary is slow
+      (async () => {
+        await new Promise(resolve => setTimeout(resolve, CONFIG.FETCH_TIMEOUT_FAST));
+        // Primary is taking too long, try backups in parallel
+        return await tryBackupProxies(url, bestProxyIndex, startTime);
+      })()
+    ]);
   } catch (error) {
-    lastError = error;
+    // Both primary and racing failed, try remaining sequentially
+    return await tryRemainingProxies(url, bestProxyIndex, startTime);
+  }
+}
+
+/**
+ * Gets the best proxy index based on success rate and response time
+ * @returns {number} Index of the best performing proxy
+ */
+function getBestProxyIndex() {
+  let bestIndex = workingProxyIndex;
+  let bestScore = -Infinity;
+  
+  for (let i = 0; i < CONFIG.CORS_PROXIES.length; i++) {
+    // Heavily penalize failures, reward fast response times
+    const failurePenalty = proxyFailureCount[i] * 2000;
+    const avgTime = proxyResponseTimes[i] || 1500; // Default to 1.5s if unknown
+    const score = 10000 / (avgTime + failurePenalty + 1);
+    
+    if (score > bestScore) {
+      bestScore = score;
+      bestIndex = i;
+    }
   }
   
-  // Reset failure counts if everything failed (network might be back)
-  proxyFailureCount = [0, 0, 0];
+  return bestIndex;
+}
+
+/**
+ * Updates proxy performance statistics
+ * @param {number} proxyIndex - Proxy index
+ * @param {boolean} success - Whether request succeeded
+ * @param {number} responseTime - Response time in ms
+ */
+function updateProxyStats(proxyIndex, success, responseTime) {
+  if (success) {
+    workingProxyIndex = proxyIndex;
+    proxyFailureCount[proxyIndex] = Math.max(0, proxyFailureCount[proxyIndex] - 1);
+    
+    // Update rolling average (70% old, 30% new)
+    if (proxyResponseTimes[proxyIndex] === 0) {
+      proxyResponseTimes[proxyIndex] = responseTime;
+    } else {
+      proxyResponseTimes[proxyIndex] = proxyResponseTimes[proxyIndex] * 0.7 + responseTime * 0.3;
+    }
+  } else {
+    proxyFailureCount[proxyIndex]++;
+  }
+}
+
+/**
+ * Attempts to fetch via a specific proxy
+ * @param {string} url - URL to fetch
+ * @param {number} proxyIndex - Proxy index to use
+ * @param {number} startTime - Start time for tracking
+ * @returns {Promise<Response>}
+ */
+async function tryProxy(url, proxyIndex, startTime) {
+  try {
+    const proxyUrl = `${CONFIG.CORS_PROXIES[proxyIndex]}${encodeURIComponent(url)}`;
+    const response = await fetch(proxyUrl, { 
+      signal: AbortSignal.timeout(CONFIG.FETCH_TIMEOUT)
+    });
+    
+    if (response.ok) {
+      const responseTime = performance.now() - startTime;
+      updateProxyStats(proxyIndex, true, responseTime);
+      return response;
+    }
+    
+    updateProxyStats(proxyIndex, false, 0);
+    throw new Error(`HTTP ${response.status}`);
+  } catch (error) {
+    updateProxyStats(proxyIndex, false, 0);
+    throw error;
+  }
+}
+
+/**
+ * Tries backup proxies in parallel (racing)
+ * @param {string} url - URL to fetch
+ * @param {number} excludeIndex - Proxy to exclude (already trying)
+ * @param {number} startTime - Start time for tracking
+ * @returns {Promise<Response>}
+ */
+async function tryBackupProxies(url, excludeIndex, startTime) {
+  const attempts = [];
   
-  throw lastError || new Error('All fetch attempts failed');
+  for (let i = 0; i < CONFIG.CORS_PROXIES.length; i++) {
+    if (i === excludeIndex) continue;
+    attempts.push(tryProxy(url, i, startTime));
+  }
+  
+  // Return first successful response
+  return await Promise.any(attempts);
+}
+
+/**
+ * Tries remaining proxies sequentially as final fallback
+ * @param {string} url - URL to fetch
+ * @param {number} excludeIndex - Proxy already tried
+ * @param {number} startTime - Start time for tracking
+ * @returns {Promise<Response>}
+ */
+async function tryRemainingProxies(url, excludeIndex, startTime) {
+  let lastError;
+  
+  for (let i = 0; i < CONFIG.CORS_PROXIES.length; i++) {
+    if (i === excludeIndex) continue;
+    
+    try {
+      return await tryProxy(url, i, startTime);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  
+  // Reset failure counts if all proxies are struggling
+  if (proxyFailureCount.every(count => count > 2)) {
+    proxyFailureCount = [0, 0, 0];
+  }
+  
+  throw lastError || new Error('All proxy attempts failed');
 }
 
 // ========================================
@@ -788,6 +891,49 @@ function DateChange()
 }
 
 /**
+ * Extracts the comic image URL from the dirkjan.nl HTML page
+ * Uses multiple extraction methods for reliability
+ * @param {string} html - The HTML content from dirkjan.nl
+ * @returns {string|null} The extracted image URL or null if not found
+ */
+function extractComicImageUrl(html) {
+  // Method 1: Regex to find img tag within article.cartoon
+  const articleMatch = html.match(/<article class="cartoon"[^>]*>([\s\S]*?)<\/article>/);
+  if (articleMatch) {
+    const articleContent = articleMatch[1];
+    const imgMatch = articleContent.match(/<img[^>]+src=["']([^"']+)["']/);
+    if (imgMatch && imgMatch[1]) {
+      return imgMatch[1];
+    }
+  }
+  
+  // Method 2: Direct regex for img src in cartoon article
+  const directMatch = html.match(/<article class="cartoon"[^>]*>[\s\S]*?<img[^>]+src=["']([^"']+)["']/);
+  if (directMatch && directMatch[1]) {
+    return directMatch[1];
+  }
+  
+  // Method 3: Look for WordPress media library pattern (common URL structure)
+  const wpMatch = html.match(/https?:\/\/dirkjan\.nl\/wp-content\/uploads\/[^"'\s]+\.(?:jpg|jpeg|png|gif)/i);
+  if (wpMatch) {
+    return wpMatch[0];
+  }
+  
+  // Method 4: Fallback to original substring method (legacy support)
+  const cartoonPos = html.indexOf('<article class="cartoon">');
+  if (cartoonPos !== -1) {
+    const startPos = cartoonPos + 41;
+    const substring = html.substring(startPos, startPos + 200);
+    const endPos = substring.indexOf('"');
+    if (endPos > 0) {
+      return html.substring(startPos, startPos + endPos);
+    }
+  }
+  
+  return null;
+}
+
+/**
  * Fetches and displays the current comic
  * Handles loading states, errors, and updates UI
  */
@@ -826,13 +972,15 @@ function DisplayComic()
 	{
       siteBody = text;
       notFound = siteBody.includes("error404");
-      picturePosition = siteBody.indexOf('<article class="cartoon">');
-      picturePosition = picturePosition+41;
+      
       if (notFound == false)
-      {        // Store pictureUrl in the global variable
-        pictureUrl = siteBody.substring(picturePosition, picturePosition+88);
-        endPosition = pictureUrl.lastIndexOf('"');
-        pictureUrl = siteBody.substring(picturePosition, picturePosition+endPosition);
+      {
+        // Extract image URL using multiple methods for reliability
+        pictureUrl = extractComicImageUrl(siteBody);
+        
+        if (!pictureUrl) {
+          throw new Error('Could not extract comic image URL from page');
+        }
         
         // Create new image to preload and add smooth transition
         const tempImg = new Image();
@@ -2371,22 +2519,22 @@ function preloadComic(date) {
   
   const url = `https://dirkjan.nl/cartoon/${preloadFormattedComicDate}`;
   
-  fetchWithFallback(url)
+  fetchWithFallback(url, false) // Disable racing for background preloading
     .then(response => response.text())
     .then(text => {
       const notFound = text.includes("error404");
       if (!notFound) {
-        let picturePos = text.indexOf('<article class="cartoon">') + 41;
-        let tempPictureUrl = text.substring(picturePos, picturePos + 88);
-        const endPos = tempPictureUrl.lastIndexOf('"');
-        tempPictureUrl = text.substring(picturePos, picturePos + endPos);
+        // Use the improved extraction function
+        const tempPictureUrl = extractComicImageUrl(text);
         
-        // Preload the actual image
-        const img = new Image();
-        img.src = tempPictureUrl;
-        
-        // Cache it
-        preloadedComics.set(preloadFormattedDate, tempPictureUrl);
+        if (tempPictureUrl) {
+          // Preload the actual image
+          const img = new Image();
+          img.src = tempPictureUrl;
+          
+          // Cache it
+          preloadedComics.set(preloadFormattedDate, tempPictureUrl);
+        }
       }
     })
     .catch(() => {
