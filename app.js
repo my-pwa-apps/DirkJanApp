@@ -17,8 +17,8 @@ const CONFIG = Object.freeze({
   CORS_PROXIES: [
     'https://api.codetabs.com/v1/proxy?quest=',
     'https://corsproxy.io/?',
-    'https://api.allorigins.win/raw?url=',
-    'https://cors-anywhere.herokuapp.com/'
+    'https://thingproxy.freeboard.io/fetch/',
+    'https://proxy.cors.sh/'
   ],
   
   // Fetch timeouts
