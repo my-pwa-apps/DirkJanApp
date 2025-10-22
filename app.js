@@ -2202,34 +2202,36 @@ function positionFullscreenToolbar() {
 }
 
 /**
- * Positions the main toolbar centered between logo and main content
+ * Positions the main toolbar centered between logo and comic image
  * @param {HTMLElement} toolbar - The toolbar element to position
  */
 function positionToolbarCentered(toolbar) {
-  const logo = document.querySelector('.logo');
-  const main = document.getElementById('main');
+  if (!toolbar || toolbar.offsetHeight === 0) return;
   
-  if (logo && main && toolbar && toolbar.offsetHeight > 0) {
-    const logoRect = logo.getBoundingClientRect();
-    const mainRect = main.getBoundingClientRect();
-    
-    // Calculate position between logo bottom and main content start
-    const logoBottom = logoRect.bottom + window.scrollY;
-    const mainTop = mainRect.top + window.scrollY;
-    const toolbarHeight = toolbar.offsetHeight;
-    const availableSpace = mainTop - logoBottom;
-    
-    // Center vertically in available space (with minimum 10px gap from logo)
-    const centeredTop = logoBottom + (availableSpace - toolbarHeight) / 2;
-    toolbar.style.top = Math.max(logoBottom + 10, centeredTop) + 'px';
-    
-    // Center horizontally
-    const viewportWidth = window.innerWidth;
-    const toolbarWidth = toolbar.offsetWidth;
-    const centeredLeft = (viewportWidth - toolbarWidth) / 2;
-    toolbar.style.left = centeredLeft + 'px';
-    toolbar.style.transform = 'none';
-  }
+  const logo = document.querySelector('.logo');
+  const comic = document.getElementById('comic');
+  
+  if (!logo || !comic) return;
+  
+  const logoRect = logo.getBoundingClientRect();
+  const comicRect = comic.getBoundingClientRect();
+  
+  // Calculate position between logo bottom and comic top
+  const logoBottom = logoRect.bottom + window.scrollY;
+  const comicTop = comicRect.top + window.scrollY;
+  const toolbarHeight = toolbar.offsetHeight;
+  const availableSpace = comicTop - logoBottom;
+  
+  // Center vertically in available space (with minimum 15px gap from logo)
+  const centeredTop = logoBottom + Math.max(15, (availableSpace - toolbarHeight) / 2);
+  toolbar.style.top = centeredTop + 'px';
+  
+  // Center horizontally
+  const viewportWidth = window.innerWidth;
+  const toolbarWidth = toolbar.offsetWidth;
+  const centeredLeft = (viewportWidth - toolbarWidth) / 2;
+  toolbar.style.left = centeredLeft + 'px';
+  toolbar.style.transform = 'none';
 }
 
 /**
