@@ -1,6 +1,6 @@
 // Service Worker for DirkJan PWA
 // Cache versioning - increment when you need to force cache refresh
-const CACHE_VERSION = 'v29';
+const CACHE_VERSION = 'v30';
 const CACHE_NAME = `dirkjan-cache-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `dirkjan-runtime-${CACHE_VERSION}`;
 const IMAGE_CACHE = `dirkjan-images-${CACHE_VERSION}`;
@@ -58,24 +58,21 @@ self.addEventListener('activate', event => {
 // Fetch event - smart caching strategy
 self.addEventListener('fetch', event => {
   const { request } = event;
+  
+  // Only handle GET requests from same origin or CORS proxies
+  if (request.method !== 'GET') return;
+  
   const url = new URL(request.url);
+  const { destination, url: requestUrl } = request;
 
-  // Only handle GET requests
-  if (request.method !== 'GET') {
-    return;
-  }
-
-  // Strategy: Cache First for app shell (HTML, CSS, JS)
-  if (request.destination === 'document' || 
-      request.destination === 'style' || 
-      request.destination === 'script' ||
-      url.pathname.endsWith('.svg')) {
+  // Strategy: Cache First for app shell (HTML, CSS, JS, SVG)
+  if (['document', 'style', 'script'].includes(destination) || url.pathname.endsWith('.svg')) {
     event.respondWith(cacheFirstStrategy(request, CACHE_NAME));
     return;
   }
 
   // Strategy: Cache First with size limit for images (comics)
-  if (request.destination === 'image') {
+  if (destination === 'image') {
     event.respondWith(cacheFirstWithLimit(request, IMAGE_CACHE, MAX_IMAGE_CACHE_SIZE));
     return;
   }
@@ -116,22 +113,25 @@ async function cacheFirstWithLimit(request, cacheName, maxSize) {
 
   try {
     const networkResponse = await fetch(request);
-    if (networkResponse && networkResponse.status === 200) {
+    if (networkResponse?.status === 200) {
       const cache = await caches.open(cacheName);
       
-      // Manage cache size
+      // Manage cache size - remove oldest entries when limit reached
       const keys = await cache.keys();
-      if (keys.length >= maxSize) {
-        // Remove oldest entries (first in cache)
-        await cache.delete(keys[0]);
+      while (keys.length >= maxSize) {
+        await cache.delete(keys.shift()); // Remove oldest (FIFO)
       }
       
+      // Cache the new response
       cache.put(request, networkResponse.clone());
     }
     return networkResponse;
   } catch (error) {
-    // Return cached version if network fails
-    return cachedResponse || new Response('Image not available offline', { status: 503 });
+    // Silently fail and return error response
+    return new Response('Image not available offline', { 
+      status: 503,
+      statusText: 'Service Unavailable'
+    });
   }
 }
 

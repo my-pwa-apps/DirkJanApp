@@ -208,154 +208,75 @@ input
     user-select: none;
 }
 
-/* Mobile responsive styles for toolbar */
+/* Mobile responsive styles for toolbar - consolidated */
 @media (max-width: 768px) {
     .toolbar {
-        width: calc(100vw - 20px); /* Use almost full width on mobile */
-        padding: 12px 10px; /* Reduce padding on mobile */
-        gap: 6px; /* Smaller gap on mobile */
-        border-radius: 16px; /* Slightly smaller border radius */
-        left: 10px; /* Position from left edge */
-        transform: none; /* Remove centering transform */
+        width: calc(100vw - 20px);
+        padding: 12px 10px;
+        gap: 6px;
+        border-radius: 16px;
+        left: 10px;
+        transform: none;
     }
     
-    .toolbar-button {
-        width: 44px; /* Smaller buttons on mobile */
+    .toolbar-button,
+    .toolbar-datepicker-btn {
+        width: 44px;
         height: 44px;
-        min-width: 44px; /* Ensure minimum size */
+        min-width: 44px;
         border-radius: 12px;
-        /* Fix mobile button state issues */
         -webkit-tap-highlight-color: transparent;
         -webkit-touch-callout: none;
         -webkit-user-select: none;
         user-select: none;
-        /* Ensure buttons reset quickly after press */
-        transition: all 0.15s ease-out;
-    }
-    
-    /* Ensure mobile buttons return to normal state quickly */
-    .toolbar-button:active {
-        transform: translateY(-1px) scale(0.98);
-        transition: transform 0.1s ease;
-    }
-    
-    /* Force reset of button state after touch */
-    .toolbar-button:focus,
-    .toolbar-button:focus-visible {
         outline: none;
-        transform: translateY(-3px) scale(1.05); /* Return to hover state */
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
     
-    /* Ensure no lingering active states */
-    .toolbar-button:not(:active):not(:hover) {
-        transform: none;
-        background-position: left center;
-    }
-    
-    .toolbar-datepicker-btn {
-        width: 44px;
-        height: 44px;
-        border-radius: 12px;
-        -webkit-tap-highlight-color: transparent;
-        transition: all 0.15s ease-out;
-    }
-    
+    .toolbar-button:active,
     .toolbar-datepicker-btn:active {
-        transform: translateY(-1px) scale(0.98);
+        transform: translateY(-1px) scale(1.02);
+        background-position: right center;
+        box-shadow: 0 4px 12px rgba(240, 152, 25, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2), inset 0 2px 4px rgba(0, 0, 0, 0.1);
         transition: transform 0.1s ease;
     }
     
-    .toolbar-datepicker-btn:focus,
+    .toolbar-button:focus-visible,
     .toolbar-datepicker-btn:focus-visible {
         outline: none;
         transform: translateY(-3px) scale(1.05);
-    }
-    
-    .toolbar-datepicker-btn:not(:active):not(:hover) {
-        transform: none;
-        background-position: left center;
     }
     
     .toolbar-svg {
         width: 22px;
         height: 22px;
     }
-}
-
-/* Android-specific button state fixes */
-@media (max-width: 768px) {
-    /* Proper touch handling without breaking visual feedback */
-    .toolbar-button,
-    .toolbar-datepicker-btn {
-        -webkit-tap-highlight-color: rgba(0,0,0,0);
-        -webkit-touch-callout: none;
-        -webkit-user-select: none;
-        user-select: none;
-        outline: none;
-        /* Keep normal transition speed for visual feedback */
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
     
-    /* Allow proper active state with quick reset */
-    .toolbar-button:active,
-    .toolbar-datepicker-btn:active {
-        transform: translateY(-1px) scale(1.02);
-        background-position: right center;
-        box-shadow: 
-            0 4px 12px rgba(240, 152, 25, 0.3),
-            0 2px 4px rgba(0, 0, 0, 0.2),
-            inset 0 2px 4px rgba(0, 0, 0, 0.1);
-        transition: transform 0.1s ease;
-    }
-    
-    /* Reset hover effects on pure touch devices */
+    /* Touch device specific - reset hover on pure touch */
     @media (hover: none) and (pointer: coarse) {
         .toolbar-button:hover,
         .toolbar-datepicker-btn:hover {
             transform: none;
             background-position: left center;
-            box-shadow: 
-                0 4px 16px rgba(240, 152, 25, 0.3),
-                0 2px 4px rgba(0, 0, 0, 0.2),
-                inset 0 1px 0 rgba(255, 255, 255, 0.3);
-        }
-    }
-    
-    /* Allow proper hover on devices that support it */
-    @media (hover: hover) {
-        .toolbar-button:hover,
-        .toolbar-datepicker-btn:hover {
-            transform: translateY(-3px) scale(1.05);
-            background-position: right center;
-            box-shadow: 
-                0 8px 24px rgba(240, 152, 25, 0.4),
-                0 4px 8px rgba(0, 0, 0, 0.3),
-                inset 0 1px 0 rgba(255, 255, 255, 0.4);
         }
     }
 }
 
+/* Extra small mobile devices */
 @media (max-width: 480px) {
     .toolbar {
-        width: calc(100vw - 16px); /* Even more width on small screens */
+        width: calc(100vw - 16px);
         padding: 10px 8px;
-        gap: 4px; /* Minimal gap on very small screens */
+        gap: 4px;
         left: 8px;
     }
     
-    .toolbar-button {
-        width: 40px; /* Even smaller buttons on very small screens */
-        height: 40px;
-        min-width: 40px;
-        border-radius: 10px;
-        transition: all 0.15s ease-out;
-    }
-    
+    .toolbar-button,
     .toolbar-datepicker-btn {
         width: 40px;
         height: 40px;
+        min-width: 40px;
         border-radius: 10px;
-        transition: all 0.15s ease-out;
     }
     
     .toolbar-svg {
@@ -578,66 +499,7 @@ input[type="date"]:focus-visible {
   fill: #333;
 }
 
-/* Responsive for mobile/tablet */
-@media (max-width: 768px) {
-  .toolbar {
-    width: calc(100vw - 20px); /* Use more of the screen width on mobile */
-    padding: 12px 16px; /* Reduce padding to allow more space for buttons */
-    gap: 8px; /* Add gap between buttons */
-  }
-  
-  .toolbar-button, .toolbar-datepicker-btn {
-    width: 44px;
-    height: 44px;
-    border-radius: 12px;
-  }
-  
-  .toolbar-svg {
-    width: 22px;
-    height: 22px;
-  }
-  
-  .toolbar-datepicker-wrapper, .toolbar-datepicker {
-    width: 44px;
-    height: 44px;
-    border-radius: 12px;
-  }
-  .datepicker-svg svg {
-    width: 20px;
-    height: 20px;
-  }
-}
-
-@media (max-width: 480px) {
-  .toolbar {
-    width: calc(100vw - 16px); /* Use almost full width on small screens */
-    padding: 10px 12px; /* Further reduce padding */
-    gap: 6px; /* Smaller gap for very small screens */
-    justify-content: space-evenly; /* Distribute buttons evenly */
-  }
-  
-  .toolbar-button, .toolbar-datepicker-btn {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-    flex-shrink: 1; /* Allow buttons to shrink if needed */
-  }
-  
-  .toolbar-svg {
-    width: 20px;
-    height: 20px;
-  }
-  
-  .toolbar-datepicker-wrapper, .toolbar-datepicker {
-    width: 40px;
-    height: 40px;
-    border-radius: 10px;
-  }
-  .datepicker-svg svg {
-    width: 18px;
-    height: 18px;
-  }
-}
+/* Duplicate media queries removed - see consolidated versions above */
 
 /* Hide old button grid */
 .buttongrid {
@@ -1240,57 +1102,7 @@ input[type="date"]#DatePicker:disabled {
     }
 }
 
-/* Mobile-specific button state improvements */
-@media (max-width: 768px) {
-  /* Ensure buttons reset properly on mobile */
-  .toolbar-button:active {
-    transform: translateY(-1px) scale(1.02) !important;
-    transition: all 0.1s ease !important;
-  }
-  
-  /* Prevent sticky hover states on mobile */
-  .toolbar-button:hover {
-    transform: translateY(-2px) scale(1.03);
-  }
-  
-  /* Reset focus styles for mobile */
-  .toolbar-button:focus {
-    outline: none;
-  }
-  
-  .toolbar-button:focus-visible {
-    outline: 2px solid rgba(240, 152, 25, 0.6);
-    outline-offset: 2px;
-  }
-}
-
-/* Touch device specific improvements */
-@media (pointer: coarse) {
-  .toolbar-button {
-    /* Slightly faster transitions for touch */
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  
-  .toolbar-button:active {
-    /* More pronounced press effect for touch feedback */
-    transform: translateY(0px) scale(0.98);
-    transition: all 0.1s ease;
-  }
-  
-  /* Prevent hover effects on touch devices */
-  .toolbar-button:hover {
-    transform: none;
-    background-position: left center;
-    box-shadow: 
-      0 4px 16px rgba(240, 152, 25, 0.3),
-      0 2px 4px rgba(0, 0, 0, 0.2),
-      inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  }
-  
-  .toolbar-button:hover::before {
-    left: -100%;
-  }
-}
+/* Duplicate mobile button styles removed - see consolidated toolbar mobile styles */
 
 /* ========================================
    LOADING SPINNER & TRANSITIONS

@@ -237,27 +237,36 @@ function updateProxyStats(proxyIndex, success, responseTime) {
  * @returns {Promise<Response>}
  */
 async function tryProxy(url, proxyIndex, startTime) {
-  const proxyName = CONFIG.CORS_PROXIES[proxyIndex].split('/')[2]; // Extract domain for logging
+  const proxyUrl = CONFIG.CORS_PROXIES[proxyIndex];
+  const proxyName = proxyUrl.split('/')[2]; // Extract domain for logging
+  
   try {
-    const proxyUrl = `${CONFIG.CORS_PROXIES[proxyIndex]}${encodeURIComponent(url)}`;
-    const response = await fetch(proxyUrl, { 
+    const fullUrl = `${proxyUrl}${encodeURIComponent(url)}`;
+    const response = await fetch(fullUrl, { 
       signal: AbortSignal.timeout(CONFIG.FETCH_TIMEOUT),
       mode: 'cors',
-      credentials: 'omit'
+      credentials: 'omit',
+      cache: 'no-cache' // Prevent stale cached errors
     });
     
-    if (response.ok) {
-      const responseTime = performance.now() - startTime;
-      updateProxyStats(proxyIndex, true, responseTime);
-      console.log(`✓ Proxy ${proxyIndex} (${proxyName}) succeeded in ${responseTime.toFixed(0)}ms`);
-      return response;
+    if (!response.ok) {
+      const errorMsg = `HTTP ${response.status}`;
+      console.warn(`✗ Proxy ${proxyIndex} (${proxyName}) ${errorMsg}`);
+      updateProxyStats(proxyIndex, false, 0);
+      throw new Error(errorMsg);
     }
     
-    console.warn(`✗ Proxy ${proxyIndex} (${proxyName}) returned ${response.status}`);
-    updateProxyStats(proxyIndex, false, 0);
-    throw new Error(`HTTP ${response.status}`);
+    // Success
+    const responseTime = performance.now() - startTime;
+    updateProxyStats(proxyIndex, true, responseTime);
+    console.log(`✓ Proxy ${proxyIndex} (${proxyName}) in ${responseTime.toFixed(0)}ms`);
+    return response;
+    
   } catch (error) {
-    console.warn(`✗ Proxy ${proxyIndex} (${proxyName}) failed:`, error.message);
+    const errorType = error.name === 'TimeoutError' ? 'timeout' : 
+                      error.name === 'AbortError' ? 'aborted' : 
+                      error.message;
+    console.warn(`✗ Proxy ${proxyIndex} (${proxyName}):`, errorType);
     updateProxyStats(proxyIndex, false, 0);
     throw error;
   }
@@ -290,7 +299,7 @@ async function tryBackupProxies(url, excludeIndex, startTime) {
  * @returns {Promise<Response>}
  */
 async function tryRemainingProxies(url, excludeIndex, startTime) {
-  let lastError;
+  const errors = [];
   
   for (let i = 0; i < CONFIG.CORS_PROXIES.length; i++) {
     if (i === excludeIndex) continue;
@@ -298,16 +307,18 @@ async function tryRemainingProxies(url, excludeIndex, startTime) {
     try {
       return await tryProxy(url, i, startTime);
     } catch (error) {
-      lastError = error;
+      errors.push(`Proxy ${i}: ${error.message}`);
     }
   }
   
   // Reset failure counts if all proxies are struggling
   if (proxyFailureCount.every(count => count > 2)) {
-    proxyFailureCount = [0, 0, 0];
+    console.log('Resetting proxy failure counts');
+    proxyFailureCount.fill(0);
   }
   
-  throw lastError || new Error('All proxy attempts failed');
+  console.error('All proxies failed:', errors.join('; '));
+  throw new Error(`All proxies failed: ${errors.join(', ')}`);
 }
 
 // ========================================
@@ -410,7 +421,7 @@ function saveFavs(arr) {
 function invalidateFavsCache() { _cachedFavs = null; }
 
 // ========================================
-// TOOLBAR POSITIONING
+// TOOLBAR POSITIONING & DRAGGING
 // ========================================
 
 /**
@@ -439,6 +450,115 @@ function clampMainToolbarInView() {
     toolbar.style.top = top + 'px';
     try { localStorage.setItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS, JSON.stringify({ top, left })); } catch(_) {}
   }
+}
+
+/**
+ * Generic draggable element maker - eliminates duplicate drag code
+ * @param {HTMLElement} element - Element to make draggable
+ * @param {HTMLElement} dragHandle - Element that triggers dragging (usually header)
+ * @param {string} storageKey - localStorage key for saving position
+ * @param {Function} onDragStart - Optional callback when drag starts
+ * @param {Function} onDragEnd - Optional callback when drag ends
+ */
+function makeDraggable(element, dragHandle, storageKey, onDragStart = null, onDragEnd = null) {
+  if (!element || !dragHandle) return;
+  
+  let isDragging = false;
+  let offsetX, offsetY;
+  let elementStartX, elementStartY;
+  
+  function onDown(e) {
+    // For mouse events, only drag with the left button
+    if (e.type === 'mousedown' && e.button !== 0) return;
+    
+    // Prevent dragging when interacting with buttons or inputs
+    if (e.target.closest('button, input')) return;
+    
+    // Check if target is the handle or within it
+    if (!(e.target === dragHandle || dragHandle.contains(e.target))) return;
+    
+    isDragging = true;
+    element.style.cursor = 'grabbing';
+    element.style.transition = 'none';
+    
+    const event = e.touches ? e.touches[0] : e;
+    const rect = element.getBoundingClientRect();
+    
+    // Get current position
+    elementStartX = parseFloat(element.style.left) || rect.left + window.scrollX;
+    elementStartY = parseFloat(element.style.top) || rect.top + window.scrollY;
+    
+    // Calculate offset from touch/click point to element's top-left
+    offsetX = event.clientX + window.scrollX - elementStartX;
+    offsetY = event.clientY + window.scrollY - elementStartY;
+    
+    // Callback for custom start behavior
+    if (onDragStart) onDragStart(element);
+    
+    document.addEventListener('mousemove', onMove, { passive: false });
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('mouseup', onUp);
+    document.addEventListener('touchend', onUp);
+    
+    e.preventDefault();
+  }
+  
+  function onMove(e) {
+    if (!isDragging) return;
+    e.preventDefault();
+    
+    const event = e.touches ? e.touches[0] : e;
+    
+    // Calculate new position
+    let newLeft = event.clientX - offsetX + window.scrollX;
+    let newTop = event.clientY - offsetY + window.scrollY;
+    
+    // Get element dimensions for boundary checking
+    const width = element.offsetWidth;
+    const height = element.offsetHeight;
+    
+    // Constrain within document bounds
+    const docWidth = Math.max(document.documentElement.scrollWidth, window.innerWidth);
+    const docHeight = Math.max(document.documentElement.scrollHeight, window.innerHeight);
+    
+    newLeft = Math.max(0, Math.min(newLeft, docWidth - width));
+    newTop = Math.max(0, Math.min(newTop, docHeight - height));
+    
+    // Apply position
+    element.style.left = `${newLeft}px`;
+    element.style.top = `${newTop}px`;
+    element.style.transform = 'none';
+  }
+  
+  function onUp() {
+    if (!isDragging) return;
+    
+    isDragging = false;
+    element.style.cursor = dragHandle === element ? 'grab' : '';
+    
+    // Save position
+    const numericTop = parseFloat(element.style.top) || 0;
+    const numericLeft = parseFloat(element.style.left) || 0;
+    try {
+      localStorage.setItem(storageKey, JSON.stringify({ top: numericTop, left: numericLeft }));
+    } catch(_) {}
+    
+    // Callback for custom end behavior
+    if (onDragEnd) onDragEnd(element);
+    
+    // Re-enable transitions
+    setTimeout(() => { element.style.transition = ''; }, 50);
+    
+    // Remove listeners
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('touchmove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    document.removeEventListener('touchend', onUp);
+  }
+  
+  // Attach initial listeners
+  dragHandle.addEventListener('mousedown', onDown);
+  dragHandle.addEventListener('touchstart', onDown, { passive: false });
 }
 
 // ========================================
@@ -1066,103 +1186,77 @@ function DisplayComic()
 }
 
 /**
- * Sets a button's disabled state (both main and rotated versions)
- * @param {string} id - Button ID
- * @param {boolean} disabled - Whether button should be disabled
+ * Sets button disabled states (both main and rotated versions)
+ * @param {Object} states - Object mapping button IDs to disabled state booleans
+ * Example: {'Next': false, 'Previous': true, 'Current': true}
  */
-function setButtonDisabled(id, disabled) {
-  const mainButton = document.getElementById(id);
-  if (mainButton) {
-    mainButton.disabled = disabled;
-  }
-  
-  const rotatedButton = document.getElementById(`rotated-${id}`);
-  if (rotatedButton) {
-    rotatedButton.disabled = disabled;
+function setButtonStates(states) {
+  for (const [id, disabled] of Object.entries(states)) {
+    const mainButton = document.getElementById(id);
+    if (mainButton) mainButton.disabled = disabled;
+    
+    const rotatedButton = document.getElementById(`rotated-${id}`);
+    if (rotatedButton) rotatedButton.disabled = disabled;
   }
 }
 
 /**
  * Compares current date with comic date range
- * Updates navigation button states accordingly
+ * Updates navigation button states and date pickers accordingly
  */
- function CompareDates() {
+function CompareDates() {
   const favs = loadFavs();
-  const rotatedDatePicker = document.getElementById('rotated-DatePicker');
   const showFavsChecked = document.getElementById("showfavs").checked;
+  const today = new Date().setHours(0, 0, 0, 0);
   
-  if (showFavsChecked) {
-    document.getElementById("DatePicker").disabled = true;
-    if (rotatedDatePicker) rotatedDatePicker.disabled = true;
-    startDate = new Date(favs[0]);
-  } else {	
-		document.getElementById("DatePicker").disabled = false;
-		if (rotatedDatePicker) rotatedDatePicker.disabled = false;
-		startDate = new Date(comicstartDate);
-	}
-	startDate = startDate.setHours(0, 0, 0, 0);
-	currentselectedDate = currentselectedDate.setHours(0, 0, 0, 0);
-	startDate = new Date(startDate);
-	currentselectedDate = new Date(currentselectedDate);
-	if(currentselectedDate.getTime() <= startDate.getTime()) {
-		setButtonDisabled("Previous", true);
-		setButtonDisabled("First", true);
-		formatDate(startDate);
-		startDate = year + '-' + month + '-' + day;
-		currentselectedDate = new Date(Date.UTC(year, month-1, day,12));
-	} else {
-		setButtonDisabled("Previous", false);
-		setButtonDisabled("First", false);
-	}
-	if(document.getElementById("showfavs").checked) {
-		endDate = new Date(favs[favs.length - 1]);
-	}
-	else{ 
-		endDate = new Date(maxDate);
-	}
-	endate = endDate.setHours(0,0,0,0);
-  endDate = new Date(endDate);
-
-  if(currentselectedDate.getTime() >= endDate.getTime()) {
-		setButtonDisabled("Next", true);
-		formatDate(endDate);
-		endDate = year + '-' + month + '-' + day;
-		currentselectedDate = new Date(Date.UTC(year, month-1, day,12));
-	} else {
-		setButtonDisabled("Next", false);
-		setButtonDisabled("Current", false);
-	}
-
-  if((currentselectedDate.getTime() === new Date().setHours(0, 0, 0, 0)) && document.getElementById('showfavs').checked == false)
-  {
-    setButtonDisabled("Current", true);
-  }
-  else
-  {
-    setButtonDisabled("Current", false);
-  }
-
-  if (showfavs.checked) {
-    const lastFavDate = new Date(favs[favs.length - 1]).setHours(0, 0, 0, 0);
-    const today = new Date().setHours(0, 0, 0, 0);
-    if (currentselectedDate.getTime() === lastFavDate && lastFavDate === today) {
-      setButtonDisabled("Current", true);
+  // Normalize dates for comparison
+  const normalizeDate = (date) => new Date(date).setHours(0, 0, 0, 0);
+  const currentTime = normalizeDate(currentselectedDate);
+  
+  // Handle date picker state
+  const datePickers = ['DatePicker', 'rotated-DatePicker'];
+  datePickers.forEach(id => {
+    const picker = document.getElementById(id);
+    if (picker) picker.disabled = showFavsChecked;
+  });
+  
+  // Determine start and end dates based on mode
+  const startDate = showFavsChecked && favs.length > 0 
+    ? normalizeDate(favs[0]) 
+    : normalizeDate(comicstartDate);
+    
+  const endDate = showFavsChecked && favs.length > 0
+    ? normalizeDate(favs[favs.length - 1])
+    : normalizeDate(maxDate);
+  
+  // Calculate button states
+  const buttonStates = {
+    First: currentTime <= startDate,
+    Previous: currentTime <= startDate,
+    Next: currentTime >= endDate,
+    Current: currentTime === today && !showFavsChecked,
+    Random: showFavsChecked && favs.length <= 1
+  };
+  
+  // Special case: In favorites mode, if we're at the last favorite and it's today
+  if (showFavsChecked && favs.length > 0) {
+    const lastFavDate = normalizeDate(favs[favs.length - 1]);
+    if (currentTime === lastFavDate && lastFavDate === today) {
+      buttonStates.Current = true;
     }
   }
-	if(document.getElementById("showfavs").checked) {
-		//document.getElementById("Current").disabled = true;
-		if(favs.length == 1) {
-			setButtonDisabled("Random", true);
-			setButtonDisabled("Previous", true);
-			setButtonDisabled("First", true);
-		} else {
-			setButtonDisabled("Random", false);
-			setButtonDisabled("Previous", false);
-			setButtonDisabled("First", false);
-		}
-	} else {
-		setButtonDisabled("Random", false);
-	}
+  
+  // Apply all button states at once
+  setButtonStates(buttonStates);
+  
+  // Adjust current date if out of bounds
+  if (currentTime < startDate) {
+    formatDate(new Date(startDate));
+    currentselectedDate = new Date(Date.UTC(year, month - 1, day, 12));
+  } else if (currentTime > endDate) {
+    formatDate(new Date(endDate));
+    currentselectedDate = new Date(Date.UTC(year, month - 1, day, 12));
+  }
 }
 
  /**
@@ -1532,97 +1626,63 @@ window.addEventListener('orientationchange', function() {
   }, 300);
 });
 
-// Add event delegation for any fullscreen toolbar that might be created
-document.body.addEventListener('touchstart', function(e) {
-  if (e.target.closest('#fullscreen-toolbar')) {
-    // If touch starts on toolbar or its children, don't initiate swipe
-    e.stopPropagation();
-  }
-}, { capture: true });
+// Unified touch event handling for toolbar and buttons
+(function() {
+  const isAndroid = /Android/i.test(navigator.userAgent);
+  
+  // Handle fullscreen toolbar touch events - prevent swipe propagation
+  document.body.addEventListener('touchstart', function(e) {
+    if (e.target.closest('#fullscreen-toolbar')) {
+      e.stopPropagation();
+    }
+  }, { capture: true });
   
   document.body.addEventListener('touchmove', function(e) {
     if (e.target.closest('#fullscreen-toolbar')) {
-      // If touch moves on toolbar or its children, don't trigger swipe
       e.stopPropagation();
     }
   }, { capture: true });
   
+  // Unified touchend handler for all toolbar buttons
   document.body.addEventListener('touchend', function(e) {
+    // Stop swipe on fullscreen toolbar
     if (e.target.closest('#fullscreen-toolbar')) {
-      // If touch ends on toolbar or its children, don't trigger swipe
       e.stopPropagation();
     }
     
-    // Fix mobile button state issues - force reset of button states
-    if (e.target.closest('.toolbar-button, .toolbar-datepicker-btn')) {
+    // Handle button state reset
+    const button = e.target.closest('.toolbar-button, .toolbar-datepicker-btn');
+    if (button) {
+      const delay = isAndroid ? 200 : 150;
       setTimeout(() => {
-        e.target.closest('.toolbar-button, .toolbar-datepicker-btn').blur();
-      }, 100);
+        if (!button.matches(':active')) {
+          button.blur();
+          button.style.transform = '';
+          button.style.backgroundPosition = '';
+        }
+      }, delay);
     }
   }, { capture: true });
   
-  // Fix mobile button state for main toolbar buttons
-  document.addEventListener('touchend', function(e) {
-    if (e.target.closest('.toolbar:not(.fullscreen-toolbar) .toolbar-button, .toolbar:not(.fullscreen-toolbar) .toolbar-datepicker-btn')) {
+  // Android-specific focus management
+  if (isAndroid) {
+    document.addEventListener('focusin', function(e) {
       const button = e.target.closest('.toolbar-button, .toolbar-datepicker-btn');
       if (button) {
-        const isAndroid = /Android/i.test(navigator.userAgent);
-        
-        if (isAndroid) {
-          // Android-specific: gentler reset that preserves visual feedback
-          setTimeout(() => {
-            button.blur();
-            // Only reset if button is not being interacted with
-            if (!button.matches(':active')) {
-              button.style.transform = '';
-              button.style.backgroundPosition = '';
-            }
-          }, 200);
-          
-          // Final cleanup
-          setTimeout(() => {
-            if (!button.matches(':active:hover')) {
-              button.blur();
-              button.style.transform = '';
-              button.style.backgroundPosition = '';
-            }
-          }, 500);
-        } else {
-          // Standard handling for other devices
-          setTimeout(() => {
-            button.blur();
-            button.style.transform = '';
-            button.style.backgroundPosition = '';
-          }, 150);
-        }
-      }
-    }
-  });
-  
-  // Lighter Android-specific event handling
-  if (/Android/i.test(navigator.userAgent)) {
-    // Handle focus issues without breaking interaction feedback
-    document.addEventListener('focusin', function(e) {
-      if (e.target.closest('.toolbar-button, .toolbar-datepicker-btn')) {
-        // Only blur after a delay to allow visual feedback
         setTimeout(() => {
-          if (!e.target.matches(':active')) {
-            e.target.blur();
-          }
+          if (!button.matches(':active')) button.blur();
         }, 300);
       }
     });
     
-    // Clean up any lingering focus when touching elsewhere
     document.addEventListener('touchstart', function(e) {
       if (!e.target.closest('.toolbar-button, .toolbar-datepicker-btn')) {
-        const focusedButton = document.querySelector('.toolbar-button:focus, .toolbar-datepicker-btn:focus');
-        if (focusedButton) {
-          focusedButton.blur();
-        }
+        const focused = document.querySelector('.toolbar-button:focus, .toolbar-datepicker-btn:focus');
+        if (focused) focused.blur();
       }
     }, { passive: true });
   }
+})();
 
 // Initialize toolbar dragging and mobile button states when DOM is ready
 if (document.readyState === 'loading') {
@@ -1955,110 +2015,16 @@ function initializeDraggableSettings() {
     });
   }
   
-  // Dragging state variables
-  let isDragging = false;
-  let dragStartX = 0;
-  let dragStartY = 0;
-  let panelStartX = 0;
-  let panelStartY = 0;
-  
-  // Mouse events
-  header.addEventListener('mousedown', dragStart);
-  document.addEventListener('mousemove', drag);
-  document.addEventListener('mouseup', dragEnd);
-  
-  // Touch events
-  header.addEventListener('touchstart', dragStart, { passive: false });
-  document.addEventListener('touchmove', drag, { passive: false });
-  document.addEventListener('touchend', dragEnd);
-  
-  function dragStart(e) {
-    // Don't drag if clicking the close button
-    if (e.target.closest('.settings-close')) return;
-    
-    if (!(e.target === header || header.contains(e.target))) return;
-    
-    isDragging = true;
-    panel.style.transition = 'none';
-    
-    // Get current panel position using getBoundingClientRect for accuracy
-    const rect = panel.getBoundingClientRect();
-    panelStartX = rect.left;
-    panelStartY = rect.top;
-    
-    // Remove the transform to prevent resize issues during drag
-    panel.style.transform = 'none';
-    
-    // Get touch/mouse starting position
-    if (e.type === "touchstart") {
-      dragStartX = e.touches[0].clientX;
-      dragStartY = e.touches[0].clientY;
-    } else {
-      dragStartX = e.clientX;
-      dragStartY = e.clientY;
-    }
-    
-    e.preventDefault(); // Prevent text selection
-  }
-  
-  function drag(e) {
-    if (!isDragging) return;
-    
-    e.preventDefault();
-    
-    let currentX, currentY;
-    
-    if (e.type === "touchmove") {
-      currentX = e.touches[0].clientX;
-      currentY = e.touches[0].clientY;
-    } else {
-      currentX = e.clientX;
-      currentY = e.clientY;
-    }
-    
-    // Calculate how far we've moved from start
-    const deltaX = currentX - dragStartX;
-    const deltaY = currentY - dragStartY;
-    
-    // Calculate new panel position
-    const newLeft = panelStartX + deltaX;
-    const newTop = panelStartY + deltaY;
-    
-    // Constrain within viewport bounds
-    const panelWidth = panel.offsetWidth;
-    const panelHeight = panel.offsetHeight;
-    const maxLeft = window.innerWidth - panelWidth;
-    const maxTop = window.innerHeight - panelHeight;
-    
-    const constrainedLeft = Math.max(0, Math.min(newLeft, maxLeft));
-    const constrainedTop = Math.max(0, Math.min(newTop, maxTop));
-    
-    // Update position without transform
-    panel.style.left = `${constrainedLeft}px`;
-    panel.style.top = `${constrainedTop}px`;
-    panel.style.transform = 'none';
-  }
-  
-  function dragEnd(e) {
-    if (isDragging) {
-      isDragging = false;
-      
-      // Save the current position
-      const currentLeft = parseFloat(panel.style.left) || 0;
-      const currentTop = parseFloat(panel.style.top) || 0;
-      try {
-        localStorage.setItem(CONFIG.STORAGE_KEYS.SETTINGS_POS, JSON.stringify({ 
-          top: currentTop, 
-          left: currentLeft 
-        }));
-      } catch(_) {}
-      
-      // Re-enable transitions for other animations
-      setTimeout(() => {
-        panel.style.transition = '';
-      }, 50);
-    }
-  }
+  // Use shared draggable utility
+  makeDraggable(
+    panel, 
+    header, 
+    CONFIG.STORAGE_KEYS.SETTINGS_POS,
+    // onDragStart: Disable animation
+    (el) => { el.style.animation = 'none'; },
+    // onDragEnd: Re-enable animation
+    (el) => { requestAnimationFrame(() => { el.style.animation = ''; }); }
+  );
 }
 
 // Initialize draggable when DOM is loaded
@@ -2266,117 +2232,46 @@ function positionToolbarCentered(toolbar) {
   }
 }
 
-// Make the main toolbar draggable
+/**
+ * Makes the main toolbar draggable
+ * @param {HTMLElement} toolbar - The toolbar element to make draggable
+ */
 function makeMainToolbarDraggable(toolbar) {
-  if (!toolbar) {
-    return;
-  }
-
-  let isDragging = false;
-  let offsetX, offsetY;
+  if (!toolbar) return;
 
   // Restore saved absolute position on load (document coordinates)
   const savedPosRaw = localStorage.getItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS) || localStorage.getItem('mainToolbarPosition');
-  const savedPos = safeJSONParse(savedPosRaw, null);
+  const savedPos = UTILS.safeJSONParse(savedPosRaw, null);
   if (savedPos && typeof savedPos.top === 'number' && typeof savedPos.left === 'number') {
     toolbar.style.top = savedPos.top + 'px';
     toolbar.style.left = savedPos.left + 'px';
     toolbar.style.transform = 'none';
+    
+    // Migrate old storage key
     if (!localStorage.getItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS)) {
-      try { localStorage.setItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS, JSON.stringify(savedPos)); localStorage.removeItem('mainToolbarPosition'); } catch(_) {}
+      try { 
+        localStorage.setItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS, JSON.stringify(savedPos)); 
+        localStorage.removeItem('mainToolbarPosition'); 
+      } catch(_) {}
     }
   }
 
-  const onDown = (e) => {
-    // For mouse events, only drag with the left button
-    if (e.type === 'mousedown' && e.button !== 0) {
-      return;
+  // Use shared draggable utility - toolbar itself is both element and drag handle
+  makeDraggable(
+    toolbar,
+    toolbar, // Entire toolbar is draggable
+    CONFIG.STORAGE_KEYS.TOOLBAR_POS,
+    // onDragStart: Set cursor
+    (el) => { el.style.cursor = 'grabbing'; },
+    // onDragEnd: Restore cursor and clamp position
+    (el) => { 
+      el.style.cursor = 'grab'; 
+      clampMainToolbarInView(); 
     }
-    
-    // Prevent dragging when interacting with buttons or inputs
-    if (e.target.closest('button, input')) {
-      return;
-    }
-
-    isDragging = true;
-    toolbar.style.cursor = 'grabbing';
-    toolbar.style.transition = 'none'; // No transition during drag
-
-    const event = e.touches ? e.touches[0] : e;
-    
-    // Calculate offset from touch/click point to toolbar's top-left corner in document coordinates
-    // We need the toolbar's absolute position (document coordinates)
-    const toolbarLeft = parseFloat(toolbar.style.left) || 0;
-    const toolbarTop = parseFloat(toolbar.style.top) || 0;
-    
-    // Calculate offset: distance from touch point to toolbar's top-left in document space
-    offsetX = event.clientX + window.scrollX - toolbarLeft;
-    offsetY = event.clientY + window.scrollY - toolbarTop;
-
-    // Add move and up listeners
-    document.addEventListener('mousemove', onMove, { passive: false });
-    document.addEventListener('touchmove', onMove, { passive: false });
-    document.addEventListener('mouseup', onUp);
-    document.addEventListener('touchend', onUp);
-
-    // Prevent default actions like text selection or page scrolling
-    e.preventDefault();
-  };
-
-  const onMove = (e) => {
-    if (!isDragging) return;
-    e.preventDefault(); // Prevent scrolling while dragging
-
-    const event = e.touches ? e.touches[0] : e;
-
-    // Calculate where the toolbar's top-left should be
-    // This keeps the toolbar under the cursor/finger exactly where grabbed
-    let newLeft = event.clientX - offsetX + window.scrollX;
-    let newTop = event.clientY - offsetY + window.scrollY;
-
-    // Get fresh dimensions for bounds checking
-    const toolbarWidth = toolbar.offsetWidth;
-    const toolbarHeight = toolbar.offsetHeight;
-
-    // Constrain within document bounds
-    const docWidth = Math.max(document.documentElement.scrollWidth, window.innerWidth);
-    const docHeight = Math.max(document.documentElement.scrollHeight, window.innerHeight);
-
-    const minLeft = 0;
-    const maxLeft = docWidth - toolbarWidth;
-    const minTop = 0;
-    const maxTop = docHeight - toolbarHeight;
-
-    newLeft = Math.max(minLeft, Math.min(newLeft, maxLeft));
-    newTop = Math.max(minTop, Math.min(newTop, maxTop));
-
-    // Apply position (absolute positioning relative to document)
-    toolbar.style.left = `${newLeft}px`;
-    toolbar.style.top = `${newTop}px`;
-    toolbar.style.transform = 'none'; // Remove any transform
-  };
-
-  const onUp = () => {
-    if (isDragging) {
-      isDragging = false;
-      toolbar.style.cursor = 'grab';
-      toolbar.style.transition = '';
-      const numericTop = parseFloat(toolbar.style.top) || 0;
-      const numericLeft = parseFloat(toolbar.style.left) || 0;
-      try { localStorage.setItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS, JSON.stringify({ top: numericTop, left: numericLeft })); } catch(_) {}
-      clampMainToolbarInView();
-    }
-
-    // Remove listeners
-    document.removeEventListener('mousemove', onMove);
-    document.removeEventListener('touchmove', onMove);
-    document.removeEventListener('mouseup', onUp);
-    document.removeEventListener('touchend', onUp);
-  };
-
-  // Attach initial listeners
-  toolbar.addEventListener('mousedown', onDown);
-  toolbar.addEventListener('touchstart', onDown, { passive: false });
+  );
+  
+  // Set initial cursor
+  toolbar.style.cursor = 'grab';
 }
 
 // ========================================
@@ -2475,48 +2370,41 @@ function preloadAdjacentComics() {
   }
 }
 
+/**
+ * Preloads a comic in the background
+ * @param {Date} date - Date of the comic to preload
+ */
 function preloadComic(date) {
-  // Save current global state to restore after preloading
-  const savedYear = year;
-  const savedMonth = month;
-  const savedDay = day;
+  // Format date locally without affecting global state
+  const d = date.getDate();
+  const m = date.getMonth() + 1;
+  const y = date.getFullYear();
+  const formattedMonth = ("0" + m).slice(-2);
+  const formattedDay = ("0" + d).slice(-2);
   
-  formatDate(date);
-  const preloadFormattedDate = year + "-" + month + "-" + day;
-  const preloadFormattedComicDate = year + month + day;
-  
-  // Restore global state
-  year = savedYear;
-  month = savedMonth;
-  day = savedDay;
+  const preloadFormattedDate = `${y}-${formattedMonth}-${formattedDay}`;
+  const preloadFormattedComicDate = `${y}${formattedMonth}${formattedDay}`;
   
   // Don't preload if already cached
-  if (preloadedComics.has(preloadFormattedDate)) {
-    return;
-  }
+  if (preloadedComics.has(preloadFormattedDate)) return;
   
   const url = `https://dirkjan.nl/cartoon/${preloadFormattedComicDate}`;
   
   fetchWithFallback(url, false) // Disable racing for background preloading
     .then(response => response.text())
     .then(text => {
-      const notFound = text.includes("error404");
-      if (!notFound) {
-        // Use the improved extraction function
-        const tempPictureUrl = extractComicImageUrl(text);
-        
-        if (tempPictureUrl) {
-          // Preload the actual image
-          const img = new Image();
-          img.src = tempPictureUrl;
-          
-          // Cache it
-          preloadedComics.set(preloadFormattedDate, tempPictureUrl);
-        }
-      }
+      if (text.includes("error404")) return;
+      
+      const imageUrl = extractComicImageUrl(text);
+      if (!imageUrl) return;
+      
+      // Preload the actual image
+      const img = new Image();
+      img.onload = () => preloadedComics.set(preloadFormattedDate, imageUrl);
+      img.src = imageUrl;
     })
     .catch(() => {
-      // Silently fail for preloading
+      // Silently fail for background preloading
     });
 }
 
