@@ -15,15 +15,16 @@ const CONFIG = Object.freeze({
   
   // CORS Proxies (in priority order)
   CORS_PROXIES: [
-    'https://corsproxy.garfieldapp.workers.dev/cors-proxy?',
+    'https://api.codetabs.com/v1/proxy?quest=',
     'https://corsproxy.io/?',
-    'https://api.allorigins.win/raw?url='
+    'https://api.allorigins.win/raw?url=',
+    'https://cors-anywhere.herokuapp.com/'
   ],
   
   // Fetch timeouts
-  FETCH_TIMEOUT: 8000,                 // 8 second timeout for HTML
-  FETCH_TIMEOUT_FAST: 4000,            // 4 second fast attempt timeout
-  IMAGE_FETCH_TIMEOUT: 6000,           // 6 second timeout for images
+  FETCH_TIMEOUT: 10000,                // 10 second timeout for HTML
+  FETCH_TIMEOUT_FAST: 5000,            // 5 second fast attempt timeout
+  IMAGE_FETCH_TIMEOUT: 8000,           // 8 second timeout for images
   
   // Swipe detection
   SWIPE_MIN_DISTANCE: 50,              // Minimum swipe distance in px
@@ -141,8 +142,8 @@ function dismissUpdate() {
 
 // Track which proxy is currently working best
 let workingProxyIndex = 0;
-let proxyFailureCount = [0, 0, 0];
-let proxyResponseTimes = [0, 0, 0]; // Track average response times in ms
+let proxyFailureCount = [0, 0, 0, 0]; // One for each proxy
+let proxyResponseTimes = [0, 0, 0, 0]; // Track average response times in ms
 
 /**
  * Fetches a URL with intelligent CORS proxy fallback
@@ -238,21 +239,27 @@ function updateProxyStats(proxyIndex, success, responseTime) {
  * @returns {Promise<Response>}
  */
 async function tryProxy(url, proxyIndex, startTime) {
+  const proxyName = CONFIG.CORS_PROXIES[proxyIndex].split('/')[2]; // Extract domain for logging
   try {
     const proxyUrl = `${CONFIG.CORS_PROXIES[proxyIndex]}${encodeURIComponent(url)}`;
     const response = await fetch(proxyUrl, { 
-      signal: AbortSignal.timeout(CONFIG.FETCH_TIMEOUT)
+      signal: AbortSignal.timeout(CONFIG.FETCH_TIMEOUT),
+      mode: 'cors',
+      credentials: 'omit'
     });
     
     if (response.ok) {
       const responseTime = performance.now() - startTime;
       updateProxyStats(proxyIndex, true, responseTime);
+      console.log(`✓ Proxy ${proxyIndex} (${proxyName}) succeeded in ${responseTime.toFixed(0)}ms`);
       return response;
     }
     
+    console.warn(`✗ Proxy ${proxyIndex} (${proxyName}) returned ${response.status}`);
     updateProxyStats(proxyIndex, false, 0);
     throw new Error(`HTTP ${response.status}`);
   } catch (error) {
+    console.warn(`✗ Proxy ${proxyIndex} (${proxyName}) failed:`, error.message);
     updateProxyStats(proxyIndex, false, 0);
     throw error;
   }
