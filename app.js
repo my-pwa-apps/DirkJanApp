@@ -1344,6 +1344,7 @@ function Rotate(applyRotation = true) {
     // Restore toolbar position from localStorage after layout changes
     setTimeout(() => {
       const toolbar = document.querySelector('.toolbar:not(.fullscreen-toolbar)');
+      const comic = document.getElementById('comic');
       if (toolbar) {
         const savedPosRaw = localStorage.getItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS);
         const savedPos = UTILS.safeJSONParse(savedPosRaw, null);
@@ -1351,6 +1352,45 @@ function Rotate(applyRotation = true) {
           // Restore the saved position
           toolbar.style.top = savedPos.top + 'px';
           toolbar.style.left = savedPos.left + 'px';
+          
+          // Check if toolbar now overlaps with comic after layout changes
+          if (comic) {
+            const toolbarRect = toolbar.getBoundingClientRect();
+            const comicRect = comic.getBoundingClientRect();
+            
+            // If toolbar overlaps comic, adjust position
+            if (toolbarRect.bottom > comicRect.top && toolbarRect.top < comicRect.bottom &&
+                toolbarRect.right > comicRect.left && toolbarRect.left < comicRect.right) {
+              
+              const logo = document.querySelector('.logo');
+              if (logo) {
+                const logoRect = logo.getBoundingClientRect();
+                
+                // Determine if toolbar was meant to be above or below comic
+                // If saved position is closer to top, move it above comic
+                // If saved position is closer to bottom, move it below comic
+                const windowHeight = window.innerHeight;
+                const toolbarWasAbove = savedPos.top < (windowHeight / 2);
+                
+                if (toolbarWasAbove) {
+                  // Position above comic (between logo and comic)
+                  const logoBottom = logoRect.bottom;
+                  const comicTop = comicRect.top;
+                  const availableSpace = comicTop - logoBottom;
+                  const toolbarHeight = toolbarRect.height;
+                  const newTop = logoBottom + Math.max(15, (availableSpace - toolbarHeight) / 2);
+                  toolbar.style.top = newTop + 'px';
+                  localStorage.setItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS, JSON.stringify({ top: newTop, left: savedPos.left }));
+                } else {
+                  // Position below comic
+                  const comicBottom = comicRect.bottom;
+                  const newTop = comicBottom + 15;
+                  toolbar.style.top = newTop + 'px';
+                  localStorage.setItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS, JSON.stringify({ top: newTop, left: savedPos.left }));
+                }
+              }
+            }
+          }
         }
         // Then clamp to ensure it's within bounds
         clampMainToolbarInView();
