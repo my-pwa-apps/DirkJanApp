@@ -427,7 +427,6 @@ function invalidateFavsCache() { _cachedFavs = null; }
 /**
  * Keeps main toolbar within viewport bounds on resize/orientation changes
  * Repositions if no saved position exists to keep it centered
- * Also ensures toolbar isn't overlapping the comic after layout changes
  */
 function clampMainToolbarInView() {
   const toolbar = document.querySelector('.toolbar:not(.fullscreen-toolbar)');
@@ -443,41 +442,16 @@ function clampMainToolbarInView() {
     return;
   }
   
-  // User has saved position - validate it's not over the comic and clamp within bounds
+  // User has saved position - just clamp within bounds
   const hasExplicitPosition = toolbar.style.top && toolbar.style.left;
   if (!hasExplicitPosition) return;
   
-  const toolbarRect = toolbar.getBoundingClientRect();
-  const comic = document.getElementById('comic');
+  const rect = toolbar.getBoundingClientRect();
   let top = parseFloat(toolbar.style.top);
   let left = parseFloat(toolbar.style.left);
+  const maxLeft = window.innerWidth - rect.width;
+  const maxTop = window.innerHeight - rect.height;
   let changed = false;
-  
-  // Check if toolbar overlaps with comic
-  if (comic) {
-    const comicRect = comic.getBoundingClientRect();
-    const logo = document.querySelector('.logo');
-    
-    // If toolbar overlaps comic vertically
-    if (toolbarRect.bottom > comicRect.top && toolbarRect.top < comicRect.bottom) {
-      // Move toolbar above comic (between logo and comic)
-      if (logo) {
-        const logoRect = logo.getBoundingClientRect();
-        const logoBottom = logoRect.bottom;
-        const comicTop = comicRect.top;
-        const availableSpace = comicTop - logoBottom;
-        const toolbarHeight = toolbarRect.height;
-        
-        // Position in the middle of available space
-        top = logoBottom + Math.max(15, (availableSpace - toolbarHeight) / 2);
-        changed = true;
-      }
-    }
-  }
-  
-  // Clamp within viewport bounds
-  const maxLeft = window.innerWidth - toolbarRect.width;
-  const maxTop = window.innerHeight - toolbarRect.height;
   
   if (left < 0) { left = 0; changed = true; }
   if (top < 0) { top = 0; changed = true; }
@@ -1367,9 +1341,20 @@ function Rotate(applyRotation = true) {
     window.removeEventListener('resize', handleRotatedViewResize);
     window.removeEventListener('orientationchange', handleRotatedViewResize);
     
-    // Revalidate toolbar position after layout changes
+    // Restore toolbar position from localStorage after layout changes
     setTimeout(() => {
-      clampMainToolbarInView();
+      const toolbar = document.querySelector('.toolbar:not(.fullscreen-toolbar)');
+      if (toolbar) {
+        const savedPosRaw = localStorage.getItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS);
+        const savedPos = UTILS.safeJSONParse(savedPosRaw, null);
+        if (savedPos && typeof savedPos.top === 'number' && typeof savedPos.left === 'number') {
+          // Restore the saved position
+          toolbar.style.top = savedPos.top + 'px';
+          toolbar.style.left = savedPos.left + 'px';
+        }
+        // Then clamp to ensure it's within bounds
+        clampMainToolbarInView();
+      }
     }, 100);
     
     return;
