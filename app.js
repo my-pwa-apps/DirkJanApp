@@ -369,9 +369,9 @@ const UTILS = {
   }
 };
 
-// Backward compatibility - keep old function names
-function formatDate(datetoFormat) { UTILS.formatDate(datetoFormat); }
-function safeJSONParse(str, fallback) { return UTILS.safeJSONParse(str, fallback); }
+// Backward compatibility - delegate to UTILS
+const formatDate = (datetoFormat) => UTILS.formatDate(datetoFormat);
+const safeJSONParse = (str, fallback) => UTILS.safeJSONParse(str, fallback);
 
 // ========================================
 // FAVORITES MANAGEMENT
@@ -1169,16 +1169,8 @@ function setButtonDisabled(id, disabled) {
   * Formats a date object into year, month, day components
   * Sets global year, month, day variables
   * @param {Date} datetoFormat - Date to format
-  * @deprecated Use UTILS.formatDate instead
+  * @deprecated Use UTILS.formatDate instead - this is handled by backward compat wrapper above
   */
- function formatDate(datetoFormat)
- {
-  day = datetoFormat.getDate();
-  month = datetoFormat.getMonth() + 1;
-  year = datetoFormat.getFullYear();
-  month = ("0"+month).slice(-2);
-  day = ("0"+day).slice(-2);
- }
 
 // ========================================
 // COMIC ROTATION & FULLSCREEN
@@ -1643,41 +1635,16 @@ if (document.readyState === 'loading') {
     const savedPos = UTILS.safeJSONParse(savedPosRaw, null);
     if (!savedPos && mainToolbar) {
       // Position toolbar after all content is loaded
-      const positionToolbar = () => {
-        const logo = document.querySelector('.logo');
-        const main = document.getElementById('main');
-        
-        if (logo && main && mainToolbar.offsetHeight > 0) {
-          const logoRect = logo.getBoundingClientRect();
-          const mainRect = main.getBoundingClientRect();
-          
-          // Calculate position between logo bottom and main content start
-          const logoBottom = logoRect.bottom + window.scrollY;
-          const mainTop = mainRect.top + window.scrollY;
-          const toolbarHeight = mainToolbar.offsetHeight;
-          const availableSpace = mainTop - logoBottom;
-          
-          // Center vertically in available space (with minimum 10px gap from logo)
-          const centeredTop = logoBottom + (availableSpace - toolbarHeight) / 2;
-          mainToolbar.style.top = Math.max(logoBottom + 10, centeredTop) + 'px';
-          
-          // Center horizontally
-          const viewportWidth = window.innerWidth;
-          const toolbarWidth = mainToolbar.offsetWidth;
-          const centeredLeft = (viewportWidth - toolbarWidth) / 2;
-          mainToolbar.style.left = centeredLeft + 'px';
-          mainToolbar.style.transform = 'none';
-        }
-      };
+      const tryPosition = () => positionToolbarCentered(mainToolbar);
       
       // Position immediately
-      positionToolbar();
+      tryPosition();
       // Try multiple times to ensure elements are rendered
       window.addEventListener('load', () => {
-        positionToolbar();
-        setTimeout(positionToolbar, 50);
-        setTimeout(positionToolbar, 200);
-        setTimeout(positionToolbar, 500);
+        tryPosition();
+        setTimeout(tryPosition, 50);
+        setTimeout(tryPosition, 200);
+        setTimeout(tryPosition, 500);
       });
     } else if (savedPos && mainToolbar) {
       // Apply saved position immediately
@@ -1701,41 +1668,16 @@ if (document.readyState === 'loading') {
   const savedPos = UTILS.safeJSONParse(savedPosRaw, null);
   if (!savedPos && mainToolbar) {
     // Position toolbar after all content is loaded
-    const positionToolbar = () => {
-      const logo = document.querySelector('.logo');
-      const main = document.getElementById('main');
-      
-      if (logo && main && mainToolbar.offsetHeight > 0) {
-        const logoRect = logo.getBoundingClientRect();
-        const mainRect = main.getBoundingClientRect();
-        
-        // Calculate position between logo bottom and main content start
-        const logoBottom = logoRect.bottom + window.scrollY;
-        const mainTop = mainRect.top + window.scrollY;
-        const toolbarHeight = mainToolbar.offsetHeight;
-        const availableSpace = mainTop - logoBottom;
-        
-        // Center vertically in available space (with minimum 10px gap from logo)
-        const centeredTop = logoBottom + (availableSpace - toolbarHeight) / 2;
-        mainToolbar.style.top = Math.max(logoBottom + 10, centeredTop) + 'px';
-        
-        // Center horizontally
-        const viewportWidth = window.innerWidth;
-        const toolbarWidth = mainToolbar.offsetWidth;
-        const centeredLeft = (viewportWidth - toolbarWidth) / 2;
-        mainToolbar.style.left = centeredLeft + 'px';
-        mainToolbar.style.transform = 'none';
-      }
-    };
+    const tryPosition = () => positionToolbarCentered(mainToolbar);
     
     // Position immediately
-    positionToolbar();
+    tryPosition();
     // Try multiple times to ensure elements are rendered
     window.addEventListener('load', () => {
-      positionToolbar();
-      setTimeout(positionToolbar, 50);
-      setTimeout(positionToolbar, 200);
-      setTimeout(positionToolbar, 500);
+      tryPosition();
+      setTimeout(tryPosition, 50);
+      setTimeout(tryPosition, 200);
+      setTimeout(tryPosition, 500);
     });
   } else if (savedPos && mainToolbar) {
     // Apply saved position immediately
@@ -2291,6 +2233,37 @@ function positionFullscreenToolbar() {
   toolbar.style.width = '';
   toolbar.style.maxWidth = '';
   toolbar.style.height = '';
+}
+
+/**
+ * Positions the main toolbar centered between logo and main content
+ * @param {HTMLElement} toolbar - The toolbar element to position
+ */
+function positionToolbarCentered(toolbar) {
+  const logo = document.querySelector('.logo');
+  const main = document.getElementById('main');
+  
+  if (logo && main && toolbar && toolbar.offsetHeight > 0) {
+    const logoRect = logo.getBoundingClientRect();
+    const mainRect = main.getBoundingClientRect();
+    
+    // Calculate position between logo bottom and main content start
+    const logoBottom = logoRect.bottom + window.scrollY;
+    const mainTop = mainRect.top + window.scrollY;
+    const toolbarHeight = toolbar.offsetHeight;
+    const availableSpace = mainTop - logoBottom;
+    
+    // Center vertically in available space (with minimum 10px gap from logo)
+    const centeredTop = logoBottom + (availableSpace - toolbarHeight) / 2;
+    toolbar.style.top = Math.max(logoBottom + 10, centeredTop) + 'px';
+    
+    // Center horizontally
+    const viewportWidth = window.innerWidth;
+    const toolbarWidth = toolbar.offsetWidth;
+    const centeredLeft = (viewportWidth - toolbarWidth) / 2;
+    toolbar.style.left = centeredLeft + 'px';
+    toolbar.style.transform = 'none';
+  }
 }
 
 // Make the main toolbar draggable
