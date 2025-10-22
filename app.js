@@ -1351,6 +1351,12 @@ function Rotate(applyRotation = true) {
       delete el.dataset.originalDisplay;
     });
     
+    // Hide toolbar immediately to prevent flash during repositioning
+    const mainToolbar = document.querySelector('.toolbar:not(.fullscreen-toolbar)');
+    if (mainToolbar) {
+      mainToolbar.style.visibility = 'hidden';
+    }
+    
     // Make sure original comic is in normal state
     element.className = "normal";
     
@@ -1371,9 +1377,6 @@ function Rotate(applyRotation = true) {
         const savedPos = UTILS.safeJSONParse(savedPosRaw, null);
         
         if (savedPos && typeof savedPos.top === 'number' && typeof savedPos.left === 'number') {
-          // Hide toolbar during repositioning to avoid visual jump
-          toolbar.style.opacity = '0';
-          
           const comicRect = comic.getBoundingClientRect();
           
           // Determine correct position based on saved flag
@@ -1425,7 +1428,7 @@ function Rotate(applyRotation = true) {
           }));
           
           // Show toolbar after positioning
-          toolbar.style.opacity = '1';
+          toolbar.style.visibility = 'visible';
         }
       }
     }, 250);
