@@ -426,25 +426,38 @@ function invalidateFavsCache() { _cachedFavs = null; }
 
 /**
  * Keeps main toolbar within viewport bounds on resize/orientation changes
+ * Repositions if no saved position exists to keep it centered
  */
 function clampMainToolbarInView() {
   const toolbar = document.querySelector('.toolbar:not(.fullscreen-toolbar)');
   if (!toolbar) return;
   
-  // Only clamp if toolbar has an explicit position set
+  // Check if user has saved a custom position
+  const savedPosRaw = localStorage.getItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS);
+  const hasSavedPosition = savedPosRaw && savedPosRaw !== 'null';
+  
+  if (!hasSavedPosition) {
+    // No saved position - recenter between logo and comic on resize
+    positionToolbarCentered(toolbar);
+    return;
+  }
+  
+  // User has saved position - just clamp within bounds
   const hasExplicitPosition = toolbar.style.top && toolbar.style.left;
   if (!hasExplicitPosition) return;
   
   const rect = toolbar.getBoundingClientRect();
   let top = parseFloat(toolbar.style.top);
   let left = parseFloat(toolbar.style.left);
-  const maxLeft = document.documentElement.scrollWidth - rect.width;
-  const maxTop = document.documentElement.scrollHeight - rect.height;
+  const maxLeft = window.innerWidth - rect.width;
+  const maxTop = window.innerHeight - rect.height;
   let changed = false;
+  
   if (left < 0) { left = 0; changed = true; }
   if (top < 0) { top = 0; changed = true; }
   if (left > maxLeft) { left = Math.max(0, maxLeft); changed = true; }
   if (top > maxTop) { top = Math.max(0, maxTop); changed = true; }
+  
   if (changed) {
     toolbar.style.left = left + 'px';
     toolbar.style.top = top + 'px';
@@ -2204,13 +2217,14 @@ function positionToolbarCentered(toolbar) {
   
   if (!logo || !comic) return;
   
+  // Since toolbar is position: fixed, use viewport coordinates (getBoundingClientRect)
   const logoRect = logo.getBoundingClientRect();
   const comicRect = comic.getBoundingClientRect();
-  
-  // Calculate position between logo bottom and comic top
-  const logoBottom = logoRect.bottom + window.scrollY;
-  const comicTop = comicRect.top + window.scrollY;
   const toolbarHeight = toolbar.offsetHeight;
+  
+  // Calculate position between logo bottom and comic top (viewport coordinates for fixed positioning)
+  const logoBottom = logoRect.bottom;
+  const comicTop = comicRect.top;
   const availableSpace = comicTop - logoBottom;
   
   // Center vertically in available space (with minimum 15px gap from logo)
