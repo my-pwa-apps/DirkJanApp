@@ -552,8 +552,23 @@ function makeDraggable(element, dragHandle, storageKey, onDragStart = null, onDr
     // Save position
     const numericTop = parseFloat(element.style.top) || 0;
     const numericLeft = parseFloat(element.style.left) || 0;
+    
+    // For toolbar, also save whether it's below the comic
+    let isBelowComic = false;
+    if (storageKey === CONFIG.STORAGE_KEYS.TOOLBAR_POS) {
+      const comic = document.getElementById('comic');
+      if (comic) {
+        const comicRect = comic.getBoundingClientRect();
+        isBelowComic = numericTop > comicRect.bottom;
+      }
+    }
+    
     try {
-      localStorage.setItem(storageKey, JSON.stringify({ top: numericTop, left: numericLeft }));
+      const positionData = { top: numericTop, left: numericLeft };
+      if (storageKey === CONFIG.STORAGE_KEYS.TOOLBAR_POS) {
+        positionData.belowComic = isBelowComic;
+      }
+      localStorage.setItem(storageKey, JSON.stringify(positionData));
     } catch(_) {}
     
     // Callback for custom end behavior
@@ -1358,9 +1373,9 @@ function Rotate(applyRotation = true) {
             const toolbarRect = toolbar.getBoundingClientRect();
             const comicRect = comic.getBoundingClientRect();
             
-            // Determine if toolbar was originally positioned below the comic
-            // by checking if saved Y position is greater than comic's bottom edge
-            const toolbarWasBelowComic = savedPos.top > comicRect.bottom;
+            // Use the belowComic flag from saved position, or check current position as fallback
+            const toolbarWasBelowComic = savedPos.belowComic === true || 
+                                          (savedPos.belowComic === undefined && savedPos.top > comicRect.bottom);
             
             // If toolbar overlaps comic, adjust position
             if (toolbarRect.bottom > comicRect.top && toolbarRect.top < comicRect.bottom &&
@@ -1371,7 +1386,11 @@ function Rotate(applyRotation = true) {
                 const comicBottom = comicRect.bottom;
                 const newTop = comicBottom + 15;
                 toolbar.style.top = newTop + 'px';
-                localStorage.setItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS, JSON.stringify({ top: newTop, left: savedPos.left }));
+                localStorage.setItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS, JSON.stringify({ 
+                  top: newTop, 
+                  left: savedPos.left, 
+                  belowComic: true 
+                }));
               } else {
                 // Toolbar was above comic - keep it above (between logo and comic)
                 const logo = document.querySelector('.logo');
@@ -1383,7 +1402,11 @@ function Rotate(applyRotation = true) {
                   const toolbarHeight = toolbarRect.height;
                   const newTop = logoBottom + Math.max(15, (availableSpace - toolbarHeight) / 2);
                   toolbar.style.top = newTop + 'px';
-                  localStorage.setItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS, JSON.stringify({ top: newTop, left: savedPos.left }));
+                  localStorage.setItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS, JSON.stringify({ 
+                    top: newTop, 
+                    left: savedPos.left, 
+                    belowComic: false 
+                  }));
                 }
               }
             }
@@ -2327,7 +2350,8 @@ function positionToolbarCentered(toolbar, savePosition = false) {
     try {
       localStorage.setItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS, JSON.stringify({ 
         top: centeredTop, 
-        left: centeredLeft 
+        left: centeredLeft,
+        belowComic: false  // Centered position is always above comic (between logo and comic)
       }));
     } catch(_) {}
   }
