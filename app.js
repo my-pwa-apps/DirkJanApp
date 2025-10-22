@@ -461,7 +461,18 @@ function clampMainToolbarInView() {
   if (changed) {
     toolbar.style.left = left + 'px';
     toolbar.style.top = top + 'px';
-    try { localStorage.setItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS, JSON.stringify({ top, left })); } catch(_) {}
+    
+    // Preserve the belowComic flag when clamping
+    const savedPos = UTILS.safeJSONParse(savedPosRaw, null);
+    const belowComic = savedPos && savedPos.belowComic !== undefined ? savedPos.belowComic : false;
+    
+    try { 
+      localStorage.setItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS, JSON.stringify({ 
+        top, 
+        left, 
+        belowComic 
+      })); 
+    } catch(_) {}
   }
 }
 
