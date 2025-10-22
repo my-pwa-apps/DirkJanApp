@@ -1364,35 +1364,35 @@ function Rotate(applyRotation = true) {
         const savedPosRaw = localStorage.getItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS);
         const savedPos = UTILS.safeJSONParse(savedPosRaw, null);
         if (savedPos && typeof savedPos.top === 'number' && typeof savedPos.left === 'number') {
-          // Restore the saved position
-          toolbar.style.top = savedPos.top + 'px';
+          // First restore the left position
           toolbar.style.left = savedPos.left + 'px';
           
-          // Check if toolbar now overlaps with comic after layout changes
+          // Check if toolbar should be repositioned relative to comic
           if (comic) {
-            const toolbarRect = toolbar.getBoundingClientRect();
             const comicRect = comic.getBoundingClientRect();
             
-            // Use the belowComic flag from saved position, or check current position as fallback
-            const toolbarWasBelowComic = savedPos.belowComic === true || 
-                                          (savedPos.belowComic === undefined && savedPos.top > comicRect.bottom);
+            // Use the belowComic flag from saved position
+            const toolbarWasBelowComic = savedPos.belowComic === true;
             
-            // If toolbar overlaps comic, adjust position
-            if (toolbarRect.bottom > comicRect.top && toolbarRect.top < comicRect.bottom &&
-                toolbarRect.right > comicRect.left && toolbarRect.left < comicRect.right) {
+            if (toolbarWasBelowComic) {
+              // Toolbar was below comic - position it below comic now
+              const comicBottom = comicRect.bottom;
+              const newTop = comicBottom + 15;
+              toolbar.style.top = newTop + 'px';
+              localStorage.setItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS, JSON.stringify({ 
+                top: newTop, 
+                left: savedPos.left, 
+                belowComic: true 
+              }));
+            } else {
+              // Toolbar was above comic - restore saved position and check for overlap
+              toolbar.style.top = savedPos.top + 'px';
+              const toolbarRect = toolbar.getBoundingClientRect();
               
-              if (toolbarWasBelowComic) {
-                // Toolbar was below comic - keep it below
-                const comicBottom = comicRect.bottom;
-                const newTop = comicBottom + 15;
-                toolbar.style.top = newTop + 'px';
-                localStorage.setItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS, JSON.stringify({ 
-                  top: newTop, 
-                  left: savedPos.left, 
-                  belowComic: true 
-                }));
-              } else {
-                // Toolbar was above comic - keep it above (between logo and comic)
+              // If toolbar overlaps comic after restoring position, move it above
+              if (toolbarRect.bottom > comicRect.top && toolbarRect.top < comicRect.bottom &&
+                  toolbarRect.right > comicRect.left && toolbarRect.left < comicRect.right) {
+                
                 const logo = document.querySelector('.logo');
                 if (logo) {
                   const logoRect = logo.getBoundingClientRect();
@@ -1410,6 +1410,9 @@ function Rotate(applyRotation = true) {
                 }
               }
             }
+          } else {
+            // No comic element, just restore saved position
+            toolbar.style.top = savedPos.top + 'px';
           }
         }
         // Then clamp to ensure it's within bounds
