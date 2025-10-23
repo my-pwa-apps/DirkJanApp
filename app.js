@@ -1397,32 +1397,21 @@ function Rotate(applyRotation = true) {
           newLeft = savedPos.left;
           
           if (shouldBeBelow) {
-            // Toolbar should be below comic - position it relative to comic's bottom
-            // But check if there's a settings panel and avoid overlapping it
-            const settingsPanel = document.getElementById('settingsDIV');
+            // Toolbar should be below comic - find the lowest element to position below
             let minTop = comicRect.bottom + 15;
             
+            // Check if settings panel is visible and also below comic
+            const settingsPanel = document.getElementById('settingsDIV');
             if (settingsPanel && settingsPanel.classList.contains('visible')) {
               const settingsRect = settingsPanel.getBoundingClientRect();
-              // Check if saved position would overlap with settings panel
-              const toolbarHeight = toolbar.offsetHeight;
-              const savedBottom = savedPos.top + toolbarHeight;
-              
-              // If saved position overlaps settings, position below settings
-              if (savedPos.top < settingsRect.bottom && savedBottom > settingsRect.top) {
-                minTop = Math.max(minTop, settingsRect.bottom + 15);
-                newTop = minTop;
-              } else if (savedPos.top >= settingsRect.bottom) {
-                // Settings is above saved position, use saved position
-                newTop = Math.max(minTop, savedPos.top);
-              } else {
-                // Use default below comic
-                newTop = minTop;
+              // If settings panel is also below (or overlaps with) comic, position toolbar below settings
+              if (settingsRect.top < comicRect.bottom + 100) {
+                // Settings is near/below comic, position toolbar below settings
+                minTop = settingsRect.bottom + 15;
               }
-            } else {
-              // No visible settings panel, try to use saved position if it's below comic
-              newTop = Math.max(minTop, savedPos.top);
             }
+            
+            newTop = minTop;
           } else {
             // Toolbar should be above comic - check if saved position is still valid
             const toolbarHeight = toolbar.offsetHeight;
