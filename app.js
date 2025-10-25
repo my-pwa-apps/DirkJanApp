@@ -380,6 +380,41 @@ const UTILS = {
   }
 };
 
+/**
+ * Persist the main toolbar position together with relative metadata.
+ * @param {number} top - Toolbar top position in px.
+ * @param {number} left - Toolbar left position in px.
+ * @param {HTMLElement} [toolbarEl] - Optional toolbar element reference.
+ */
+function storeToolbarPosition(top, left, toolbarEl) {
+  const toolbar = toolbarEl || document.querySelector('.toolbar:not(.fullscreen-toolbar)');
+  const positionData = { top, left };
+
+  const comic = document.getElementById('comic');
+  if (comic) {
+    const comicRect = comic.getBoundingClientRect();
+    const belowComic = top > comicRect.bottom;
+    positionData.belowComic = belowComic;
+    if (belowComic) {
+      positionData.offsetFromComic = Math.max(15, top - comicRect.bottom);
+    }
+  }
+
+  const settingsPanel = document.getElementById('settingsDIV');
+  if (settingsPanel && settingsPanel.classList.contains('visible')) {
+    const settingsRect = settingsPanel.getBoundingClientRect();
+    const belowSettings = top > settingsRect.bottom + 5;
+    positionData.belowSettings = belowSettings;
+    if (belowSettings) {
+      positionData.offsetFromSettings = Math.max(15, top - settingsRect.bottom);
+    }
+  }
+
+  try {
+    localStorage.setItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS, JSON.stringify(positionData));
+  } catch (_) {}
+}
+
 // Backward compatibility - delegate to UTILS
 const formatDate = (datetoFormat) => UTILS.formatDate(datetoFormat);
 const safeJSONParse = (str, fallback) => UTILS.safeJSONParse(str, fallback);
@@ -461,20 +496,7 @@ function clampMainToolbarInView() {
   if (changed) {
     toolbar.style.left = left + 'px';
     toolbar.style.top = top + 'px';
-    
-    // Preserve the belowComic and belowSettings flags when clamping
-    const savedPos = UTILS.safeJSONParse(savedPosRaw, null);
-    const belowComic = savedPos && savedPos.belowComic !== undefined ? savedPos.belowComic : false;
-    const belowSettings = savedPos && savedPos.belowSettings !== undefined ? savedPos.belowSettings : false;
-    
-    try { 
-      localStorage.setItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS, JSON.stringify({ 
-        top, 
-        left, 
-        belowComic,
-        belowSettings
-      })); 
-    } catch(_) {}
+    storeToolbarPosition(top, left, toolbar);
   }
 }
 
@@ -566,35 +588,13 @@ function makeDraggable(element, dragHandle, storageKey, onDragStart = null, onDr
     const numericTop = parseFloat(element.style.top) || 0;
     const numericLeft = parseFloat(element.style.left) || 0;
     
-    // For toolbar, also save whether it's below the comic and settings
-    let isBelowComic = false;
-    let isBelowSettings = false;
     if (storageKey === CONFIG.STORAGE_KEYS.TOOLBAR_POS) {
-      const comic = document.getElementById('comic');
-      const settingsPanel = document.getElementById('settingsDIV');
-      
-      if (comic) {
-        const elementRect = element.getBoundingClientRect();
-        const comicRect = comic.getBoundingClientRect();
-        // Toolbar is below comic if its top edge is below comic's bottom edge
-        isBelowComic = elementRect.top > comicRect.bottom;
-        
-        // Also check if below settings panel (only matters if settings is visible)
-        if (settingsPanel && settingsPanel.classList.contains('visible')) {
-          const settingsRect = settingsPanel.getBoundingClientRect();
-          isBelowSettings = elementRect.top > settingsRect.bottom;
-        }
-      }
+      storeToolbarPosition(numericTop, numericLeft, element);
+    } else {
+      try {
+        localStorage.setItem(storageKey, JSON.stringify({ top: numericTop, left: numericLeft }));
+      } catch (_) {}
     }
-    
-    try {
-      const positionData = { top: numericTop, left: numericLeft };
-      if (storageKey === CONFIG.STORAGE_KEYS.TOOLBAR_POS) {
-        positionData.belowComic = isBelowComic;
-        positionData.belowSettings = isBelowSettings;
-      }
-      localStorage.setItem(storageKey, JSON.stringify(positionData));
-    } catch(_) {}
     
     // Callback for custom end behavior
     if (onDragEnd) onDragEnd(element);
@@ -1411,9 +1411,11 @@ function Rotate(applyRotation = true) {
           if (shouldBeBelow) {
             const settingsPanel = document.getElementById('settingsDIV');
 
-            const minBelowComic = comicRect.bottom + 15;
-            let minRequiredTop = minBelowComic;
+            const storedComicGap = Math.max(15, savedPos.offsetFromComic || 15);
+            const minBelowComic = comicRect.bottom + storedComicGap;
+
             let targetTop = Number.isFinite(savedPos.top) ? savedPos.top : minBelowComic;
+            targetTop = Math.max(targetTop, minBelowComic);
 
             if (settingsPanel && settingsPanel.classList.contains('visible')) {
               const settingsRect = settingsPanel.getBoundingClientRect();
@@ -1421,36 +1423,31 @@ function Rotate(applyRotation = true) {
 
               let belowSettingsFlag = savedPos.belowSettings === true;
               if (!belowSettingsFlag) {
-                belowSettingsFlag = savedPos.top > (settingsRect.bottom + 10);
+                belowSettingsFlag = savedPos.offsetFromSettings !== undefined || savedPos.top > (settingsRect.bottom + 10);
               }
 
               if (belowSettingsFlag) {
-                const desiredGap = savedPos.top > settingsRect.bottom
-                  ? Math.max(savedPos.top - settingsRect.bottom, 15)
-                  : 15;
-                minRequiredTop = Math.max(minRequiredTop, settingsRect.bottom + desiredGap);
+                const storedSettingsGap = Math.max(15, savedPos.offsetFromSettings || Math.max(savedPos.top - settingsRect.bottom, 15));
+                const minBelowSettings = settingsRect.bottom + storedSettingsGap;
+                targetTop = Math.max(targetTop, minBelowSettings);
               } else {
-                // Ensure we do not overlap the settings panel
                 const overlapsSettings = (targetTop + toolbarHeight > settingsRect.top) &&
                   (targetTop < settingsRect.bottom);
 
                 if (overlapsSettings) {
                   const spaceBetween = settingsRect.top - comicRect.bottom;
                   if (spaceBetween >= toolbarHeight + 30) {
-                    targetTop = comicRect.bottom + 15;
+                    targetTop = comicRect.bottom + Math.max(15, storedComicGap);
                   } else {
-                    minRequiredTop = Math.max(minRequiredTop, settingsRect.bottom + 15);
+                    targetTop = settingsRect.bottom + 15;
                   }
-                } else {
-                  // Stay at least 15px below settings if saved position was already below
-                  if (targetTop > settingsRect.bottom) {
-                    minRequiredTop = Math.max(minRequiredTop, settingsRect.bottom + 15);
-                  }
+                } else if (targetTop > settingsRect.bottom) {
+                  targetTop = Math.max(targetTop, settingsRect.bottom + 15);
                 }
               }
             }
 
-            newTop = Math.max(targetTop, minRequiredTop);
+            newTop = targetTop;
           } else {
             // Toolbar should be above comic - check if saved position is still valid
             const toolbarHeight = toolbar.offsetHeight;
@@ -1482,22 +1479,7 @@ function Rotate(applyRotation = true) {
           // Apply position
           toolbar.style.left = newLeft + 'px';
           toolbar.style.top = newTop + 'px';
-          
-          // Update saved position
-          // Also save whether it's below settings
-          const settingsPanel = document.getElementById('settingsDIV');
-          let belowSettings = false;
-          if (settingsPanel && settingsPanel.classList.contains('visible')) {
-            const settingsRect = settingsPanel.getBoundingClientRect();
-            belowSettings = newTop > settingsRect.bottom;
-          }
-          
-          localStorage.setItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS, JSON.stringify({ 
-            top: newTop, 
-            left: newLeft, 
-            belowComic: shouldBeBelow,
-            belowSettings: belowSettings
-          }));
+          storeToolbarPosition(newTop, newLeft, toolbar);
           
           // Show toolbar after positioning
           toolbar.style.visibility = 'visible';
@@ -2435,14 +2417,7 @@ function positionToolbarCentered(toolbar, savePosition = false) {
   
   // Save position if requested
   if (savePosition) {
-    try {
-      localStorage.setItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS, JSON.stringify({ 
-        top: centeredTop, 
-        left: centeredLeft,
-        belowComic: false,  // Centered position is always above comic (between logo and comic)
-        belowSettings: false
-      }));
-    } catch(_) {}
+    storeToolbarPosition(centeredTop, centeredLeft, toolbar);
   }
 }
 
