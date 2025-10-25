@@ -386,27 +386,48 @@ const UTILS = {
  * @param {number} left - Toolbar left position in px.
  * @param {HTMLElement} [toolbarEl] - Optional toolbar element reference.
  */
-function storeToolbarPosition(top, left, toolbarEl) {
+function storeToolbarPosition(top, left, toolbarEl, overrides = {}) {
   const toolbar = toolbarEl || document.querySelector('.toolbar:not(.fullscreen-toolbar)');
-  const positionData = { top, left };
+  const savedRaw = localStorage.getItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS);
+  const saved = UTILS.safeJSONParse(savedRaw, {});
+
+  const positionData = { ...saved, top, left };
+
+  const applyOverride = (key, value) => {
+    if (value === undefined) return;
+    if (value === null) {
+      delete positionData[key];
+    } else {
+      positionData[key] = value;
+    }
+  };
+
+  applyOverride('belowComic', overrides.belowComic);
+  applyOverride('offsetFromComic', overrides.offsetFromComic ?? (overrides.belowComic === false ? null : undefined));
+  applyOverride('belowSettings', overrides.belowSettings);
+  applyOverride('offsetFromSettings', overrides.offsetFromSettings ?? (overrides.belowSettings === false ? null : undefined));
 
   const comic = document.getElementById('comic');
-  if (comic) {
+  if (comic && !('belowComic' in positionData)) {
     const comicRect = comic.getBoundingClientRect();
     const belowComic = top > comicRect.bottom;
     positionData.belowComic = belowComic;
-    if (belowComic) {
+    if (belowComic && !('offsetFromComic' in positionData)) {
       positionData.offsetFromComic = Math.max(15, top - comicRect.bottom);
+    } else if (!belowComic) {
+      delete positionData.offsetFromComic;
     }
   }
 
   const settingsPanel = document.getElementById('settingsDIV');
-  if (settingsPanel && settingsPanel.classList.contains('visible')) {
+  if (settingsPanel && settingsPanel.classList.contains('visible') && !('belowSettings' in positionData)) {
     const settingsRect = settingsPanel.getBoundingClientRect();
     const belowSettings = top > settingsRect.bottom + 5;
     positionData.belowSettings = belowSettings;
-    if (belowSettings) {
+    if (belowSettings && !('offsetFromSettings' in positionData)) {
       positionData.offsetFromSettings = Math.max(15, top - settingsRect.bottom);
+    } else if (!belowSettings) {
+      delete positionData.offsetFromSettings;
     }
   }
 
@@ -589,7 +610,34 @@ function makeDraggable(element, dragHandle, storageKey, onDragStart = null, onDr
     const numericLeft = parseFloat(element.style.left) || 0;
     
     if (storageKey === CONFIG.STORAGE_KEYS.TOOLBAR_POS) {
-      storeToolbarPosition(numericTop, numericLeft, element);
+      const comic = document.getElementById('comic');
+      const settingsPanel = document.getElementById('settingsDIV');
+      let belowComic = false;
+      let comicGap;
+      if (comic) {
+        const comicRect = comic.getBoundingClientRect();
+        belowComic = numericTop > comicRect.bottom;
+        if (belowComic) {
+          comicGap = Math.max(15, numericTop - comicRect.bottom);
+        }
+      }
+
+      let belowSettings = false;
+      let settingsGap;
+      if (settingsPanel && settingsPanel.classList.contains('visible')) {
+        const settingsRect = settingsPanel.getBoundingClientRect();
+        belowSettings = numericTop > settingsRect.bottom + 5;
+        if (belowSettings) {
+          settingsGap = Math.max(15, numericTop - settingsRect.bottom);
+        }
+      }
+
+      storeToolbarPosition(numericTop, numericLeft, element, {
+        belowComic,
+        offsetFromComic: comicGap ?? null,
+        belowSettings,
+        offsetFromSettings: settingsGap ?? null
+      });
     } else {
       try {
         localStorage.setItem(storageKey, JSON.stringify({ top: numericTop, left: numericLeft }));
@@ -1401,16 +1449,16 @@ function Rotate(applyRotation = true) {
         
         if (savedPos && typeof savedPos.top === 'number' && typeof savedPos.left === 'number') {
           const comicRect = comic.getBoundingClientRect();
+          const settingsPanel = document.getElementById('settingsDIV');
           
           // Determine correct position based on saved flag
-          const shouldBeBelow = savedPos.belowComic === true;
+          const shouldBeBelow = savedPos.belowComic === true ||
+            (savedPos.belowComic === undefined && (savedPos.offsetFromComic !== undefined || savedPos.top > comicRect.bottom + 10));
           let newTop, newLeft;
           
           newLeft = savedPos.left;
           
           if (shouldBeBelow) {
-            const settingsPanel = document.getElementById('settingsDIV');
-
             const storedComicGap = Math.max(15, savedPos.offsetFromComic || 15);
             const minBelowComic = comicRect.bottom + storedComicGap;
 
@@ -1479,7 +1527,23 @@ function Rotate(applyRotation = true) {
           // Apply position
           toolbar.style.left = newLeft + 'px';
           toolbar.style.top = newTop + 'px';
-          storeToolbarPosition(newTop, newLeft, toolbar);
+
+          const overrides = {};
+          const finalBelowComic = newTop > comicRect.bottom;
+          overrides.belowComic = finalBelowComic;
+          overrides.offsetFromComic = finalBelowComic ? Math.max(15, newTop - comicRect.bottom) : null;
+
+          if (settingsPanel && settingsPanel.classList.contains('visible')) {
+            const settingsRect = settingsPanel.getBoundingClientRect();
+            const finalBelowSettings = newTop > settingsRect.bottom + 5;
+            overrides.belowSettings = finalBelowSettings;
+            overrides.offsetFromSettings = finalBelowSettings ? Math.max(15, newTop - settingsRect.bottom) : null;
+          } else {
+            overrides.belowSettings = false;
+            overrides.offsetFromSettings = null;
+          }
+
+          storeToolbarPosition(newTop, newLeft, toolbar, overrides);
           
           // Show toolbar after positioning
           toolbar.style.visibility = 'visible';
@@ -2417,7 +2481,12 @@ function positionToolbarCentered(toolbar, savePosition = false) {
   
   // Save position if requested
   if (savePosition) {
-    storeToolbarPosition(centeredTop, centeredLeft, toolbar);
+    storeToolbarPosition(centeredTop, centeredLeft, toolbar, {
+      belowComic: false,
+      offsetFromComic: null,
+      belowSettings: false,
+      offsetFromSettings: null
+    });
   }
 }
 
