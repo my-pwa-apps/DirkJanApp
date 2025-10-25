@@ -1411,7 +1411,14 @@ function Rotate(applyRotation = true) {
           if (shouldBeBelow) {
             // Toolbar should be below comic - try to restore saved position
             const settingsPanel = document.getElementById('settingsDIV');
-            const shouldBeBelowSettings = savedPos.belowSettings === true;
+            let shouldBeBelowSettings = savedPos.belowSettings === true;
+            
+            // Fallback: if flag not set, check if saved position was below settings
+            if (!shouldBeBelowSettings && settingsPanel && settingsPanel.classList.contains('visible')) {
+              const settingsRect = settingsPanel.getBoundingClientRect();
+              // If saved top is significantly below settings bottom, assume it was below
+              shouldBeBelowSettings = savedPos.top > (settingsRect.bottom + 10);
+            }
             
             if (shouldBeBelowSettings && settingsPanel && settingsPanel.classList.contains('visible')) {
               // Toolbar was below settings - position it below settings
