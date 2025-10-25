@@ -1409,34 +1409,38 @@ function Rotate(applyRotation = true) {
           newLeft = savedPos.left;
           
           if (shouldBeBelow) {
-            // Toolbar should be below comic
-            let newTop = comicRect.bottom + 15;
-            
-            // Check if settings panel is visible
+            // Toolbar should be below comic - try to restore saved position
             const settingsPanel = document.getElementById('settingsDIV');
-            if (settingsPanel && settingsPanel.classList.contains('visible')) {
+            const shouldBeBelowSettings = savedPos.belowSettings === true;
+            
+            if (shouldBeBelowSettings && settingsPanel && settingsPanel.classList.contains('visible')) {
+              // Toolbar was below settings - position it below settings
               const settingsRect = settingsPanel.getBoundingClientRect();
+              newTop = settingsRect.bottom + 15;
+            } else if (settingsPanel && settingsPanel.classList.contains('visible')) {
+              // Settings is visible but toolbar was not below it
+              // Try to use saved position, but check for overlap
+              const settingsRect = settingsPanel.getBoundingClientRect();
+              const toolbarHeight = toolbar.offsetHeight;
               
-              // Check if toolbar was saved as being below settings
-              const shouldBeBelowSettings = savedPos.belowSettings === true;
-              
-              if (shouldBeBelowSettings) {
-                // Toolbar was below settings, position it below settings now
-                newTop = settingsRect.bottom + 15;
-              } else {
-                // Toolbar was between comic and settings (or settings wasn't visible when saved)
-                // Check if there's enough space between comic and settings for the toolbar
-                const toolbarHeight = toolbar.offsetHeight;
+              // Check if saved position would overlap with settings
+              if (savedPos.top + toolbarHeight > settingsRect.top && savedPos.top < settingsRect.bottom) {
+                // Saved position overlaps settings - check if there's space between comic and settings
                 const spaceBetween = settingsRect.top - comicRect.bottom;
-                
                 if (spaceBetween >= toolbarHeight + 30) {
-                  // Enough space between comic and settings
+                  // Enough space, position between them
                   newTop = comicRect.bottom + 15;
                 } else {
-                  // Not enough space, position below settings to avoid overlap
+                  // Not enough space, position below settings
                   newTop = settingsRect.bottom + 15;
                 }
+              } else {
+                // No overlap, use saved position (but ensure it's at least below comic)
+                newTop = Math.max(savedPos.top, comicRect.bottom + 15);
               }
+            } else {
+              // No settings panel or not visible - try to use saved position
+              newTop = Math.max(savedPos.top, comicRect.bottom + 15);
             }
           } else {
             // Toolbar should be above comic - check if saved position is still valid
