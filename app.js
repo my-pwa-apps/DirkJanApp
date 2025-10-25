@@ -1450,7 +1450,7 @@ function Rotate(applyRotation = true) {
               }
             }
 
-            newTop = Math.min(Math.max(targetTop, minRequiredTop), maxTop);
+            newTop = Math.max(targetTop, minRequiredTop);
           } else {
             // Toolbar should be above comic - check if saved position is still valid
             const toolbarHeight = toolbar.offsetHeight;
