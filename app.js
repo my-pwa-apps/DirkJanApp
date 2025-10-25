@@ -1409,22 +1409,17 @@ function Rotate(applyRotation = true) {
           newLeft = savedPos.left;
           
           if (shouldBeBelow) {
-            // Toolbar should be below comic - prefer the saved absolute position
             const settingsPanel = document.getElementById('settingsDIV');
-            let newTopCandidate = savedPos.top;
 
-            // Always ensure we stay below the comic
             const minBelowComic = comicRect.bottom + 15;
-            if (!Number.isFinite(newTopCandidate)) {
-              newTopCandidate = minBelowComic;
-            }
-            newTopCandidate = Math.max(newTopCandidate, minBelowComic);
+            let minRequiredTop = minBelowComic;
+            let targetTop = Number.isFinite(savedPos.top) ? savedPos.top : minBelowComic;
 
             if (settingsPanel && settingsPanel.classList.contains('visible')) {
               const settingsRect = settingsPanel.getBoundingClientRect();
-              let belowSettingsFlag = savedPos.belowSettings === true;
+              const toolbarHeight = toolbar.offsetHeight;
 
-              // Fallback: infer from saved top if flag missing
+              let belowSettingsFlag = savedPos.belowSettings === true;
               if (!belowSettingsFlag) {
                 belowSettingsFlag = savedPos.top > (settingsRect.bottom + 10);
               }
@@ -1433,16 +1428,29 @@ function Rotate(applyRotation = true) {
                 const desiredGap = savedPos.top > settingsRect.bottom
                   ? Math.max(savedPos.top - settingsRect.bottom, 15)
                   : 15;
-                newTopCandidate = Math.max(newTopCandidate, settingsRect.bottom + desiredGap);
+                minRequiredTop = Math.max(minRequiredTop, settingsRect.bottom + desiredGap);
               } else {
-                const minBelowSettings = settingsRect.bottom + 15;
-                if (newTopCandidate < minBelowSettings) {
-                  newTopCandidate = minBelowSettings;
+                // Ensure we do not overlap the settings panel
+                const overlapsSettings = (targetTop + toolbarHeight > settingsRect.top) &&
+                  (targetTop < settingsRect.bottom);
+
+                if (overlapsSettings) {
+                  const spaceBetween = settingsRect.top - comicRect.bottom;
+                  if (spaceBetween >= toolbarHeight + 30) {
+                    targetTop = comicRect.bottom + 15;
+                  } else {
+                    minRequiredTop = Math.max(minRequiredTop, settingsRect.bottom + 15);
+                  }
+                } else {
+                  // Stay at least 15px below settings if saved position was already below
+                  if (targetTop > settingsRect.bottom) {
+                    minRequiredTop = Math.max(minRequiredTop, settingsRect.bottom + 15);
+                  }
                 }
               }
             }
 
-            newTop = newTopCandidate;
+            newTop = Math.min(Math.max(targetTop, minRequiredTop), maxTop);
           } else {
             // Toolbar should be above comic - check if saved position is still valid
             const toolbarHeight = toolbar.offsetHeight;
