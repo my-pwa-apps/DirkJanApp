@@ -462,15 +462,17 @@ function clampMainToolbarInView() {
     toolbar.style.left = left + 'px';
     toolbar.style.top = top + 'px';
     
-    // Preserve the belowComic flag when clamping
+    // Preserve the belowComic and belowSettings flags when clamping
     const savedPos = UTILS.safeJSONParse(savedPosRaw, null);
     const belowComic = savedPos && savedPos.belowComic !== undefined ? savedPos.belowComic : false;
+    const belowSettings = savedPos && savedPos.belowSettings !== undefined ? savedPos.belowSettings : false;
     
     try { 
       localStorage.setItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS, JSON.stringify({ 
         top, 
         left, 
-        belowComic 
+        belowComic,
+        belowSettings
       })); 
     } catch(_) {}
   }
@@ -564,15 +566,24 @@ function makeDraggable(element, dragHandle, storageKey, onDragStart = null, onDr
     const numericTop = parseFloat(element.style.top) || 0;
     const numericLeft = parseFloat(element.style.left) || 0;
     
-    // For toolbar, also save whether it's below the comic
+    // For toolbar, also save whether it's below the comic and settings
     let isBelowComic = false;
+    let isBelowSettings = false;
     if (storageKey === CONFIG.STORAGE_KEYS.TOOLBAR_POS) {
       const comic = document.getElementById('comic');
+      const settingsPanel = document.getElementById('settingsDIV');
+      
       if (comic) {
         const elementRect = element.getBoundingClientRect();
         const comicRect = comic.getBoundingClientRect();
         // Toolbar is below comic if its top edge is below comic's bottom edge
         isBelowComic = elementRect.top > comicRect.bottom;
+        
+        // Also check if below settings panel (only matters if settings is visible)
+        if (settingsPanel && settingsPanel.classList.contains('visible')) {
+          const settingsRect = settingsPanel.getBoundingClientRect();
+          isBelowSettings = elementRect.top > settingsRect.bottom;
+        }
       }
     }
     
@@ -580,6 +591,7 @@ function makeDraggable(element, dragHandle, storageKey, onDragStart = null, onDr
       const positionData = { top: numericTop, left: numericLeft };
       if (storageKey === CONFIG.STORAGE_KEYS.TOOLBAR_POS) {
         positionData.belowComic = isBelowComic;
+        positionData.belowSettings = isBelowSettings;
       }
       localStorage.setItem(storageKey, JSON.stringify(positionData));
     } catch(_) {}
@@ -1397,21 +1409,35 @@ function Rotate(applyRotation = true) {
           newLeft = savedPos.left;
           
           if (shouldBeBelow) {
-            // Toolbar should be below comic - find the lowest element to position below
-            let minTop = comicRect.bottom + 15;
+            // Toolbar should be below comic
+            let newTop = comicRect.bottom + 15;
             
-            // Check if settings panel is visible and also below comic
+            // Check if settings panel is visible
             const settingsPanel = document.getElementById('settingsDIV');
             if (settingsPanel && settingsPanel.classList.contains('visible')) {
               const settingsRect = settingsPanel.getBoundingClientRect();
-              // If settings panel is also below (or overlaps with) comic, position toolbar below settings
-              if (settingsRect.top < comicRect.bottom + 100) {
-                // Settings is near/below comic, position toolbar below settings
-                minTop = settingsRect.bottom + 15;
+              
+              // Check if toolbar was saved as being below settings
+              const shouldBeBelowSettings = savedPos.belowSettings === true;
+              
+              if (shouldBeBelowSettings) {
+                // Toolbar was below settings, position it below settings now
+                newTop = settingsRect.bottom + 15;
+              } else {
+                // Toolbar was between comic and settings (or settings wasn't visible when saved)
+                // Check if there's enough space between comic and settings for the toolbar
+                const toolbarHeight = toolbar.offsetHeight;
+                const spaceBetween = settingsRect.top - comicRect.bottom;
+                
+                if (spaceBetween >= toolbarHeight + 30) {
+                  // Enough space between comic and settings
+                  newTop = comicRect.bottom + 15;
+                } else {
+                  // Not enough space, position below settings to avoid overlap
+                  newTop = settingsRect.bottom + 15;
+                }
               }
             }
-            
-            newTop = minTop;
           } else {
             // Toolbar should be above comic - check if saved position is still valid
             const toolbarHeight = toolbar.offsetHeight;
@@ -1445,10 +1471,19 @@ function Rotate(applyRotation = true) {
           toolbar.style.top = newTop + 'px';
           
           // Update saved position
+          // Also save whether it's below settings
+          const settingsPanel = document.getElementById('settingsDIV');
+          let belowSettings = false;
+          if (settingsPanel && settingsPanel.classList.contains('visible')) {
+            const settingsRect = settingsPanel.getBoundingClientRect();
+            belowSettings = newTop > settingsRect.bottom;
+          }
+          
           localStorage.setItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS, JSON.stringify({ 
             top: newTop, 
             left: newLeft, 
-            belowComic: shouldBeBelow 
+            belowComic: shouldBeBelow,
+            belowSettings: belowSettings
           }));
           
           // Show toolbar after positioning
@@ -2391,7 +2426,8 @@ function positionToolbarCentered(toolbar, savePosition = false) {
       localStorage.setItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS, JSON.stringify({ 
         top: centeredTop, 
         left: centeredLeft,
-        belowComic: false  // Centered position is always above comic (between logo and comic)
+        belowComic: false,  // Centered position is always above comic (between logo and comic)
+        belowSettings: false
       }));
     } catch(_) {}
   }
