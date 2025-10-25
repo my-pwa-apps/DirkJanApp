@@ -1409,46 +1409,40 @@ function Rotate(applyRotation = true) {
           newLeft = savedPos.left;
           
           if (shouldBeBelow) {
-            // Toolbar should be below comic - try to restore saved position
+            // Toolbar should be below comic - prefer the saved absolute position
             const settingsPanel = document.getElementById('settingsDIV');
-            let shouldBeBelowSettings = savedPos.belowSettings === true;
-            
-            // Fallback: if flag not set, check if saved position was below settings
-            if (!shouldBeBelowSettings && settingsPanel && settingsPanel.classList.contains('visible')) {
-              const settingsRect = settingsPanel.getBoundingClientRect();
-              // If saved top is significantly below settings bottom, assume it was below
-              shouldBeBelowSettings = savedPos.top > (settingsRect.bottom + 10);
+            let newTopCandidate = savedPos.top;
+
+            // Always ensure we stay below the comic
+            const minBelowComic = comicRect.bottom + 15;
+            if (!Number.isFinite(newTopCandidate)) {
+              newTopCandidate = minBelowComic;
             }
-            
-            if (shouldBeBelowSettings && settingsPanel && settingsPanel.classList.contains('visible')) {
-              // Toolbar was below settings - position it below settings
+            newTopCandidate = Math.max(newTopCandidate, minBelowComic);
+
+            if (settingsPanel && settingsPanel.classList.contains('visible')) {
               const settingsRect = settingsPanel.getBoundingClientRect();
-              newTop = settingsRect.bottom + 15;
-            } else if (settingsPanel && settingsPanel.classList.contains('visible')) {
-              // Settings is visible but toolbar was not below it
-              // Try to use saved position, but check for overlap
-              const settingsRect = settingsPanel.getBoundingClientRect();
-              const toolbarHeight = toolbar.offsetHeight;
-              
-              // Check if saved position would overlap with settings
-              if (savedPos.top + toolbarHeight > settingsRect.top && savedPos.top < settingsRect.bottom) {
-                // Saved position overlaps settings - check if there's space between comic and settings
-                const spaceBetween = settingsRect.top - comicRect.bottom;
-                if (spaceBetween >= toolbarHeight + 30) {
-                  // Enough space, position between them
-                  newTop = comicRect.bottom + 15;
-                } else {
-                  // Not enough space, position below settings
-                  newTop = settingsRect.bottom + 15;
-                }
-              } else {
-                // No overlap, use saved position (but ensure it's at least below comic)
-                newTop = Math.max(savedPos.top, comicRect.bottom + 15);
+              let belowSettingsFlag = savedPos.belowSettings === true;
+
+              // Fallback: infer from saved top if flag missing
+              if (!belowSettingsFlag) {
+                belowSettingsFlag = savedPos.top > (settingsRect.bottom + 10);
               }
-            } else {
-              // No settings panel or not visible - try to use saved position
-              newTop = Math.max(savedPos.top, comicRect.bottom + 15);
+
+              if (belowSettingsFlag) {
+                const desiredGap = savedPos.top > settingsRect.bottom
+                  ? Math.max(savedPos.top - settingsRect.bottom, 15)
+                  : 15;
+                newTopCandidate = Math.max(newTopCandidate, settingsRect.bottom + desiredGap);
+              } else {
+                const minBelowSettings = settingsRect.bottom + 15;
+                if (newTopCandidate < minBelowSettings) {
+                  newTopCandidate = minBelowSettings;
+                }
+              }
             }
+
+            newTop = newTopCandidate;
           } else {
             // Toolbar should be above comic - check if saved position is still valid
             const toolbarHeight = toolbar.offsetHeight;
