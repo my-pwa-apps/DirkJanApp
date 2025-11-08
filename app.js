@@ -13,6 +13,12 @@ const CONFIG = Object.freeze({
   NOTIFICATION_AUTO_HIDE: 8000,        // Auto-hide notification after 8s
   KEYBOARD_HINT_DELAY: 2000,           // Show keyboard hint after 2s
   
+  // CORS Proxies (in priority order)
+  CORS_PROXIES: [
+    'https://api.codetabs.com/v1/proxy?quest=',
+    'https://corsproxy.io/?'
+  ],
+  
   // Fetch timeouts
   FETCH_TIMEOUT: 10000,                // 10 second timeout for HTML
   FETCH_TIMEOUT_FAST: 5000,            // 5 second fast attempt timeout
@@ -129,38 +135,191 @@ function dismissUpdate() {
 }
 
 // ========================================
-// DIRECT FETCH SYSTEM
+// CORS PROXY SYSTEM
 // ========================================
 
+// Track which proxy is currently working best
+let workingProxyIndex = 0;
+let proxyFailureCount = [0, 0]; // One for each proxy
+let proxyResponseTimes = [0, 0]; // Track average response times in ms
+
 /**
- * Fetches a URL directly without CORS proxies
+ * Fetches a URL with intelligent CORS proxy fallback
+ * Uses parallel racing for faster fallback and tracks proxy performance
  * @param {string} url - The URL to fetch
- * @param {boolean} enableRacing - Unused parameter kept for compatibility
+ * @param {boolean} enableRacing - If true, races proxies after a delay for faster fallback
  * @returns {Promise<Response>} The fetch response
- * @throws {Error} If fetch fails
+ * @throws {Error} If all fetch attempts fail
  */
 async function fetchWithFallback(url, enableRacing = true) {
+  const startTime = performance.now();
+  const bestProxyIndex = getBestProxyIndex();
+  
+  // Try the best performing proxy first
+  const primaryAttempt = tryProxy(url, bestProxyIndex, startTime);
+  
+  if (!enableRacing) {
+    // Simple mode: just try primary then fallback
+    try {
+      return await primaryAttempt;
+    } catch (error) {
+      return await tryRemainingProxies(url, bestProxyIndex, startTime);
+    }
+  }
+  
+  // Racing mode: if primary is slow, start backup attempts
   try {
-    const response = await fetch(url, { 
+    return await Promise.race([
+      primaryAttempt,
+      // Start racing with other proxies after a delay if primary is slow
+      (async () => {
+        await new Promise(resolve => setTimeout(resolve, CONFIG.FETCH_TIMEOUT_FAST));
+        // Primary is taking too long, try backups in parallel
+        return await tryBackupProxies(url, bestProxyIndex, startTime);
+      })()
+    ]);
+  } catch (error) {
+    // Both primary and racing failed, try remaining sequentially
+    return await tryRemainingProxies(url, bestProxyIndex, startTime);
+  }
+}
+
+/**
+ * Gets the best proxy index based on success rate and response time
+ * @returns {number} Index of the best performing proxy
+ */
+function getBestProxyIndex() {
+  let bestIndex = workingProxyIndex;
+  let bestScore = -Infinity;
+  
+  for (let i = 0; i < CONFIG.CORS_PROXIES.length; i++) {
+    // Heavily penalize failures, reward fast response times
+    const failurePenalty = proxyFailureCount[i] * 2000;
+    const avgTime = proxyResponseTimes[i] || 1500; // Default to 1.5s if unknown
+    const score = 10000 / (avgTime + failurePenalty + 1);
+    
+    if (score > bestScore) {
+      bestScore = score;
+      bestIndex = i;
+    }
+  }
+  
+  return bestIndex;
+}
+
+/**
+ * Updates proxy performance statistics
+ * @param {number} proxyIndex - Proxy index
+ * @param {boolean} success - Whether request succeeded
+ * @param {number} responseTime - Response time in ms
+ */
+function updateProxyStats(proxyIndex, success, responseTime) {
+  if (success) {
+    workingProxyIndex = proxyIndex;
+    proxyFailureCount[proxyIndex] = Math.max(0, proxyFailureCount[proxyIndex] - 1);
+    
+    // Update rolling average (70% old, 30% new)
+    if (proxyResponseTimes[proxyIndex] === 0) {
+      proxyResponseTimes[proxyIndex] = responseTime;
+    } else {
+      proxyResponseTimes[proxyIndex] = proxyResponseTimes[proxyIndex] * 0.7 + responseTime * 0.3;
+    }
+  } else {
+    proxyFailureCount[proxyIndex]++;
+  }
+}
+
+/**
+ * Attempts to fetch via a specific proxy
+ * @param {string} url - URL to fetch
+ * @param {number} proxyIndex - Proxy index to use
+ * @param {number} startTime - Start time for tracking
+ * @returns {Promise<Response>}
+ */
+async function tryProxy(url, proxyIndex, startTime) {
+  const proxyUrl = CONFIG.CORS_PROXIES[proxyIndex];
+  const proxyName = proxyUrl.split('/')[2]; // Extract domain for logging
+  
+  try {
+    const fullUrl = `${proxyUrl}${encodeURIComponent(url)}`;
+    const response = await fetch(fullUrl, { 
       signal: AbortSignal.timeout(CONFIG.FETCH_TIMEOUT),
       mode: 'cors',
       credentials: 'omit',
-      cache: 'default'
+      cache: 'no-cache' // Prevent stale cached errors
     });
     
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+      const errorMsg = `HTTP ${response.status}`;
+      console.warn(`✗ Proxy ${proxyIndex} (${proxyName}) ${errorMsg}`);
+      updateProxyStats(proxyIndex, false, 0);
+      throw new Error(errorMsg);
     }
     
+    // Success
+    const responseTime = performance.now() - startTime;
+    updateProxyStats(proxyIndex, true, responseTime);
+    console.log(`✓ Proxy ${proxyIndex} (${proxyName}) in ${responseTime.toFixed(0)}ms`);
     return response;
     
   } catch (error) {
-    console.error('Fetch failed:', error);
+    const errorType = error.name === 'TimeoutError' ? 'timeout' : 
+                      error.name === 'AbortError' ? 'aborted' : 
+                      error.message;
+    console.warn(`✗ Proxy ${proxyIndex} (${proxyName}):`, errorType);
+    updateProxyStats(proxyIndex, false, 0);
     throw error;
   }
 }
 
+/**
+ * Tries backup proxies in parallel (racing)
+ * @param {string} url - URL to fetch
+ * @param {number} excludeIndex - Proxy to exclude (already trying)
+ * @param {number} startTime - Start time for tracking
+ * @returns {Promise<Response>}
+ */
+async function tryBackupProxies(url, excludeIndex, startTime) {
+  const attempts = [];
+  
+  for (let i = 0; i < CONFIG.CORS_PROXIES.length; i++) {
+    if (i === excludeIndex) continue;
+    attempts.push(tryProxy(url, i, startTime));
+  }
+  
+  // Return first successful response
+  return await Promise.any(attempts);
+}
 
+/**
+ * Tries remaining proxies sequentially as final fallback
+ * @param {string} url - URL to fetch
+ * @param {number} excludeIndex - Proxy already tried
+ * @param {number} startTime - Start time for tracking
+ * @returns {Promise<Response>}
+ */
+async function tryRemainingProxies(url, excludeIndex, startTime) {
+  const errors = [];
+  
+  for (let i = 0; i < CONFIG.CORS_PROXIES.length; i++) {
+    if (i === excludeIndex) continue;
+    
+    try {
+      return await tryProxy(url, i, startTime);
+    } catch (error) {
+      errors.push(`Proxy ${i}: ${error.message}`);
+    }
+  }
+  
+  // Reset failure counts if all proxies are struggling
+  if (proxyFailureCount.every(count => count > 2)) {
+    console.log('Resetting proxy failure counts');
+    proxyFailureCount.fill(0);
+  }
+  
+  console.error('All proxies failed:', errors.join('; '));
+  throw new Error(`All proxies failed: ${errors.join(', ')}`);
+}
 
 // ========================================
 // GLOBAL STATE & UTILITY FUNCTIONS
@@ -619,22 +778,39 @@ async function shareWithImage(shareText, shareUrl) {
   })();
   if (!fileShareSupported) throw new Error('File sharing not supported');
 
-  // Fetch image directly
-  const response = await fetch(pictureUrl, { 
-    signal: AbortSignal.timeout(CONFIG.IMAGE_FETCH_TIMEOUT),
-    mode: 'cors',
-    headers: { Accept: 'image/*' },
-    cache: 'default'
-  });
+  const tryFetch = async (baseUrl, timeoutMs) => {
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const resp = await fetch(baseUrl, { mode: 'cors', headers: { Accept: 'image/*' }, signal: controller.signal });
+      return resp;
+    } finally { clearTimeout(t); }
+  };
+
+  // Build URL attempts using the intelligent proxy selection
+  // Try proxies in order based on recent success
+  const attempts = [];
   
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}`);
+  // Add proxies in priority order (starting with last working one)
+  for (let i = 0; i < CONFIG.CORS_PROXIES.length; i++) {
+    const proxyIndex = (workingProxyIndex + i) % CONFIG.CORS_PROXIES.length;
+    attempts.push(`${CONFIG.CORS_PROXIES[proxyIndex]}${encodeURIComponent(pictureUrl)}`);
   }
   
-  const blob = await response.blob();
-  if (blob.size < CONFIG.MIN_IMAGE_SIZE) {
-    throw new Error('Invalid image size');
+  // Add direct URL as final fallback
+  attempts.push(pictureUrl);
+
+  let blob = null;
+  for (const url of attempts) {
+    try {
+      const r = await tryFetch(url, CONFIG.IMAGE_FETCH_TIMEOUT);
+      if (!r.ok) continue;
+      const b = await r.blob();
+      if (b.size < CONFIG.MIN_IMAGE_SIZE) continue; // Ensure valid image size
+      blob = b; break;
+    } catch (err) { /* Try next URL */ }
   }
+  if (!blob) throw new Error('Failed to fetch image blob');
 
   // Ensure JPEG for widest support
   let finalFile;
