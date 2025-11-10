@@ -520,7 +520,7 @@ function calculateOptimalToolbarPosition(toolbar) {
 /**
  * Check if toolbar position is within snap zone of optimal position
  * @param {number} top - Current top position
- * @param {number} left - Current left position
+ * @param {number} left - Current left position (unused now since toolbar is always centered)
  * @param {HTMLElement} toolbar - The toolbar element
  * @returns {boolean} True if within snap zone
  */
@@ -529,10 +529,9 @@ function isInSnapZone(top, left, toolbar) {
   if (!optimalPos) return false;
   
   const verticalDistance = Math.abs(top - optimalPos.top);
-  const horizontalDistance = Math.abs(left - optimalPos.left);
   
-  // Snap if within threshold on both axes (or just vertical for more forgiving snap)
-  return verticalDistance < CONFIG.SNAP_THRESHOLD && horizontalDistance < CONFIG.SNAP_THRESHOLD;
+  // Only check vertical distance since toolbar is always horizontally centered
+  return verticalDistance < CONFIG.SNAP_THRESHOLD;
 }
 
 /**
@@ -685,7 +684,13 @@ function makeDraggable(element, dragHandle, storageKey, onDragStart = null, onDr
     const docWidth = Math.max(document.documentElement.scrollWidth, window.innerWidth);
     const docHeight = Math.max(document.documentElement.scrollHeight, window.innerHeight);
     
-    newLeft = Math.max(0, Math.min(newLeft, docWidth - width));
+    // For toolbar: always keep horizontally centered
+    if (storageKey === CONFIG.STORAGE_KEYS.TOOLBAR_POS) {
+      newLeft = (window.innerWidth - width) / 2;
+    } else {
+      newLeft = Math.max(0, Math.min(newLeft, docWidth - width));
+    }
+    
     newTop = Math.max(0, Math.min(newTop, docHeight - height));
     
     // Apply position
@@ -703,6 +708,12 @@ function makeDraggable(element, dragHandle, storageKey, onDragStart = null, onDr
     // Get current position
     let numericTop = parseFloat(element.style.top) || 0;
     let numericLeft = parseFloat(element.style.left) || 0;
+    
+    // For toolbar: ensure it's horizontally centered
+    if (storageKey === CONFIG.STORAGE_KEYS.TOOLBAR_POS) {
+      numericLeft = (window.innerWidth - element.offsetWidth) / 2;
+      element.style.left = numericLeft + 'px';
+    }
     
     // Check for snap zone if this is the toolbar
     let isOptimalPosition = false;
