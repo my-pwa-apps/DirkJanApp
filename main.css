@@ -188,6 +188,7 @@ input
     padding: 16px 20px;
     width: calc(100vw - 40px); /* Use full viewport width minus padding */
     max-width: 900px; /* Limit maximum width to match main content */
+    min-width: 320px; /* Ensure minimum width for very small screens */
     box-shadow: 
         0 8px 32px rgba(0, 0, 0, 0.3),
         0 2px 8px rgba(0, 0, 0, 0.2),
@@ -203,6 +204,7 @@ input
     gap: 8px; /* Add default gap between buttons */
     -webkit-user-select: none;
     user-select: none;
+    transition: width 0.3s ease, gap 0.3s ease, padding 0.3s ease; /* Smooth responsive transitions */
 }
 
 /* Mobile responsive styles for toolbar - consolidated */
@@ -212,8 +214,7 @@ input
         padding: 12px 10px;
         gap: 6px;
         border-radius: 16px;
-        left: 10px;
-        transform: none;
+        /* Don't override left/top - let JavaScript handle positioning */
     }
     
     .toolbar-button,
@@ -265,7 +266,7 @@ input
         width: calc(100vw - 16px);
         padding: 10px 8px;
         gap: 4px;
-        left: 8px;
+        /* Don't override left/top - let JavaScript handle positioning */
     }
     
     .toolbar-button,
