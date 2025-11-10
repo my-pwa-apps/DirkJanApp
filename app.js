@@ -58,6 +58,7 @@ const CONFIG = Object.freeze({
     SETTINGS_VISIBLE: 'settings'
   })
 });
+
 // ========================================
 // SERVICE WORKER REGISTRATION & PWA SETUP
 // ========================================
@@ -65,9 +66,9 @@ const CONFIG = Object.freeze({
 /**
  * Initializes and registers the service worker for PWA functionality
  */
-if ("serviceWorker" in navigator) {
+if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register("./serviceworker.js")
+    navigator.serviceWorker.register('./serviceworker.js')
       .then(registration => {
         // Check for updates periodically (every hour)
         setInterval(() => {
@@ -80,7 +81,6 @@ if ("serviceWorker" in navigator) {
           if (newWorker) {
             newWorker.addEventListener('statechange', () => {
               if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                // New service worker available
                 showUpdateNotification();
               }
             });
@@ -811,94 +811,79 @@ function makeDraggable(element, dragHandle, storageKey, onDragStart = null, onDr
  * Handles image sharing, text fallbacks, and clipboard copying
  * @returns {Promise<void>}
  */
-async function Share() 
-{
-	if(!pictureUrl) {
-		alert('Sorry, no comic is available to share at this moment.');
-		return;
-	}
+async function Share() {
+  if (!pictureUrl) {
+    alert('Sorry, no comic is available to share at this moment.');
+    return;
+  }
 
-	// Create share text with current date
-	const shareText = `Check out this DirkJan comic from ${formattedDate}!`;
-	const shareUrl = 'https://dirkjanapp.pages.dev';
+  const shareText = `Check out this DirkJan comic from ${formattedDate}!`;
+  const shareUrl = 'https://dirkjanapp.pages.dev';
+  const isAndroid = /Android/i.test(navigator.userAgent);
 
-	// Detect Android for special handling
-	const isAndroid = /Android/i.test(navigator.userAgent);
+  if (!navigator.share) {
+    fallbackShare(shareText, shareUrl);
+    return;
+  }
 
-	// Check if Web Share API is supported
-	if(!navigator.share) {
-		fallbackShare(shareText, shareUrl);
-		return;
-	}
+  const originalShareButton = document.getElementById('share');
+  if (originalShareButton) {
+    originalShareButton.style.opacity = '0.6';
+    originalShareButton.style.pointerEvents = 'none';
+  }
 
-	// Show immediate feedback to user
-	const originalShareButton = document.getElementById('share');
-	if (originalShareButton) {
-		originalShareButton.style.opacity = '0.6';
-		originalShareButton.style.pointerEvents = 'none';
-	}
-
-	try {
-		await shareWithImage(shareText, shareUrl);
-	} catch (error) {
-		// Enhanced fallback for Android - try different approaches
-		if (isAndroid) {
-			try {
-				
-				// Android-specific: Try sharing with the image URL prominently featured
-				const androidShareText = `📸 DirkJan Comic from ${formattedDate}\n\n🖼️ Image: ${pictureUrl}\n\n📱 Get the app: ${shareUrl}`;
-				
-				// First try: Image URL as main content
-				try {
-					await navigator.share({
-						title: 'DirkJan Comic Image',
-						text: androidShareText
-					});
-					return;
-				} catch (error) {
-					// Try next method
-				}
-				
-				// Second try: Just the image URL with minimal text
-				try {
-					await navigator.share({
-						title: 'DirkJan Comic',
-						text: `Comic image: ${pictureUrl}`,
-						url: shareUrl
-					});
-					return;
-				} catch (error) {
-					// Try next method
-				}
-				
-				// Third try: Original approach
-				await navigator.share({
-					title: 'DirkJan Comic',
-					text: `${shareText}\n\n📸 Comic image: ${pictureUrl}\n\n🌐 App: ${shareUrl}`
-				});
-			} catch (androidError) {
-				fallbackShare(shareText, shareUrl);
-			}
-		} else {
-			// Enhanced text fallback for other devices
-			try {
-				await navigator.share({
-					title: 'DirkJan Comic',
-					text: `${shareText}\n\nView comic image: ${pictureUrl}`,
-					url: shareUrl
-				});
-			} catch (textError) {
-				// Final fallback to clipboard
-				fallbackShare(shareText, shareUrl);
-			}
-		}
-	} finally {
-		// Restore share button
-		if (originalShareButton) {
-			originalShareButton.style.opacity = '';
-			originalShareButton.style.pointerEvents = '';
-		}
-	}
+  try {
+    await shareWithImage(shareText, shareUrl);
+  } catch (error) {
+    if (isAndroid) {
+      try {
+        const androidShareText = `📸 DirkJan Comic from ${formattedDate}\n\n🖼️ Image: ${pictureUrl}\n\n📱 Get the app: ${shareUrl}`;
+        
+        try {
+          await navigator.share({
+            title: 'DirkJan Comic Image',
+            text: androidShareText
+          });
+          return;
+        } catch (error) {
+          // Try next method
+        }
+        
+        try {
+          await navigator.share({
+            title: 'DirkJan Comic',
+            text: `Comic image: ${pictureUrl}`,
+            url: shareUrl
+          });
+          return;
+        } catch (error) {
+          // Try next method
+        }
+        
+        await navigator.share({
+          title: 'DirkJan Comic',
+          text: `${shareText}\n\n📸 Comic image: ${pictureUrl}\n\n🌐 App: ${shareUrl}`
+        });
+      } catch (androidError) {
+        fallbackShare(shareText, shareUrl);
+      }
+    } else {
+      try {
+        await navigator.share({
+          title: 'DirkJan Comic',
+          text: `${shareText}\n\nView comic image: ${pictureUrl}`,
+          url: shareUrl
+        });
+      } catch (textError) {
+        fallbackShare(shareText, shareUrl);
+      }
+    }
+  } finally {
+    if (originalShareButton) {
+      originalShareButton.style.opacity = '';
+      originalShareButton.style.pointerEvents = '';
+    }
+  }
 }
 
 /**

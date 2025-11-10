@@ -14,169 +14,77 @@
     --focus-ring: 0 0 0 3px rgba(255, 215, 0, 0.5);
 }
 
-body
-{
-    /* Fix the gradient by making it fixed and ensuring full height coverage */
-    background: linear-gradient(to bottom, #000000, #d0d0d0) fixed no-repeat;
-    background-size: 100% 100vh;
-    min-height: 100vh;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: darkgrey;
-    color: black;
-    margin: 0; /* Prevent margin from causing scroll issues */
-    padding: 0;
-}
-
 html {
-    /* Ensure html also covers full height */
     height: 100%;
     min-height: 100vh;
 }
 
-main
-{
+body {
+    background: linear-gradient(to bottom, #000000, #d0d0d0) fixed no-repeat;
+    background-size: 100% 100vh;
+    min-height: 100vh;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: black;
+    margin: 0;
+    padding: 0;
+}
+
+main {
     max-width: 900px;
     margin: auto;
     padding: 0;
     text-align: center;
 }
 
-input[type="checkbox"], label
-{
+input[type="checkbox"],
+label {
     float: left;
     line-height: 1.6em;
     height: 1.6em;
-    margin: 0px 2px;
-    padding: 0px;
+    margin: 0 2px;
+    padding: 0;
     font-size: small;
 }
 
-/* Old checkbox styles - only for legacy elements, not settings panel */
-.buttongrid input[type=checkbox],
-#settingsDIV.legacy input[type=checkbox]
-{
-	position: relative;
-	cursor: pointer;
-	clear: left;
-	margin-right: 25px;
-	margin-bottom: 20px;
-}
-
-.buttongrid input[type=checkbox]:before,
-#settingsDIV.legacy input[type=checkbox]:before
-{
-	content: "";
-	display: block;
-	position: absolute;
-	width: 16px;
-	height: 16px;
-	top: 0;
-	left: 0;
-	border: 2px solid black;
-	border-radius: 3px;
-	background-color: lightgray;
-}
-
-.buttongrid input[type=checkbox]:checked:after,
-#settingsDIV.legacy input[type=checkbox]:checked:after
-{
-	content: "";
-	display: block;
-	width: 5px;
-	height: 10px;
-	border: solid black;
-	border-width: 0 2px 2px 0;
-	-webkit-transform: rotate(45deg);
-	-ms-transform: rotate(45deg);
-	transform: rotate(45deg);
-	position: absolute;
-	top: 2px;
-	left: 6px;
-}
-
-.logo
-{
+.logo {
     width: 100%;
     margin-bottom: 5px;
     padding: 8px 12px;
     box-sizing: border-box;
 }
 
-.logo img
-{
+.logo img {
     width: 100%;
     max-width: 100%;
     height: auto;
     display: block;
 }
-.button {
-    margin: 5px ;
-    padding: 10px ;
-    text-align: center;
-    transition: 0.5s;
-    background-size: 200% auto;
-    color: black;
-    border-radius: 10px;
-    display: block;
-    font-weight: 700;
-    box-shadow: 0px 0px 10px -7px #f09819;
-    background-image: var(--toolbar-gradient);
-    cursor: pointer;
-    -webkit-user-select: none;
-    user-select: none;
-    touch-action: manipulation;
-    border: none; /* Remove border */
-    outline: none; /* Remove outline focus border */
-  }
-    .button:active {
-      transform: scale(0.95);
-      border-radius: 10px;
-      border: none;
-      outline: none;
-    }
-  
-  .button:hover {
-    background-position: right center;
-    color: black;
-    text-decoration: none;
-    border-radius: 10px;
-    border: none;
-    outline: none;
-  }
-  
-  .button:disabled {
-      background-color: #f39700;
-      opacity: 0.5;
-      color: black;
-      border-radius: 10px;
-      box-shadow: none;
-  }
-
-input 
-{
-	margin: 5px ;
-	padding: 10px ;
-	-webkit-appearance: none;
-	-moz-appearance: none;
+input {
+    margin: 5px;
+    padding: 10px;
+    -webkit-appearance: none;
+    -moz-appearance: none;
     appearance: none;
-	max-width: 100%;
-	font-size: 0.75pc;
-	box-sizing: border-box;
-	text-align: center;
-	border-radius: 10px;
-	background-color: white;
+    max-width: 100%;
+    font-size: 0.75pc;
+    box-sizing: border-box;
+    text-align: center;
+    border-radius: 10px;
+    background-color: white;
     opacity: 0.9;
     border: none;
-    outline: none; /* Remove outline focus border */
+    outline: none;
 }
 
-/* Modern toolbar design with Fluent Design */
-/* Toolbar container provides space for the toolbar */
+/* ========================================
+   TOOLBAR DESIGN
+   ======================================== */
+
 .toolbar-container {
-  position: relative;
-  height: 80px; /* Space for toolbar */
-  margin: 15px 0;
-  width: 100%;
+    position: relative;
+    height: 80px;
+    margin: 15px 0;
+    width: 100%;
 }
 
 .toolbar {
@@ -207,87 +115,7 @@ input
     transition: width 0.3s ease, gap 0.3s ease, padding 0.3s ease; /* Smooth responsive transitions */
 }
 
-/* Mobile responsive styles for toolbar - consolidated */
-@media (max-width: 768px) {
-    .toolbar {
-        width: calc(100vw - 20px);
-        padding: 12px 10px;
-        gap: 6px;
-        border-radius: 16px;
-        /* Don't override left/top - let JavaScript handle positioning */
-    }
-    
-    .toolbar-button,
-    .toolbar-datepicker-btn {
-        width: 44px;
-        height: 44px;
-        min-width: 44px;
-        border-radius: 12px;
-        -webkit-tap-highlight-color: transparent;
-        -webkit-touch-callout: none;
-        -webkit-user-select: none;
-        user-select: none;
-        outline: none;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    
-    .toolbar-button:active,
-    .toolbar-datepicker-btn:active {
-        transform: translateY(-1px) scale(1.02);
-        background-position: right center;
-        box-shadow: 0 4px 12px rgba(240, 152, 25, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2), inset 0 2px 4px rgba(0, 0, 0, 0.1);
-        transition: transform 0.1s ease;
-    }
-    
-    /* Reset active state when not focused (prevents stuck buttons on mobile) */
-    .toolbar-button:not(:focus):not(:active),
-    .toolbar-datepicker-btn:not(:focus):not(:active) {
-        transform: none !important;
-    }
-    
-    .toolbar-button:focus-visible,
-    .toolbar-datepicker-btn:focus-visible {
-        outline: none;
-        transform: translateY(-3px) scale(1.05);
-    }
-    
-    .toolbar-svg {
-        width: 22px;
-        height: 22px;
-    }
-    
-    /* Touch device specific - reset hover on pure touch */
-    @media (hover: none) and (pointer: coarse) {
-        .toolbar-button:hover,
-        .toolbar-datepicker-btn:hover {
-            transform: none;
-            background-position: left center;
-        }
-    }
-}
 
-/* Extra small mobile devices */
-@media (max-width: 480px) {
-    .toolbar {
-        width: calc(100vw - 16px);
-        padding: 10px 8px;
-        gap: 4px;
-        /* Don't override left/top - let JavaScript handle positioning */
-    }
-    
-    .toolbar-button,
-    .toolbar-datepicker-btn {
-        width: 40px;
-        height: 40px;
-        min-width: 40px;
-        border-radius: 10px;
-    }
-    
-    .toolbar-svg {
-        width: 20px;
-        height: 20px;
-    }
-}
 .toolbar-button {
     background: var(--primary-gradient);
     background-size: 200% auto;
@@ -483,82 +311,43 @@ input[type="date"]:focus-visible {
   pointer-events: none;
 }
 
-.toolbar-datepicker::before { content: none; }
-
-/* Always keep .toolbar-button and .toolbar-svg flat and single color */
-.toolbar-button, .toolbar-datepicker-btn {
-  color: #333 !important;
+.toolbar-datepicker::before {
+    content: none;
 }
+
+.toolbar-button,
+.toolbar-datepicker-btn {
+    color: #333 !important;
+}
+
 .toolbar-svg {
-  width: 28px;
-  height: 28px;
-  stroke: #333;
-  color: #333;
-  fill: none;
+    width: 28px;
+    height: 28px;
+    stroke: #333;
+    color: #333;
+    fill: none;
 }
 
 .toolbar-svg circle[fill="currentColor"],
 .toolbar-svg rect[fill="currentColor"],
 .toolbar-svg path[fill="currentColor"] {
-  fill: #333;
+    fill: #333;
 }
 
-/* Duplicate media queries removed - see consolidated versions above */
+/* ========================================
+   COMIC IMAGE STYLES
+   ======================================== */
 
-/* Hide old button grid */
-.buttongrid {
-    display: none !important;
-}
-
-.rotate {
-    max-height: 95vh; /* Use most of the viewport height */
-    max-width: 95vw; /* Use most of the viewport width */
-    width: auto;
-    height: auto;
-    object-fit: contain; /* Maintain aspect ratio while fitting container */
-    box-shadow: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
-    border-radius: 4px;
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) rotate(90deg);
-    z-index: 10001;
-    cursor: pointer; /* Make it clear the image is clickable */
-    pointer-events: auto; /* Ensure click events work */
-    transform-origin: center center;
-}
-
-/* Fullscreen mode without rotation (for landscape device orientation) */
-.fullscreen-landscape {
-    max-height: 95vh;
-    max-width: 95vw;
-    width: auto;
-    height: auto;
-    object-fit: contain;
-    box-shadow: 0 10px 20px rgba(0,0,0,0.19), 0 6px 6px rgba(0,0,0,0.23);
-    border-radius: 4px;
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%); /* Center without rotation */
-    z-index: 10001;
-    cursor: pointer;
-    pointer-events: auto;
-}
-  
 .normal {
-    -ms-transform: rotate(0deg);
-    -webkit-transform: rotate(0deg);
     transform: rotate(0deg);
-    width: 100vw; /* Full viewport width */
+    width: 100vw;
     max-width: 100vw;
     height: auto;
     display: block;
-    margin: 0;
+    margin: 0 0 20px 0;
     padding: 0;
     cursor: pointer;
-    pointer-events: auto; /* Ensure comic is always clickable */
-    /* Break out of parent container to fill screen */
+    pointer-events: auto;
     position: relative;
     left: 50%;
     right: 50%;
@@ -566,197 +355,175 @@ input[type="date"]:focus-visible {
     margin-right: -50vw;
 }
 
-/* Date picker styling to match buttons */
-input[type="date"]#DatePicker {
-    margin: 5px;
-    padding: 10px;
-    text-align: center;
-    transition: 0.5s;
-    background-size: 200% auto;
-    color: black;
-    border-radius: 10px;
-    display: block;
-    font-weight: 700;
-    box-shadow: 0px 0px 10px -7px #f09819;
-    background-image: var(--toolbar-gradient);
+.rotate {
+    max-height: 95vh;
+    max-width: 95vw;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.19), 0 6px 6px rgba(0, 0, 0, 0.23);
+    border-radius: 4px;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(90deg);
+    transform-origin: center center;
+    z-index: 10001;
     cursor: pointer;
-    -webkit-user-select: none;
-    user-select: none;
-    touch-action: manipulation;
-    border: none;
-    outline: none; /* Remove outline focus border */
+    pointer-events: auto;
 }
 
-/* Style the calendar picker icon */
-input[type="date"]#DatePicker::-webkit-calendar-picker-indicator {
-    filter: brightness(0.1); /* Dark icon to match the text */
-    opacity: 0.8;
+.fullscreen-landscape {
+    max-height: 95vh;
+    max-width: 95vw;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.19), 0 6px 6px rgba(0, 0, 0, 0.23);
+    border-radius: 4px;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10001;
     cursor: pointer;
-    margin-left: 5px;
+    pointer-events: auto;
 }
 
-/* Active state for date picker */
-input[type="date"]#DatePicker:active {
-    transform: scale(0.95);
-    border: none;
-    outline: none;
-}
+/* ========================================
+   SETTINGS PANEL
+   ======================================== */
 
-/* Hover state for date picker */
-input[type="date"]#DatePicker:hover {
-    background-position: right center;
-    border: none;
-    outline: none;
-}
-
-/* Disabled state */
-input[type="date"]#DatePicker:disabled {
-    background-color: #f39700;
-    opacity: 0.5;
-    color: black;
-    box-shadow: none;
-}
-
-/* Settings menu styling */
-/* Floating Draggable Settings Panel */
 .settings-panel {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-  border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3),
-              0 10px 30px rgba(0, 0, 0, 0.15),
-              inset 0 1px 0 rgba(255, 255, 255, 0.8);
-  z-index: 10000;
-  width: 320px; /* Fixed width to prevent size changes */
-  max-width: 90vw;
-  display: none;
-  flex-direction: column;
-  border: 2px solid rgba(240, 152, 25, 0.3);
-  overflow: hidden;
-  /* Prevent animation glitches when position is set via JS */
-  transition: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border: 2px solid rgba(240, 152, 25, 0.3);
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3),
+                0 10px 30px rgba(0, 0, 0, 0.15),
+                inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    width: 320px;
+    max-width: 90vw;
+    z-index: 10000;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    transition: none;
 }
 
 .settings-panel.visible {
-  display: flex;
-  animation: fadeIn 0.15s ease-out;
+    display: flex;
+    animation: fadeIn 0.15s ease-out;
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 .settings-header {
-  background: linear-gradient(135deg, #F09819 0%, #FFD700 100%);
-  padding: 16px 20px;
-  cursor: move;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  -webkit-user-select: none;
-  user-select: none;
-  border-bottom: 2px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    background: linear-gradient(135deg, #F09819 0%, #FFD700 100%);
+    border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+    padding: 16px 20px;
+    cursor: move;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    -webkit-user-select: none;
+    user-select: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .settings-header h3 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 700;
-  color: #333;
-  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: #333;
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.5);
 }
 
 .settings-close {
-  background: rgba(0, 0, 0, 0.1);
-  border: none;
-  border-radius: 50%;
-  width: 32px;
-  height: 32px;
-  font-size: 24px;
-  line-height: 1;
-  cursor: pointer;
-  color: #333;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 300;
+    background: rgba(0, 0, 0, 0.1);
+    border: none;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    color: #333;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 300;
 }
 
 .settings-close:hover {
-  background: rgba(0, 0, 0, 0.2);
-  transform: rotate(90deg);
+    background: rgba(0, 0, 0, 0.2);
+    transform: rotate(90deg);
 }
 
 .settings-close:active {
-  transform: rotate(90deg) scale(0.95);
+    transform: rotate(90deg) scale(0.95);
 }
 
 .settings-content {
-  padding: 24px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }
 
 .setting-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 12px;
-  background: rgba(240, 152, 25, 0.05);
-  border-radius: 8px;
-  transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 12px;
+    background: rgba(240, 152, 25, 0.05);
+    border-radius: 8px;
+    transition: all 0.2s ease;
 }
 
 .setting-item:hover {
-  background: rgba(240, 152, 25, 0.1);
-  transform: translateX(4px);
+    background: rgba(240, 152, 25, 0.1);
+    transform: translateX(4px);
 }
 
 .setting-item input[type="checkbox"] {
-  width: 20px;
-  height: 20px;
-  min-width: 20px;
-  min-height: 20px;
-  cursor: pointer;
-  accent-color: #F09819;
-  margin: 0;
-  flex-shrink: 0;
-  -webkit-appearance: checkbox;
-  -moz-appearance: checkbox;
-  appearance: auto;
-  position: static;
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    min-height: 20px;
+    cursor: pointer;
+    accent-color: #F09819;
+    margin: 0;
+    flex-shrink: 0;
+    -webkit-appearance: checkbox;
+    -moz-appearance: checkbox;
+    appearance: auto;
+    position: static;
 }
 
 .setting-item label {
-  cursor: pointer;
-  font-size: 15px;
-  font-weight: 500;
-  color: #333;
-  margin: 0;
-  flex: 1;
-  line-height: 20px;
-  display: flex;
-  align-items: center;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 500;
+    color: #333;
+    margin: 0;
+    flex: 1;
+    line-height: 20px;
+    display: flex;
+    align-items: center;
 }
 
-/* Old settings div styling (hidden by default when panel is used) */
-#settingsDIV.legacy {
-    padding: 8px 12px 12px 15px;
-    margin: 5px 0;
-}
+/* ========================================
+   ACTION ICONS
+   ======================================== */
 
-/* Settings icon container */
 .settings-icons-container {
     position: relative;
     display: flex;
@@ -765,72 +532,69 @@ input[type="date"]#DatePicker:disabled {
     gap: 16px;
     padding-right: 15px;
 }
-
-/* Unified icon button styles matching toolbar's orange theme */
 .icon-button {
-  background: var(--primary-gradient);
-  background-size: 200% auto;
-  border: none;
-  border-radius: 50%;
-  width: 48px;
-  height: 48px;
-  padding: 0;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  will-change: transform, box-shadow;
-  box-shadow: 0 4px 16px rgba(240, 152, 25, 0.3),
-              0 2px 4px rgba(0, 0, 0, 0.2),
-              inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+    background: var(--primary-gradient);
+    background-size: 200% auto;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform, box-shadow;
+    box-shadow: 0 4px 16px rgba(240, 152, 25, 0.3),
+                0 2px 4px rgba(0, 0, 0, 0.2),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
 }
 
 .icon-button::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-  transition: left 0.6s ease;
-  z-index: 0;
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: var(--shimmer-gradient);
+    transition: left 0.6s ease;
+    z-index: 0;
 }
 
 .icon-button:hover::before {
-  left: 100%;
+    left: 100%;
 }
 
 .icon-button:hover {
-  transform: translateY(-3px) scale(1.05);
-  background-position: right center;
-  box-shadow: 0 8px 24px rgba(240, 152, 25, 0.4),
-              0 4px 8px rgba(0, 0, 0, 0.3),
-              inset 0 1px 0 rgba(255, 255, 255, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+    transform: translateY(-3px) scale(1.05);
+    background-position: right center;
+    box-shadow: 0 8px 24px rgba(240, 152, 25, 0.4),
+                0 4px 8px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .icon-button:active {
-  transform: translateY(-1px) scale(1.02);
-  box-shadow: 0 4px 12px rgba(240, 152, 25, 0.3),
-              0 2px 4px rgba(0, 0, 0, 0.2),
-              inset 0 2px 4px rgba(0, 0, 0, 0.1);
-  background-position: right center;
+    transform: translateY(-1px) scale(1.02);
+    box-shadow: 0 4px 12px rgba(240, 152, 25, 0.3),
+                0 2px 4px rgba(0, 0, 0, 0.2),
+                inset 0 2px 4px rgba(0, 0, 0, 0.1);
+    background-position: right center;
 }
 
 .icon-button svg {
-  width: 24px;
-  height: 24px;
-  fill: none;
-  stroke-width: 2.5;
-  transition: all 0.3s ease;
-  position: relative;
-  z-index: 1;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
+    width: 24px;
+    height: 24px;
+    fill: none;
+    stroke-width: 2.5;
+    transition: all 0.3s ease;
+    position: relative;
+    z-index: 1;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
 }
 
 /* Settings button - black icon */
@@ -883,112 +647,50 @@ input[type="date"]#DatePicker:disabled {
 }
 
 @keyframes share-pop {
-  0% { transform: scale(1); }
-  40% { transform: scale(1.25); }
-  60% { transform: scale(0.95); }
-  80% { transform: scale(1.1); }
-  100% { transform: scale(1); }
+    0% { transform: scale(1); }
+    40% { transform: scale(1.25); }
+    60% { transform: scale(0.95); }
+    80% { transform: scale(1.1); }
+    100% { transform: scale(1); }
 }
 
-/* Mobile responsive styles for icon buttons */
-@media (max-width: 768px) {
-    .icon-button {
-        width: 52px;
-        height: 52px;
-    }
-    
-    .icon-button svg {
-        width: 26px;
-        height: 26px;
-    }
-    
-    .settings-icons-container {
-        gap: 10px;
-        padding-right: 20px;
-    }
-}
+/* ========================================
+   FULLSCREEN TOOLBAR
+   ======================================== */
 
-/* Tablet responsive styles for icon buttons */
-@media (min-width: 769px) and (max-width: 1024px) {
-    .icon-button {
-        width: 50px;
-        height: 50px;
-    }
-    
-    .icon-button svg {
-        width: 25px;
-        height: 25px;
-    }
-    
-    .settings-icons-container {
-        gap: 9px;
-    }
-}
-
-.toolbar-svg {
-  width: 28px;
-  height: 28px;
-  display: block;
-  stroke: #333;
-  color: #333;
-  fill: none;
-}
-
-/* Fullscreen toolbar styles */
 .fullscreen-toolbar {
-  background: linear-gradient(135deg, rgba(0, 0, 0, 0.8) 0%, rgba(80, 80, 80, 0.7) 51%, rgba(0, 0, 0, 0.8) 100%);
-  border-radius: 20px;
-  padding: 16px;
-  margin: 0;
-  width: auto;
-  box-shadow: 
-      0 8px 32px rgba(0, 0, 0, 0.5),
-      0 4px 12px rgba(0, 0, 0, 0.4),
-      inset 0 1px 0 rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  -webkit-backdrop-filter: blur(25px);
-  backdrop-filter: blur(25px);
-  display: flex;
-  justify-content: space-evenly;
-  align-items: center;
-  gap: 12px;
-  transition: all 0.3s ease;
-  position: fixed;
-  z-index: 10002;
+    background: var(--dark-gradient-strong);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    padding: 16px;
+    margin: 0;
+    width: auto;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5),
+                0 4px 12px rgba(0, 0, 0, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    -webkit-backdrop-filter: blur(25px);
+    backdrop-filter: blur(25px);
+    display: flex;
+    justify-content: space-evenly;
+    align-items: center;
+    gap: 12px;
+    transition: all 0.3s ease;
+    position: fixed;
+    z-index: 10002;
 }
 
-/* Ensure all buttons in fullscreen toolbar look consistent */
 .fullscreen-toolbar .toolbar-button {
-  width: 48px;
-  height: 48px;
-  margin: 0;
-  border-radius: 14px;
+    width: 48px;
+    height: 48px;
+    margin: 0;
+    border-radius: 14px;
 }
 
 .fullscreen-toolbar .toolbar-svg {
-  width: 24px;
-  height: 24px;
+    width: 24px;
+    height: 24px;
 }
 
-/* Responsive styles for the fullscreen toolbar */
-@media (max-width: 480px) {
-  .fullscreen-toolbar {
-    padding: 12px 16px;
-    border-radius: 16px;
-  }
-  
-  .fullscreen-toolbar .toolbar-button {
-    width: 44px;
-    height: 44px;
-    border-radius: 12px;
-  }
-  .fullscreen-toolbar .toolbar-svg {
-    width: 22px;
-    height: 22px;
-  }
-}
-
-/* Rotated comic toolbar - always on the left side */
 .fullscreen-toolbar.rotated {
     flex-direction: column;
     padding: 16px 10px;
@@ -998,74 +700,42 @@ input[type="date"]#DatePicker:disabled {
     left: 20px;
     bottom: auto;
     transform: translateY(-50%);
-    gap: 10px; /* Increased gap for better spacing */
+    gap: 10px;
 }
-  
+
 .fullscreen-toolbar.rotated .toolbar-button {
-    margin: 0; /* Use gap for spacing, so remove margin */
+    margin: 0;
 }
-  
-/* Rotated comic positioning */
+
 #rotated-comic {
-    /* Using margin-left pushes the comic off-center. 
-       Instead, we adjust `left` to re-center the comic in the space available next to the toolbar. */
-    left: calc(50% + 40px) !important; /* Nudge to center in space right of toolbar */
-    margin-left: 0 !important; /* Reset margin */
+    left: calc(50% + 40px) !important;
+    margin-left: 0 !important;
     margin-bottom: 0 !important;
 }
 
-/* Landscape fullscreen comic positioning (avoid toolbar overlap) */
 #rotated-comic.fullscreen-landscape {
-    left: 50% !important; /* Centered horizontally */
-    top: 40% !important; /* Higher to avoid toolbar at bottom */
-    transform: translate(-50%, -50%) !important; /* Center the comic */
+    left: 50% !important;
+    top: 40% !important;
+    transform: translate(-50%, -50%) !important;
 }
 
-/* --- ROTATED MODE: Rotate toolbar SVGs for proper direction --- */
-/* Since the comic is rotated 90° clockwise, we need to rotate the navigation arrows accordingly */
-/* For a vertical toolbar on the left, Up = Previous/First, Down = Next */
-
-/* First button (skip to beginning) - rotate 90deg to point UP */
-.fullscreen-toolbar.rotated .toolbar-button:nth-child(1) .toolbar-svg {
-  transform: rotate(90deg);
-}
-
-/* Second button (Previous) - rotate 90deg to point UP */
-.fullscreen-toolbar.rotated .toolbar-button:nth-child(2) .toolbar-svg {
-  transform: rotate(90deg);
-}
-
-/* Third button (Random) - rotate -90 degrees so dice stays upright */
-.fullscreen-toolbar.rotated .toolbar-button:nth-child(3) .toolbar-svg {
-  transform: rotate(-90deg);
-}
-
-/* Fourth button (Date picker) - rotate -90 degrees so calendar stays upright */
-.fullscreen-toolbar.rotated .toolbar-button:nth-child(4) .toolbar-svg {
-  transform: rotate(-90deg);
-}
-
-/* Fifth button (Next) - rotate 90 degrees clockwise so right arrow points DOWN */
+.fullscreen-toolbar.rotated .toolbar-button:nth-child(1) .toolbar-svg,
+.fullscreen-toolbar.rotated .toolbar-button:nth-child(2) .toolbar-svg,
 .fullscreen-toolbar.rotated .toolbar-button:nth-child(5) .toolbar-svg {
-  transform: rotate(90deg);
+    transform: rotate(90deg);
 }
 
-/* Sixth button (Today) - rotate -90 degrees so calendar stays upright */
-.fullscreen-toolbar.rotated .toolbar-button:nth-child(6) .toolbar-svg {
-  transform: rotate(-90deg);
-}
-
-/* Seventh button (Close) - rotate -90 degrees so X stays upright */
+.fullscreen-toolbar.rotated .toolbar-button:nth-child(3) .toolbar-svg,
+.fullscreen-toolbar.rotated .toolbar-button:nth-child(4) .toolbar-svg,
+.fullscreen-toolbar.rotated .toolbar-button:nth-child(6) .toolbar-svg,
 .fullscreen-toolbar.rotated .toolbar-button:nth-child(7) .toolbar-svg {
-  transform: rotate(-90deg);
+    transform: rotate(-90deg);
 }
 
-/* Ensure no rotation in normal mode */
 .fullscreen-toolbar:not(.rotated) .toolbar-svg {
-  transform: none;
+    transform: none;
 }
 
-/* Landscape toolbar (device is landscape, no rotation needed) */
 .fullscreen-toolbar.landscape-toolbar {
     flex-direction: row;
     padding: 10px 15px;
@@ -1082,291 +752,289 @@ input[type="date"]#DatePicker:disabled {
 }
 
 .fullscreen-toolbar.landscape-toolbar .toolbar-svg {
-    transform: none; /* No rotation needed in landscape mode */
+    transform: none;
 }
 
-/* Additional responsive styles for the rotated toolbar on small height screens */
+/* ========================================
+   LOADING & TRANSITIONS
+   ======================================== */
+
+.loading-spinner {
+    display: inline-block;
+    width: 50px;
+    height: 50px;
+    border: 5px solid rgba(240, 152, 25, 0.3);
+    border-radius: 50%;
+    border-top-color: #f09819;
+    animation: spinner 0.8s linear infinite;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+}
+
+@keyframes spinner {
+    to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+.comic-container {
+    position: relative;
+    min-height: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+img#comic.loading {
+    opacity: 0.3;
+    cursor: pointer;
+    pointer-events: auto;
+}
+
+img#comic.loaded {
+    animation: fadeInComic 0.3s ease-out;
+}
+
+@keyframes fadeInComic {
+    from {
+        opacity: 0;
+        transform: scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* ========================================
+   ACCESSIBILITY
+   ======================================== */
+
+.skip-link {
+    position: absolute;
+    left: -9999px;
+    top: auto;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+.skip-link:focus {
+    position: static;
+    left: auto;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    background: #000;
+    color: #fff;
+    padding: 10px;
+    z-index: 10005;
+}
+
+/* ========================================
+   RESPONSIVE DESIGN
+   ======================================== */
+
+@media (max-width: 768px) {
+    .toolbar {
+        width: calc(100vw - 20px);
+        padding: 12px 10px;
+        gap: 6px;
+        border-radius: 16px;
+    }
+    
+    .toolbar-button,
+    .toolbar-datepicker-btn {
+        width: 44px;
+        height: 44px;
+        min-width: 44px;
+        border-radius: 12px;
+        -webkit-tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        user-select: none;
+        outline: none;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .toolbar-button:active,
+    .toolbar-datepicker-btn:active {
+        transform: translateY(-1px) scale(1.02);
+        background-position: right center;
+        box-shadow: 0 4px 12px rgba(240, 152, 25, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2), inset 0 2px 4px rgba(0, 0, 0, 0.1);
+        transition: transform 0.1s ease;
+    }
+    
+    .toolbar-button:not(:focus):not(:active),
+    .toolbar-datepicker-btn:not(:focus):not(:active) {
+        transform: none !important;
+    }
+    
+    .toolbar-button:focus-visible,
+    .toolbar-datepicker-btn:focus-visible {
+        outline: none;
+        transform: translateY(-3px) scale(1.05);
+    }
+    
+    .toolbar-svg {
+        width: 22px;
+        height: 22px;
+    }
+    
+    .fullscreen-toolbar {
+        padding: 12px 16px;
+        border-radius: 16px;
+    }
+    
+    .fullscreen-toolbar .toolbar-button {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+    }
+    
+    .fullscreen-toolbar .toolbar-svg {
+        width: 22px;
+        height: 22px;
+    }
+    
+    .icon-button {
+        width: 52px;
+        height: 52px;
+    }
+    
+    .icon-button svg {
+        width: 26px;
+        height: 26px;
+    }
+    
+    .settings-icons-container {
+        gap: 10px;
+        padding: 0 10px;
+    }
+    
+    .settings-panel {
+        min-width: 280px;
+        max-width: 85vw;
+    }
+    
+    .settings-content {
+        padding: 20px 16px;
+    }
+    
+    .settings-header h3 {
+        font-size: 16px;
+    }
+    
+    .logo {
+        padding: 8px 4px;
+    }
+}
+
+@media (hover: none) and (pointer: coarse) {
+    .toolbar-button:hover,
+    .toolbar-datepicker-btn:hover {
+        transform: none;
+        background-position: left center;
+    }
+}
+
+@media (max-width: 480px) {
+    .toolbar {
+        width: calc(100vw - 16px);
+        padding: 10px 8px;
+        gap: 4px;
+    }
+    
+    .toolbar-button,
+    .toolbar-datepicker-btn {
+        width: 40px;
+        height: 40px;
+        min-width: 40px;
+        border-radius: 10px;
+    }
+    
+    .toolbar-svg {
+        width: 20px;
+        height: 20px;
+    }
+    
+    .icon-button {
+        width: 44px;
+        height: 44px;
+    }
+    
+    .icon-button svg {
+        width: 22px;
+        height: 22px;
+    }
+    
+    .settings-icons-container {
+        gap: 12px;
+        padding-right: 12px;
+    }
+    
+    .settings-panel {
+        min-width: 260px;
+        max-width: 90vw;
+    }
+    
+    .settings-header {
+        padding: 12px 16px;
+    }
+    
+    .settings-header h3 {
+        font-size: 15px;
+    }
+    
+    .settings-content {
+        padding: 16px 12px;
+        gap: 16px;
+    }
+    
+    .setting-item {
+        padding: 10px;
+    }
+    
+    .setting-item label {
+        font-size: 14px;
+    }
+}
+
 @media (max-height: 420px) {
     .fullscreen-toolbar.rotated {
-        gap: 4px; /* Further reduce gap */
-        padding: 8px 4px; /* Adjust padding */
-        left: 10px; /* Keep it close to the edge */
+        gap: 4px;
+        padding: 8px 4px;
+        left: 10px;
     }
 
     .fullscreen-toolbar.rotated .toolbar-button,
     .fullscreen-toolbar.rotated .toolbar-datepicker-btn {
-        width: 36px; /* Smaller buttons */
+        width: 36px;
         height: 36px;
         border-radius: 10px;
     }
 
     .fullscreen-toolbar.rotated .toolbar-svg {
-        width: 18px; /* Smaller icons */
+        width: 18px;
         height: 18px;
     }
 }
 
-/* Duplicate mobile button styles removed - see consolidated toolbar mobile styles */
-
-/* ========================================
-   LOADING SPINNER & TRANSITIONS
-   ======================================== */
-
-/* Loading spinner for comic images */
-.loading-spinner {
-  display: inline-block;
-  width: 50px;
-  height: 50px;
-  border: 5px solid rgba(240, 152, 25, 0.3);
-  border-radius: 50%;
-  border-top-color: #f09819;
-  animation: spinner 0.8s linear infinite;
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 10;
-}
-
-@keyframes spinner {
-  to { transform: translate(-50%, -50%) rotate(360deg); }
-}
-
-/* Container for comic image with loading state */
-.comic-container {
-  position: relative;
-  min-height: 300px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Smooth fade-in transition for comics */
-.comic-fade-enter {
-  opacity: 0;
-  transform: scale(0.98);
-}
-
-.comic-fade-enter-active {
-  opacity: 1;
-  transform: scale(1);
-  transition: opacity 0.3s ease-out, transform 0.3s ease-out;
-}
-
-.comic-fade-exit {
-  opacity: 1;
-  transform: scale(1);
-}
-
-.comic-fade-exit-active {
-  opacity: 0;
-  transform: scale(0.98);
-  transition: opacity 0.2s ease-in, transform 0.2s ease-in;
-}
-
-/* Loading state for comic image */
-img#comic.loading {
-  opacity: 0.3;
-  cursor: pointer; /* Ensure cursor shows it's clickable */
-  pointer-events: auto; /* Ensure it's clickable even while loading */
-}
-
-img#comic.loaded {
-  animation: fadeInComic 0.3s ease-out;
-}
-
-@keyframes fadeInComic {
-  from {
-    opacity: 0;
-    transform: scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-/* ========================================
-   ACCESSIBILITY & UTILITY CLASSES
-   ======================================== */
-
-/* Skip link for accessibility */
-.skip-link {
-  position: absolute;
-  left: -9999px;
-  top: auto;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-}
-
-.skip-link:focus {
-  position: static;
-  left: auto;
-  width: auto;
-  height: auto;
-  overflow: visible;
-  background: #000;
-  color: #fff;
-  padding: 10px;
-  z-index: 10005;
-}
-
-/* Hidden button grid for backwards compatibility */
-.buttongrid {
-  display: none !important;
-}
-
-/* Settings icons container */
-.settings-icons-container {
-  position: relative;
-  height: 60px;
-  margin: 10px auto;
-  max-width: 900px;
-}
-
-/* Old icon positioning removed - now using flexbox in .settings-icons-container */
-
-/* ========================================
-   RESPONSIVE DESIGN - MOBILE & TABLET
-   ======================================== */
-
-/* Ensure comic always fills full width on all devices */
-@media (max-width: 1200px) {
-  .normal {
-    width: 100vw;
-    max-width: 100vw;
-  }
-}
-
-/* Mobile optimizations */
-@media (max-width: 768px) {
-  /* Ensure main container doesn't restrict comic width */
-  main {
-    max-width: 100%;
-    padding: 0;
-    margin: 0 auto;
-  }
-  
-  /* Comic fills entire screen width on mobile */
-  .normal {
-    width: 100vw;
-    max-width: 100vw;
-    margin-left: -50vw;
-    margin-right: -50vw;
-    left: 50%;
-    right: 50%;
-  }
-  
-  /* Logo adjustments for mobile */
-  .logo {
-    width: 100%;
-    margin-bottom: 0;
-    padding: 8px 4px; /* Slight horizontal padding on mobile */
-  }
-  
-  .logo img {
-    width: 100%;
-    max-width: 100%;
-  }
-  
-  /* Settings icons responsive positioning */
-  .settings-icons-container {
-    max-width: 100%;
-    padding: 0 10px;
-  }
-  
-  /* Settings panel responsive */
-  .settings-panel {
-    min-width: 280px;
-    max-width: 85vw;
-  }
-  
-  .settings-content {
-    padding: 20px 16px;
-  }
-  
-  .settings-header h3 {
-    font-size: 16px;
-  }
-}
-
-/* Small mobile devices */
-@media (max-width: 480px) {
-  .logo {
-    width: 100%;
-    padding: 8px 4px; /* Slight horizontal padding on mobile */
-  }
-  
-  .logo img {
-    width: 100%;
-    max-width: 100%;
-  }
-  
-  /* Adjust icon spacing for very small screens */
-  .icon-button {
-    width: 44px;
-    height: 44px;
-  }
-  
-  /* Smaller settings panel on very small screens */
-  .settings-panel {
-    min-width: 260px;
-    max-width: 90vw;
-  }
-  
-  .settings-header {
-    padding: 12px 16px;
-  }
-  
-  .settings-header h3 {
-    font-size: 15px;
-  }
-  
-  .settings-content {
-    padding: 16px 12px;
-    gap: 16px;
-  }
-  
-  .setting-item {
-    padding: 10px;
-  }
-  
-  .setting-item label {
-    font-size: 14px;
-  }
-  
-  .icon-button svg {
-    width: 22px;
-    height: 22px;
-  }
-  
-  .settings-icons-container {
-    gap: 12px;
-    padding-right: 12px;
-  }
-}
-
-/* Large screens - maintain max width for readability */
-@media (min-width: 1400px) {
-  .normal {
-    width: 100vw;
-    max-width: 100vw;
-    /* Comic still fills full width even on large screens */
-  }
-  
-  /* Keep other content centered */
-  main {
-    max-width: 900px;
-  }
-}
-
-/* Handle very wide screens */
-@media (min-width: 1920px) {
-  .normal {
-    width: 100vw;
-    max-width: 100vw;
-  }
+@media (min-width: 769px) and (max-width: 1024px) {
+    .icon-button {
+        width: 50px;
+        height: 50px;
+    }
+    
+    .icon-button svg {
+        width: 25px;
+        height: 25px;
+    }
+    
+    .settings-icons-container {
+        gap: 9px;
+    }
 }
 
 

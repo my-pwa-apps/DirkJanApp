@@ -1,6 +1,6 @@
 // Service Worker for DirkJan PWA
 // Cache versioning - increment when you need to force cache refresh
-const CACHE_VERSION = 'v60';
+const CACHE_VERSION = 'v61';
 const CACHE_NAME = `dirkjan-cache-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `dirkjan-runtime-${CACHE_VERSION}`;
 const IMAGE_CACHE = `dirkjan-images-${CACHE_VERSION}`;
@@ -13,16 +13,12 @@ const PRECACHE_ASSETS = [
   './app.js',
   './manifest.webmanifest',
   './dirk-jan-tekst.svg',
-  './tune.svg',
-  './heart.svg',
-  './heartborder.svg',
-  './share.svg',
   './favicon-32x32.webp',
   './android-chrome-192x192.png'
 ];
 
 // Maximum cache sizes
-const MAX_IMAGE_CACHE_SIZE = 50; // Keep last 50 comic images
+const MAX_IMAGE_CACHE_SIZE = 50;
 const MAX_RUNTIME_CACHE_SIZE = 30;
 
 // Install event - pre-cache essential assets
@@ -43,12 +39,9 @@ self.addEventListener('activate', event => {
     caches.keys()
       .then(cacheNames => {
         return Promise.all(
-          cacheNames.map(cache => {
-            // Delete old caches that don't match current version
-            if (cache !== CACHE_NAME && cache !== RUNTIME_CACHE && cache !== IMAGE_CACHE) {
-              return caches.delete(cache);
-            }
-          })
+          cacheNames
+            .filter(cache => cache !== CACHE_NAME && cache !== RUNTIME_CACHE && cache !== IMAGE_CACHE)
+            .map(cache => caches.delete(cache))
         );
       })
       .then(() => self.clients.claim())
@@ -59,11 +52,10 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const { request } = event;
   
-  // Only handle GET requests from same origin or CORS proxies
   if (request.method !== 'GET') return;
   
   const url = new URL(request.url);
-  const { destination, url: requestUrl } = request;
+  const { destination } = request;
 
   // Strategy: Cache First for app shell (HTML, CSS, JS, SVG)
   if (['document', 'style', 'script'].includes(destination) || url.pathname.endsWith('.svg')) {
@@ -153,24 +145,15 @@ async function networkFirstStrategy(request, cacheName) {
   }
 }
 
-// Background sync for offline actions (future enhancement)
-self.addEventListener('sync', event => {
-  if (event.tag === 'sync-favorites') {
-    event.waitUntil(syncFavorites());
-  }
-});
-
-async function syncFavorites() {
-  // Placeholder for syncing favorites when back online
-}
-
 // Listen for messages from the app
 self.addEventListener('message', event => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
+  if (!event.data) return;
+  
+  if (event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
   
-  if (event.data && event.data.type === 'CLEAR_CACHE') {
+  if (event.data.type === 'CLEAR_CACHE') {
     event.waitUntil(
       caches.keys().then(cacheNames => {
         return Promise.all(cacheNames.map(cache => caches.delete(cache)));
