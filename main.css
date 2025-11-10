@@ -239,6 +239,12 @@ input
         transition: transform 0.1s ease;
     }
     
+    /* Reset active state when not focused (prevents stuck buttons on mobile) */
+    .toolbar-button:not(:focus):not(:active),
+    .toolbar-datepicker-btn:not(:focus):not(:active) {
+        transform: none !important;
+    }
+    
     .toolbar-button:focus-visible,
     .toolbar-datepicker-btn:focus-visible {
         outline: none;
