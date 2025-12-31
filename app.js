@@ -339,6 +339,7 @@ let comicstartDate = CONFIG.COMIC_START_DATE;
 let currentselectedDate;        // Currently selected date object
 let maxDate;                    // Maximum available comic date
 let nextclicked = false;        // Tracks navigation direction
+let isAnimating = false;        // Prevents overlapping animations
 
 // Parsing variables
 let siteBody, notFound, picturePosition, endPosition;
@@ -1291,6 +1292,11 @@ function extractComicImageUrl(html) {
  */
 function DisplayComic(direction = null)
 {
+  // Prevent overlapping animations - if animating, skip animation for this call
+  if (isAnimating && direction) {
+    direction = null; // Fall back to no animation if one is in progress
+  }
+  
   try {
     formatDate(currentselectedDate);
 
@@ -1343,6 +1349,9 @@ function DisplayComic(direction = null)
           return new Promise((resolve) => {
             // Only animate if there's an existing image
             if (comicImg.src && comicImg.src !== window.location.href && direction) {
+              isAnimating = true; // Set animation lock
+              console.log('Animation direction:', direction); // Debug log
+              
               if (direction === 'next' || direction === 'prev') {
                 // FILMSTRIP SLIDE animation - both comics visible during transition
                 const slideOutClass = direction === 'prev' ? 'slide-out-right' : 'slide-out-left';
@@ -1443,6 +1452,7 @@ function DisplayComic(direction = null)
         
         // Run animation
         animateTransition().then(() => {
+          isAnimating = false; // Release animation lock
           comicImg.alt = `DirkJan strip van ${day}-${month}-${year} door Mark Retera`;
           comicImg.classList.remove('loading', 'slide-in-left', 'slide-in-right');
           // Only add loaded class if no animation was performed (avoids opacity flash)
