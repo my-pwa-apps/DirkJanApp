@@ -1313,9 +1313,11 @@ function DisplayComic(direction = null)
   const wrapper = document.getElementById('comic-wrapper');
   const rotatedComic = document.getElementById('rotated-comic');
   
-  // Show loading state
-  comicImg.classList.add('loading');
-  comicImg.classList.remove('loaded');
+  // Show loading state only if no animation (first load or error recovery)
+  if (!direction) {
+    comicImg.classList.add('loading');
+    comicImg.classList.remove('loaded');
+  }
   
   fetchWithFallback(url)
     .then(function(response)
@@ -1420,8 +1422,11 @@ function DisplayComic(direction = null)
         // Run animation
         animateTransition().then(() => {
           comicImg.alt = `DirkJan strip van ${day}-${month}-${year} door Mark Retera`;
-          comicImg.classList.remove('loading');
-          comicImg.classList.add('loaded');
+          comicImg.classList.remove('loading', 'slide-in-left', 'slide-in-right');
+          // Only add loaded class if no animation was performed (avoids opacity flash)
+          if (!direction) {
+            comicImg.classList.add('loaded');
+          }
           
           // Also update the rotated comic if it exists (with animation)
           if (rotatedComic) {
