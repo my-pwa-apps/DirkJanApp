@@ -834,10 +834,6 @@ input[type="date"]:focus-visible {
     opacity: 1;
 }
 
-#rotated-comic.dissolve {
-    opacity: 0;
-}
-
 /* Slide animations for rotated comics (with 90deg rotation) */
 #rotated-comic.rotate.slide-out-left,
 .rotated-comic-outgoing.rotate.slide-out-left {
@@ -1178,8 +1174,8 @@ img#comic.loaded {
     right: 0;
     padding: 6px 12px;
     background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
     text-align: center;
     font-size: 11px;
     color: rgba(255, 255, 255, 0.7);

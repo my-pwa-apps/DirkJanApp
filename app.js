@@ -338,13 +338,10 @@ let formattedComicDate = '';    // Date formatted for API calls (YYYYMMDD)
 let comicstartDate = CONFIG.COMIC_START_DATE;
 let currentselectedDate;        // Currently selected date object
 let maxDate;                    // Maximum available comic date
-let nextclicked = false;        // Tracks navigation direction
 let isAnimating = false;        // Prevents overlapping animations
-let lastAnimationType = null;   // Tracks the original animation type for 404 retries
 
 // Parsing variables
-let siteBody, notFound, picturePosition, endPosition;
-let startDate, endDate, formattedmaxDate;
+let siteBody, notFound;
 let year, month, day;
 
 // Favorites cache
@@ -1056,7 +1053,6 @@ function onLoad()
   }
  
  maxDate = new Date();
- nextclicked = true;
 
   if (currentselectedDate.getDay() == 0) 
   {
@@ -1127,8 +1123,6 @@ function PreviousClick()
   } else {
     currentselectedDate.setDate(currentselectedDate.getDate() - 1);
   }
-  nextclicked = false;
-  lastAnimationType = 'prev';
   CompareDates();
   DisplayComic('prev');
 } 
@@ -1139,8 +1133,6 @@ function PreviousClick()
  */
 function NextClick()
 {
-  nextclicked = true;
-  lastAnimationType = 'next';
   if (document.getElementById("showfavs").checked) {
     const favs = loadFavs();
     const idx = favs.indexOf(formattedDate);
@@ -1166,7 +1158,6 @@ function FirstClick()
   } else {
     currentselectedDate = new Date(Date.UTC(1978, 5, 19,12));
   }
-  lastAnimationType = 'morph';
   CompareDates();
   DisplayComic('morph');
 }
@@ -1187,7 +1178,6 @@ function CurrentClick()
       currentselectedDate.setDate(currentselectedDate.getDate()-1);
     }
   }
-  lastAnimationType = 'morph';
   CompareDates();
   DisplayComic('morph');
 }
@@ -1208,7 +1198,6 @@ function RandomClick()
     const end = new Date();
     currentselectedDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
   }
-  lastAnimationType = 'morph'; // Track that we came from Random
   CompareDates();
   DisplayComic('morph');
 }
@@ -1243,7 +1232,6 @@ function DateChange()
     if (currentselectedDate.getDay() == 0) {
       currentselectedDate.setDate(currentselectedDate.getDate()-1);
     }
-    lastAnimationType = 'morph';
     CompareDates();
     DisplayComic('morph');
   }
