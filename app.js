@@ -1396,6 +1396,8 @@ function DisplayComic(direction = null)
                 // Create clone of current comic to morph out (sits on top)
                 const outgoingClone = comicImg.cloneNode(true);
                 outgoingClone.removeAttribute('id');
+                // Remove any leftover slide animation classes from the clone
+                outgoingClone.classList.remove('slide-in-left', 'slide-in-right', 'slide-out-left', 'slide-out-right', 'no-transition', 'loading', 'loaded');
                 outgoingClone.classList.add('comic-morph-outgoing');
                 wrapper.appendChild(outgoingClone);
                 
@@ -1570,6 +1572,8 @@ function animateRotatedComic(rotatedComic, newSrc, direction) {
     // Create clone of current comic to morph out (sits on top)
     const outgoingClone = rotatedComic.cloneNode(true);
     outgoingClone.removeAttribute('id');
+    // Remove any leftover slide animation classes from the clone
+    outgoingClone.classList.remove('slide-in-left', 'slide-in-right', 'slide-out-left', 'slide-out-right', 'dissolve');
     outgoingClone.classList.add('rotated-comic-morph-outgoing');
     // Copy inline styles to preserve positioning
     outgoingClone.style.cssText = rotatedComic.style.cssText;
