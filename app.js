@@ -340,6 +340,7 @@ let currentselectedDate;        // Currently selected date object
 let maxDate;                    // Maximum available comic date
 let nextclicked = false;        // Tracks navigation direction
 let isAnimating = false;        // Prevents overlapping animations
+let lastAnimationType = null;   // Tracks the original animation type for 404 retries
 
 // Parsing variables
 let siteBody, notFound, picturePosition, endPosition;
@@ -1127,6 +1128,7 @@ function PreviousClick()
     currentselectedDate.setDate(currentselectedDate.getDate() - 1);
   }
   nextclicked = false;
+  lastAnimationType = 'prev';
   CompareDates();
   DisplayComic('prev');
 } 
@@ -1138,6 +1140,7 @@ function PreviousClick()
 function NextClick()
 {
   nextclicked = true;
+  lastAnimationType = 'next';
   if (document.getElementById("showfavs").checked) {
     const favs = loadFavs();
     const idx = favs.indexOf(formattedDate);
@@ -1163,6 +1166,7 @@ function FirstClick()
   } else {
     currentselectedDate = new Date(Date.UTC(1978, 5, 19,12));
   }
+  lastAnimationType = 'morph';
   CompareDates();
   DisplayComic('morph');
 }
@@ -1183,6 +1187,7 @@ function CurrentClick()
       currentselectedDate.setDate(currentselectedDate.getDate()-1);
     }
   }
+  lastAnimationType = 'morph';
   CompareDates();
   DisplayComic('morph');
 }
@@ -1203,6 +1208,7 @@ function RandomClick()
     const end = new Date();
     currentselectedDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
   }
+  lastAnimationType = 'morph'; // Track that we came from Random
   CompareDates();
   DisplayComic('morph');
 }
@@ -1237,6 +1243,7 @@ function DateChange()
     if (currentselectedDate.getDay() == 0) {
       currentselectedDate.setDate(currentselectedDate.getDate()-1);
     }
+    lastAnimationType = 'morph';
     CompareDates();
     DisplayComic('morph');
   }
@@ -1468,13 +1475,23 @@ function DisplayComic(direction = null)
       }
       else
       {
+        // Comic not found (404) - try to navigate to find a valid comic
         comicImg.classList.remove('loading');
-        if (nextclicked)
-        {
+        isAnimating = false; // Release animation lock before retry
+        
+        // If we came from Random or morph actions, try random again
+        if (lastAnimationType === 'morph') {
+          // Pick a new random date and try again
+          const start = new Date(comicstartDate);
+          const end = new Date();
+          currentselectedDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+          CompareDates();
+          DisplayComic('morph');
+        } else if (nextclicked) {
+          // We were going next, keep trying next
           NextClick();
-        }
-        else
-        {
+        } else {
+          // We were going previous, keep trying previous
           PreviousClick();
         }
       }
