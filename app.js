@@ -1401,6 +1401,14 @@ function DisplayComic(direction = null)
                 outgoingClone.classList.add('comic-morph-outgoing');
                 wrapper.appendChild(outgoingClone);
                 
+                // Reset the main comic transform and disable transition to prevent sliding
+                comicImg.classList.add('no-transition');
+                comicImg.classList.remove('slide-in-left', 'slide-in-right', 'slide-out-left', 'slide-out-right');
+                comicImg.style.transform = 'translateX(0)';
+                
+                // Force reflow to apply the no-transition immediately
+                comicImg.offsetHeight;
+                
                 // Load new image underneath (hidden by clone until loaded)
                 comicImg.src = pictureUrl;
                 
@@ -1413,6 +1421,8 @@ function DisplayComic(direction = null)
                   // Cleanup after animation
                   setTimeout(() => {
                     outgoingClone.remove();
+                    comicImg.classList.remove('no-transition');
+                    comicImg.style.transform = '';
                     resolve();
                   }, 550);
                 };
@@ -1575,10 +1585,15 @@ function animateRotatedComic(rotatedComic, newSrc, direction) {
     // Remove any leftover slide animation classes from the clone
     outgoingClone.classList.remove('slide-in-left', 'slide-in-right', 'slide-out-left', 'slide-out-right', 'dissolve');
     outgoingClone.classList.add('rotated-comic-morph-outgoing');
-    // Copy inline styles to preserve positioning
+    // Copy inline styles to preserve positioning, but override transform transition
     outgoingClone.style.cssText = rotatedComic.style.cssText;
     outgoingClone.style.transition = 'filter 0.5s ease-in-out, opacity 0.5s ease-in-out';
+    outgoingClone.style.transform = rotatedComic.style.transform || 'none'; // Lock current transform, no animation
     document.body.appendChild(outgoingClone);
+    
+    // Reset the main rotated comic to prevent sliding
+    rotatedComic.classList.remove('slide-in-left', 'slide-in-right', 'slide-out-left', 'slide-out-right');
+    rotatedComic.style.transition = 'none';
     
     // Load new image underneath - fully visible
     rotatedComic.src = newSrc;
@@ -1595,6 +1610,7 @@ function animateRotatedComic(rotatedComic, newSrc, direction) {
       // Cleanup after animation
       setTimeout(() => {
         outgoingClone.remove();
+        rotatedComic.style.transition = '';
       }, 550);
     };
     
