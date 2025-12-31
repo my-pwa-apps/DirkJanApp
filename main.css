@@ -765,89 +765,138 @@ input[type="date"]:focus-visible {
     overflow: hidden;
 }
 
-/* Filmstrip slide animation for next/previous */
-@keyframes slideOutLeft {
-    from { transform: translateX(0); opacity: 1; }
-    to { transform: translateX(-100%); opacity: 0; }
+/* Base comic transition for slide animations */
+#comic {
+    transition: transform 0.4s ease-out, opacity 0.4s ease-out;
+    opacity: 1;
+    position: relative;
+    transform: translateX(0);
+    transform-origin: center center;
 }
 
-@keyframes slideInRight {
-    from { transform: translateX(100%); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
+#comic.no-transition {
+    transition: none !important;
 }
 
-@keyframes slideOutRight {
-    from { transform: translateX(0); opacity: 1; }
-    to { transform: translateX(100%); opacity: 0; }
+/* Outgoing comic clone for filmstrip effect */
+.comic-outgoing {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    max-width: 900px;
+    height: auto;
+    transition: transform 0.4s ease-out;
+    pointer-events: none;
+    z-index: 2;
 }
 
-@keyframes slideInLeft {
-    from { transform: translateX(-100%); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
+/* Slide animations - movement without opacity fade */
+#comic.slide-out-left,
+.comic-outgoing.slide-out-left {
+    transform: translateX(calc(-100% - 20px));
 }
 
-/* Morph animation for random/first/last/date */
-@keyframes morphOut {
-    from { 
-        transform: scale(1); 
-        opacity: 1; 
-        filter: blur(0px) brightness(1);
-    }
-    to { 
-        transform: scale(0.95); 
-        opacity: 0; 
-        filter: blur(8px) brightness(1.2);
-    }
+#comic.slide-out-right,
+.comic-outgoing.slide-out-right {
+    transform: translateX(calc(100% + 20px));
 }
 
-@keyframes morphIn {
-    from { 
-        transform: scale(1.05); 
-        opacity: 0; 
-        filter: blur(8px) brightness(1.2);
-    }
-    to { 
-        transform: scale(1); 
-        opacity: 1; 
-        filter: blur(0px) brightness(1);
-    }
+#comic.slide-in-left {
+    transform: translateX(calc(100% + 20px));
 }
 
-/* Animation classes - use higher specificity to override loaded animation */
-img#comic.slide-out-left,
-#rotated-comic.slide-out-left,
-.slide-out-left {
-    animation: slideOutLeft 0.25s ease-out forwards !important;
+#comic.slide-in-right {
+    transform: translateX(calc(-100% - 20px));
 }
 
-img#comic.slide-in-right,
-#rotated-comic.slide-in-right,
-.slide-in-right {
-    animation: slideInRight 0.25s ease-out forwards !important;
+/* Outgoing comic clone for blur morph effect */
+.comic-morph-outgoing {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    max-width: 900px;
+    height: auto;
+    pointer-events: none;
+    z-index: 2;
+    transform-origin: center center;
+    transition: filter 0.5s ease-in-out, opacity 0.5s ease-in-out;
+    filter: blur(0px);
+    opacity: 1;
 }
 
-img#comic.slide-out-right,
-#rotated-comic.slide-out-right,
-.slide-out-right {
-    animation: slideOutRight 0.25s ease-out forwards !important;
+.comic-morph-outgoing.morph-out {
+    filter: blur(15px);
+    opacity: 0;
 }
 
-img#comic.slide-in-left,
-#rotated-comic.slide-in-left,
-.slide-in-left {
-    animation: slideInLeft 0.25s ease-out forwards !important;
+/* Rotated comic base transition */
+#rotated-comic {
+    transition: transform 0.4s ease-out, opacity 0.4s ease-out;
+    opacity: 1;
 }
 
-img#comic.morph-out,
-#rotated-comic.morph-out,
-.morph-out {
-    animation: morphOut 0.2s ease-out forwards !important;
+#rotated-comic.dissolve {
+    opacity: 0;
 }
 
-img#comic.morph-in,
-#rotated-comic.morph-in,
-.morph-in {
-    animation: morphIn 0.25s ease-out forwards !important;
+/* Slide animations for rotated comics (with 90deg rotation) */
+#rotated-comic.rotate.slide-out-left,
+.rotated-comic-outgoing.rotate.slide-out-left {
+    transform: translate(-50%, calc(-50% - 100vh - 20px)) rotate(90deg) !important;
+}
+
+#rotated-comic.rotate.slide-out-right,
+.rotated-comic-outgoing.rotate.slide-out-right {
+    transform: translate(-50%, calc(-50% + 100vh + 20px)) rotate(90deg) !important;
+}
+
+#rotated-comic.rotate.slide-in-left {
+    transform: translate(-50%, calc(-50% + 100vh + 20px)) rotate(90deg) !important;
+}
+
+#rotated-comic.rotate.slide-in-right {
+    transform: translate(-50%, calc(-50% - 100vh - 20px)) rotate(90deg) !important;
+}
+
+/* Slide animations for landscape fullscreen (no rotation) */
+#rotated-comic.fullscreen-landscape.slide-out-left,
+.rotated-comic-outgoing.fullscreen-landscape.slide-out-left {
+    transform: translate(calc(-50% - 100vw - 20px), -50%) !important;
+}
+
+#rotated-comic.fullscreen-landscape.slide-out-right,
+.rotated-comic-outgoing.fullscreen-landscape.slide-out-right {
+    transform: translate(calc(-50% + 100vw + 20px), -50%) !important;
+}
+
+#rotated-comic.fullscreen-landscape.slide-in-left {
+    transform: translate(calc(-50% + 100vw + 20px), -50%) !important;
+}
+
+#rotated-comic.fullscreen-landscape.slide-in-right {
+    transform: translate(calc(-50% - 100vw - 20px), -50%) !important;
+}
+
+/* Outgoing rotated comic clone for filmstrip effect */
+.rotated-comic-outgoing {
+    pointer-events: none;
+    transition: transform 0.4s ease-out;
+}
+
+/* Blur morph for rotated comic */
+.rotated-comic-morph-outgoing {
+    pointer-events: none;
+    transition: filter 0.5s ease-in-out, opacity 0.5s ease-in-out !important;
+    filter: blur(0px);
+    opacity: 1;
+}
+
+.rotated-comic-morph-outgoing.morph-out {
+    filter: blur(15px);
+    opacity: 0 !important;
+}
 }
 
 /* ========================================

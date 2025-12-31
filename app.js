@@ -1285,124 +1285,11 @@ function extractComicImageUrl(html) {
 }
 
 /**
- * Animates the comic transition based on animation type
- * Handles both main comic and rotated/fullscreen comic
- * @param {string} animationType - 'next', 'prev', or 'morph'
- * @param {function} onAnimationOut - Callback after outgoing animation completes
- */
-function animateComicTransition(animationType, onAnimationOut) {
-  const comicImg = document.getElementById("comic");
-  const rotatedComic = document.getElementById('rotated-comic');
-  
-  if (!comicImg && !rotatedComic) {
-    onAnimationOut();
-    return;
-  }
-  
-  const animationClasses = ['slide-out-left', 'slide-out-right', 'slide-in-left', 'slide-in-right', 'morph-out', 'morph-in'];
-  
-  // Clear any existing animation classes from both comics
-  if (comicImg) {
-    animationClasses.forEach(cls => comicImg.classList.remove(cls));
-  }
-  if (rotatedComic) {
-    animationClasses.forEach(cls => rotatedComic.classList.remove(cls));
-  }
-  
-  // If no animation type or comics not loaded, just call callback
-  const hasSource = (comicImg && comicImg.src) || (rotatedComic && rotatedComic.src);
-  if (!animationType || !hasSource) {
-    onAnimationOut();
-    return;
-  }
-  
-  // Determine animation class based on type
-  let outClass = '';
-  if (animationType === 'next') {
-    outClass = 'slide-out-left';
-  } else if (animationType === 'prev') {
-    outClass = 'slide-out-right';
-  } else if (animationType === 'morph') {
-    outClass = 'morph-out';
-  }
-  
-  // Add the appropriate out animation class to both comics
-  if (comicImg && outClass) {
-    comicImg.classList.add(outClass);
-  }
-  if (rotatedComic && outClass) {
-    rotatedComic.classList.add(outClass);
-  }
-  
-  // Wait for animation to complete
-  const animDuration = animationType === 'morph' ? 200 : 250;
-  setTimeout(() => {
-    if (comicImg) {
-      comicImg.classList.remove('slide-out-left', 'slide-out-right', 'morph-out');
-    }
-    if (rotatedComic) {
-      rotatedComic.classList.remove('slide-out-left', 'slide-out-right', 'morph-out');
-    }
-    onAnimationOut();
-  }, animDuration);
-}
-
-/**
- * Applies the incoming animation to the comic
- * Handles both main comic and rotated/fullscreen comic
- * @param {string} animationType - 'next', 'prev', or 'morph'
- */
-function animateComicIn(animationType) {
-  const comicImg = document.getElementById("comic");
-  const rotatedComic = document.getElementById('rotated-comic');
-  
-  if ((!comicImg && !rotatedComic) || !animationType) return;
-  
-  const animationClasses = ['slide-out-left', 'slide-out-right', 'slide-in-left', 'slide-in-right', 'morph-out', 'morph-in'];
-  
-  // Clear any existing animation classes from both comics
-  if (comicImg) {
-    animationClasses.forEach(cls => comicImg.classList.remove(cls));
-  }
-  if (rotatedComic) {
-    animationClasses.forEach(cls => rotatedComic.classList.remove(cls));
-  }
-  
-  // Determine animation class based on type
-  let inClass = '';
-  if (animationType === 'next') {
-    inClass = 'slide-in-right';
-  } else if (animationType === 'prev') {
-    inClass = 'slide-in-left';
-  } else if (animationType === 'morph') {
-    inClass = 'morph-in';
-  }
-  
-  // Add the appropriate in animation class to both comics
-  if (comicImg && inClass) {
-    comicImg.classList.add(inClass);
-  }
-  if (rotatedComic && inClass) {
-    rotatedComic.classList.add(inClass);
-  }
-  
-  // Clean up classes after animation
-  setTimeout(() => {
-    if (comicImg) {
-      comicImg.classList.remove('slide-in-left', 'slide-in-right', 'morph-in');
-    }
-    if (rotatedComic) {
-      rotatedComic.classList.remove('slide-in-left', 'slide-in-right', 'morph-in');
-    }
-  }, 300);
-}
-
-/**
  * Fetches and displays the current comic
  * Handles loading states, errors, animations, and updates UI
- * @param {string} animationType - Optional: 'next', 'prev', or 'morph' for transition animation
+ * @param {string} direction - Optional: 'next', 'prev', or 'morph' for transition animation
  */
-function DisplayComic(animationType = null)
+function DisplayComic(direction = null)
 {
   try {
     formatDate(currentselectedDate);
@@ -1421,14 +1308,14 @@ function DisplayComic(animationType = null)
 
   localStorage.setItem('lastcomic', currentselectedDate);
   
-  // Show loading state
+  // Get comic elements
   const comicImg = document.getElementById("comic");
+  const wrapper = document.getElementById('comic-wrapper');
   const rotatedComic = document.getElementById('rotated-comic');
   
-  // Animate out if we have an animation type
-  animateComicTransition(animationType, () => {
-    comicImg.classList.add('loading');
-    comicImg.classList.remove('loaded');
+  // Show loading state
+  comicImg.classList.add('loading');
+  comicImg.classList.remove('loaded');
   
   fetchWithFallback(url)
     .then(function(response)
@@ -1449,35 +1336,98 @@ function DisplayComic(animationType = null)
           throw new Error('Could not extract comic image URL from page');
         }
         
-        // Create new image to preload and add smooth transition
-        const tempImg = new Image();
-        tempImg.onload = function() {
-          // Apply incoming animation BEFORE setting src so it's visible
-          // Don't add 'loaded' class if we have a custom animation
-          if (animationType) {
-            animateComicIn(animationType);
-          }
-          
-          comicImg.src = pictureUrl;
+        // Animate transition based on direction
+        const animateTransition = () => {
+          return new Promise((resolve) => {
+            // Only animate if there's an existing image
+            if (comicImg.src && comicImg.src !== window.location.href && direction) {
+              if (direction === 'next' || direction === 'prev') {
+                // FILMSTRIP SLIDE animation - both comics visible during transition
+                const slideOutClass = direction === 'prev' ? 'slide-out-right' : 'slide-out-left';
+                const slideInClass = direction === 'prev' ? 'slide-in-right' : 'slide-in-left';
+                
+                // Create a clone of current comic to slide out
+                const outgoingClone = comicImg.cloneNode(true);
+                outgoingClone.removeAttribute('id');
+                outgoingClone.classList.add('comic-outgoing');
+                outgoingClone.classList.remove('slide-out-left', 'slide-out-right', 'slide-in-left', 'slide-in-right', 'no-transition', 'loading', 'loaded');
+                wrapper.appendChild(outgoingClone);
+                
+                // Set new image source on original (it will slide in)
+                comicImg.classList.add('no-transition');
+                comicImg.src = pictureUrl;
+                comicImg.classList.add(slideInClass);
+                
+                // Force reflow
+                comicImg.offsetHeight;
+                outgoingClone.offsetHeight;
+                
+                // Re-enable transitions and animate both
+                comicImg.classList.remove('no-transition');
+                
+                requestAnimationFrame(() => {
+                  requestAnimationFrame(() => {
+                    // Slide outgoing clone away
+                    outgoingClone.classList.add(slideOutClass);
+                    // Slide incoming comic to center
+                    comicImg.classList.remove(slideInClass);
+                    
+                    // Cleanup after animation
+                    setTimeout(() => {
+                      outgoingClone.remove();
+                      resolve();
+                    }, 450);
+                  });
+                });
+              } else {
+                // BLUR MORPH animation for random, date picker, first, last
+                // Create clone of current comic to morph out (sits on top)
+                const outgoingClone = comicImg.cloneNode(true);
+                outgoingClone.removeAttribute('id');
+                outgoingClone.classList.add('comic-morph-outgoing');
+                wrapper.appendChild(outgoingClone);
+                
+                // Load new image underneath (hidden by clone until loaded)
+                comicImg.src = pictureUrl;
+                
+                // Wait for new image to load, THEN blur out clone
+                const startMorph = () => {
+                  requestAnimationFrame(() => {
+                    outgoingClone.classList.add('morph-out');
+                  });
+                  
+                  // Cleanup after animation
+                  setTimeout(() => {
+                    outgoingClone.remove();
+                    resolve();
+                  }, 550);
+                };
+                
+                if (comicImg.complete) {
+                  startMorph();
+                } else {
+                  comicImg.addEventListener('load', startMorph, { once: true });
+                }
+              }
+            } else {
+              // First load - no animation needed
+              comicImg.src = pictureUrl;
+              resolve();
+            }
+          });
+        };
+        
+        // Run animation
+        animateTransition().then(() => {
           comicImg.alt = `DirkJan strip van ${day}-${month}-${year} door Mark Retera`;
           comicImg.classList.remove('loading');
+          comicImg.classList.add('loaded');
           
-          // Only add 'loaded' class if no custom animation (it has its own fadeIn)
-          if (!animationType) {
-            comicImg.classList.add('loaded');
-          }
-          
-          // Also update the rotated comic if it exists
+          // Also update the rotated comic if it exists (with animation)
           if (rotatedComic) {
-            rotatedComic.src = pictureUrl;
+            animateRotatedComic(rotatedComic, pictureUrl, direction);
           }
-        };
-        tempImg.onerror = function() {
-          comicImg.classList.remove('loading');
-          comicImg.src = "";
-          comicImg.alt = "Failed to load comic image.";
-        };
-        tempImg.src = pictureUrl;
+        });
       }
       else
       {
@@ -1526,8 +1476,6 @@ function DisplayComic(animationType = null)
     preloadAdjacentComics();
   }, 500);
   
-  }); // End of animateComicTransition callback
-  
   } catch (error) {
     console.error('Error in DisplayComic():', error);
     const comicImg = document.getElementById("comic");
@@ -1536,6 +1484,100 @@ function DisplayComic(animationType = null)
       comicImg.src = "";
       comicImg.alt = "Failed to display comic. Please try again.";
     }
+  }
+}
+
+/**
+ * Animates the rotated/fullscreen comic transition
+ * @param {HTMLElement} rotatedComic - The rotated comic element
+ * @param {string} newSrc - The new image URL
+ * @param {string} direction - 'next', 'prev', or 'morph'
+ */
+function animateRotatedComic(rotatedComic, newSrc, direction) {
+  if (!rotatedComic || !newSrc) return;
+  
+  if (direction === 'next' || direction === 'prev') {
+    // FILMSTRIP SLIDE animation for rotated comic
+    const slideOutClass = direction === 'prev' ? 'slide-out-right' : 'slide-out-left';
+    const slideInClass = direction === 'prev' ? 'slide-in-right' : 'slide-in-left';
+    
+    // Create a clone of current rotated comic to slide out
+    const outgoingClone = rotatedComic.cloneNode(true);
+    outgoingClone.removeAttribute('id');
+    outgoingClone.classList.add('rotated-comic-outgoing');
+    outgoingClone.classList.remove('slide-out-left', 'slide-out-right', 'slide-in-left', 'slide-in-right', 'dissolve');
+    // Copy all inline styles to preserve positioning
+    outgoingClone.style.cssText = rotatedComic.style.cssText;
+    outgoingClone.style.transition = 'transform 0.4s ease-out';
+    document.body.appendChild(outgoingClone);
+    
+    // Set new image source on original (it will slide in)
+    rotatedComic.style.transition = 'none';
+    rotatedComic.src = newSrc;
+    rotatedComic.classList.add(slideInClass);
+    
+    // Force reflow
+    rotatedComic.offsetHeight;
+    outgoingClone.offsetHeight;
+    
+    // Re-enable transitions and animate both
+    rotatedComic.style.transition = '';
+    
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        // Slide outgoing clone away
+        outgoingClone.classList.add(slideOutClass);
+        // Slide incoming comic to center
+        rotatedComic.classList.remove(slideInClass);
+        
+        rotatedComic.onload = function() {
+          maximizeRotatedImage(rotatedComic);
+        };
+        
+        // Cleanup after animation
+        setTimeout(() => {
+          outgoingClone.remove();
+        }, 450);
+      });
+    });
+  } else if (direction === 'morph') {
+    // BLUR MORPH animation for rotated comic
+    // Create clone of current comic to morph out (sits on top)
+    const outgoingClone = rotatedComic.cloneNode(true);
+    outgoingClone.removeAttribute('id');
+    outgoingClone.classList.add('rotated-comic-morph-outgoing');
+    // Copy inline styles to preserve positioning
+    outgoingClone.style.cssText = rotatedComic.style.cssText;
+    outgoingClone.style.transition = 'filter 0.5s ease-in-out, opacity 0.5s ease-in-out';
+    document.body.appendChild(outgoingClone);
+    
+    // Load new image underneath - fully visible
+    rotatedComic.src = newSrc;
+    
+    // When loaded, resize and blur out the clone
+    const startMorph = () => {
+      maximizeRotatedImage(rotatedComic);
+      
+      // Blur out the old image (clone)
+      requestAnimationFrame(() => {
+        outgoingClone.classList.add('morph-out');
+      });
+      
+      // Cleanup after animation
+      setTimeout(() => {
+        outgoingClone.remove();
+      }, 550);
+    };
+    
+    if (rotatedComic.complete) {
+      startMorph();
+    } else {
+      rotatedComic.addEventListener('load', startMorph, { once: true });
+    }
+  } else {
+    // No animation - just update src
+    rotatedComic.src = newSrc;
+    maximizeRotatedImage(rotatedComic);
   }
 }
 
