@@ -1304,6 +1304,9 @@ function DisplayComic(direction = null)
     direction = null; // Fall back to no animation if one is in progress
   }
   
+  // Capture animation type at start to avoid race conditions in 404 handler
+  const capturedAnimationType = direction;
+  
   try {
     formatDate(currentselectedDate);
 
@@ -1357,7 +1360,6 @@ function DisplayComic(direction = null)
             // Only animate if there's an existing image
             if (comicImg.src && comicImg.src !== window.location.href && direction) {
               isAnimating = true; // Set animation lock
-              console.log('Animation direction:', direction); // Debug log
               
               if (direction === 'next' || direction === 'prev') {
                 // FILMSTRIP SLIDE animation - both comics visible during transition
@@ -1479,20 +1481,24 @@ function DisplayComic(direction = null)
         comicImg.classList.remove('loading');
         isAnimating = false; // Release animation lock before retry
         
-        // If we came from Random or morph actions, try random again
-        if (lastAnimationType === 'morph') {
-          // Pick a new random date and try again
+        // Use captured animation type to avoid race conditions
+        // (user might have clicked different button while fetch was in progress)
+        if (capturedAnimationType === 'morph') {
+          // Pick a new random date and try again with morph animation
           const start = new Date(comicstartDate);
           const end = new Date();
           currentselectedDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
           CompareDates();
           DisplayComic('morph');
-        } else if (nextclicked) {
+        } else if (capturedAnimationType === 'next') {
           // We were going next, keep trying next
           NextClick();
-        } else {
+        } else if (capturedAnimationType === 'prev') {
           // We were going previous, keep trying previous
           PreviousClick();
+        } else {
+          // No animation direction - just try next
+          NextClick();
         }
       }
     })
