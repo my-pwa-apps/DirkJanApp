@@ -813,29 +813,41 @@ input[type="date"]:focus-visible {
     }
 }
 
-/* Animation classes */
+/* Animation classes - use higher specificity to override loaded animation */
+img#comic.slide-out-left,
+#rotated-comic.slide-out-left,
 .slide-out-left {
-    animation: slideOutLeft 0.25s ease-out forwards;
+    animation: slideOutLeft 0.25s ease-out forwards !important;
 }
 
+img#comic.slide-in-right,
+#rotated-comic.slide-in-right,
 .slide-in-right {
-    animation: slideInRight 0.25s ease-out forwards;
+    animation: slideInRight 0.25s ease-out forwards !important;
 }
 
+img#comic.slide-out-right,
+#rotated-comic.slide-out-right,
 .slide-out-right {
-    animation: slideOutRight 0.25s ease-out forwards;
+    animation: slideOutRight 0.25s ease-out forwards !important;
 }
 
+img#comic.slide-in-left,
+#rotated-comic.slide-in-left,
 .slide-in-left {
-    animation: slideInLeft 0.25s ease-out forwards;
+    animation: slideInLeft 0.25s ease-out forwards !important;
 }
 
+img#comic.morph-out,
+#rotated-comic.morph-out,
 .morph-out {
-    animation: morphOut 0.2s ease-out forwards;
+    animation: morphOut 0.2s ease-out forwards !important;
 }
 
+img#comic.morph-in,
+#rotated-comic.morph-in,
 .morph-in {
-    animation: morphIn 0.25s ease-out forwards;
+    animation: morphIn 0.25s ease-out forwards !important;
 }
 
 /* ========================================

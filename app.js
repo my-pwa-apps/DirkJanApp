@@ -1452,13 +1452,20 @@ function DisplayComic(animationType = null)
         // Create new image to preload and add smooth transition
         const tempImg = new Image();
         tempImg.onload = function() {
+          // Apply incoming animation BEFORE setting src so it's visible
+          // Don't add 'loaded' class if we have a custom animation
+          if (animationType) {
+            animateComicIn(animationType);
+          }
+          
           comicImg.src = pictureUrl;
           comicImg.alt = `DirkJan strip van ${day}-${month}-${year} door Mark Retera`;
           comicImg.classList.remove('loading');
-          comicImg.classList.add('loaded');
           
-          // Apply incoming animation
-          animateComicIn(animationType);
+          // Only add 'loaded' class if no custom animation (it has its own fadeIn)
+          if (!animationType) {
+            comicImg.classList.add('loaded');
+          }
           
           // Also update the rotated comic if it exists
           if (rotatedComic) {
