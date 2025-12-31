@@ -340,8 +340,8 @@ input[type="date"]:focus-visible {
 
 .normal {
     transform: rotate(0deg);
-    width: 100vw;
-    max-width: 100vw;
+    width: 100%;
+    max-width: 100%;
     height: auto;
     display: block;
     margin: 0 0 20px 0;
@@ -349,10 +349,6 @@ input[type="date"]:focus-visible {
     cursor: pointer;
     pointer-events: auto;
     position: relative;
-    left: 50%;
-    right: 50%;
-    margin-left: -50vw;
-    margin-right: -50vw;
 }
 
 .rotate {
@@ -761,7 +757,8 @@ input[type="date"]:focus-visible {
 
 .comic-wrapper {
     position: relative;
-    width: 100%;
+    width: 100vw;
+    margin-left: calc(-50vw + 50%);
     overflow: hidden;
 }
 
@@ -784,7 +781,6 @@ input[type="date"]:focus-visible {
     top: 0;
     left: 0;
     width: 100%;
-    max-width: 900px;
     height: auto;
     transition: transform 0.4s ease-out;
     pointer-events: none;
@@ -816,7 +812,6 @@ input[type="date"]:focus-visible {
     top: 0;
     left: 0;
     width: 100%;
-    max-width: 900px;
     height: auto;
     pointer-events: none;
     z-index: 2;
