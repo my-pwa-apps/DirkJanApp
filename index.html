@@ -137,7 +137,9 @@
                 </div>
             </div>
 
-        <img id="comic" class="normal" alt="Loading DirkJan comic..." loading="lazy">
+        <div id="comic-wrapper" class="comic-wrapper">
+            <img id="comic" class="normal" alt="Loading DirkJan comic..." loading="lazy">
+        </div>
 
         <div class="settings-icons-container" role="group" aria-label="Acties">
             <button id="settings" onclick="HideSettings()" class="icon-button" aria-label="Instellingen" title="Instellingen">
@@ -182,6 +184,10 @@
             </div>
         </div>
     </main>
+
+    <footer class="app-footer">
+        <span>Comics © <a href="https://dirkjan.nl" target="_blank" rel="noopener">Mark Retera / dirkjan.nl</a> • App by Daily DirkJan</span>
+    </footer>
 
     <script src="./app.js"></script>
     <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "e1b02b3fe1fe45f2addaf5622cf2fcb3"}'></script>

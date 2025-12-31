@@ -1127,7 +1127,7 @@ function PreviousClick()
   }
   nextclicked = false;
   CompareDates();
-  DisplayComic();
+  DisplayComic('prev');
 } 
 
 /**
@@ -1147,7 +1147,7 @@ function NextClick()
     currentselectedDate.setDate(currentselectedDate.getDate() + 1);
   }
   CompareDates();
-  DisplayComic();
+  DisplayComic('next');
 }
 
 /**
@@ -1163,7 +1163,7 @@ function FirstClick()
     currentselectedDate = new Date(Date.UTC(1978, 5, 19,12));
   }
   CompareDates();
-  DisplayComic();
+  DisplayComic('morph');
 }
 
 /**
@@ -1183,7 +1183,7 @@ function CurrentClick()
     }
   }
   CompareDates();
-  DisplayComic();
+  DisplayComic('morph');
 }
 
 /**
@@ -1203,7 +1203,7 @@ function RandomClick()
     currentselectedDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
   }
   CompareDates();
-  DisplayComic();
+  DisplayComic('morph');
 }
 
 /**
@@ -1237,7 +1237,7 @@ function DateChange()
       currentselectedDate.setDate(currentselectedDate.getDate()-1);
     }
     CompareDates();
-    DisplayComic();
+    DisplayComic('morph');
   }
 }
 
@@ -1285,10 +1285,124 @@ function extractComicImageUrl(html) {
 }
 
 /**
- * Fetches and displays the current comic
- * Handles loading states, errors, and updates UI
+ * Animates the comic transition based on animation type
+ * Handles both main comic and rotated/fullscreen comic
+ * @param {string} animationType - 'next', 'prev', or 'morph'
+ * @param {function} onAnimationOut - Callback after outgoing animation completes
  */
-function DisplayComic()
+function animateComicTransition(animationType, onAnimationOut) {
+  const comicImg = document.getElementById("comic");
+  const rotatedComic = document.getElementById('rotated-comic');
+  
+  if (!comicImg && !rotatedComic) {
+    onAnimationOut();
+    return;
+  }
+  
+  const animationClasses = ['slide-out-left', 'slide-out-right', 'slide-in-left', 'slide-in-right', 'morph-out', 'morph-in'];
+  
+  // Clear any existing animation classes from both comics
+  if (comicImg) {
+    animationClasses.forEach(cls => comicImg.classList.remove(cls));
+  }
+  if (rotatedComic) {
+    animationClasses.forEach(cls => rotatedComic.classList.remove(cls));
+  }
+  
+  // If no animation type or comics not loaded, just call callback
+  const hasSource = (comicImg && comicImg.src) || (rotatedComic && rotatedComic.src);
+  if (!animationType || !hasSource) {
+    onAnimationOut();
+    return;
+  }
+  
+  // Determine animation class based on type
+  let outClass = '';
+  if (animationType === 'next') {
+    outClass = 'slide-out-left';
+  } else if (animationType === 'prev') {
+    outClass = 'slide-out-right';
+  } else if (animationType === 'morph') {
+    outClass = 'morph-out';
+  }
+  
+  // Add the appropriate out animation class to both comics
+  if (comicImg && outClass) {
+    comicImg.classList.add(outClass);
+  }
+  if (rotatedComic && outClass) {
+    rotatedComic.classList.add(outClass);
+  }
+  
+  // Wait for animation to complete
+  const animDuration = animationType === 'morph' ? 200 : 250;
+  setTimeout(() => {
+    if (comicImg) {
+      comicImg.classList.remove('slide-out-left', 'slide-out-right', 'morph-out');
+    }
+    if (rotatedComic) {
+      rotatedComic.classList.remove('slide-out-left', 'slide-out-right', 'morph-out');
+    }
+    onAnimationOut();
+  }, animDuration);
+}
+
+/**
+ * Applies the incoming animation to the comic
+ * Handles both main comic and rotated/fullscreen comic
+ * @param {string} animationType - 'next', 'prev', or 'morph'
+ */
+function animateComicIn(animationType) {
+  const comicImg = document.getElementById("comic");
+  const rotatedComic = document.getElementById('rotated-comic');
+  
+  if ((!comicImg && !rotatedComic) || !animationType) return;
+  
+  const animationClasses = ['slide-out-left', 'slide-out-right', 'slide-in-left', 'slide-in-right', 'morph-out', 'morph-in'];
+  
+  // Clear any existing animation classes from both comics
+  if (comicImg) {
+    animationClasses.forEach(cls => comicImg.classList.remove(cls));
+  }
+  if (rotatedComic) {
+    animationClasses.forEach(cls => rotatedComic.classList.remove(cls));
+  }
+  
+  // Determine animation class based on type
+  let inClass = '';
+  if (animationType === 'next') {
+    inClass = 'slide-in-right';
+  } else if (animationType === 'prev') {
+    inClass = 'slide-in-left';
+  } else if (animationType === 'morph') {
+    inClass = 'morph-in';
+  }
+  
+  // Add the appropriate in animation class to both comics
+  if (comicImg && inClass) {
+    comicImg.classList.add(inClass);
+  }
+  if (rotatedComic && inClass) {
+    rotatedComic.classList.add(inClass);
+  }
+  
+  // Clean up classes after animation
+  setTimeout(() => {
+    if (comicImg) {
+      comicImg.classList.remove('slide-in-left', 'slide-in-right', 'morph-in');
+    }
+    if (rotatedComic) {
+      rotatedComic.classList.remove('slide-in-left', 'slide-in-right', 'morph-in');
+    }
+  }, 300);
+}
+
+/**
+ * Fetches and displays the current comic
+ * Handles loading states, errors, animations, and updates UI
+ * @param {string} animationType - Optional: 'next', 'prev', or 'morph' for transition animation
+ */
+function DisplayComic(animationType = null)
 {
   try {
     formatDate(currentselectedDate);
@@ -1311,8 +1425,10 @@ function DisplayComic()
   const comicImg = document.getElementById("comic");
   const rotatedComic = document.getElementById('rotated-comic');
   
-  comicImg.classList.add('loading');
-  comicImg.classList.remove('loaded');
+  // Animate out if we have an animation type
+  animateComicTransition(animationType, () => {
+    comicImg.classList.add('loading');
+    comicImg.classList.remove('loaded');
   
   fetchWithFallback(url)
     .then(function(response)
@@ -1340,6 +1456,9 @@ function DisplayComic()
           comicImg.alt = `DirkJan strip van ${day}-${month}-${year} door Mark Retera`;
           comicImg.classList.remove('loading');
           comicImg.classList.add('loaded');
+          
+          // Apply incoming animation
+          animateComicIn(animationType);
           
           // Also update the rotated comic if it exists
           if (rotatedComic) {
@@ -1399,6 +1518,8 @@ function DisplayComic()
   setTimeout(() => {
     preloadAdjacentComics();
   }, 500);
+  
+  }); // End of animateComicTransition callback
   
   } catch (error) {
     console.error('Error in DisplayComic():', error);

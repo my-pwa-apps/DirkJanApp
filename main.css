@@ -756,6 +756,89 @@ input[type="date"]:focus-visible {
 }
 
 /* ========================================
+   COMIC ANIMATIONS
+   ======================================== */
+
+.comic-wrapper {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+}
+
+/* Filmstrip slide animation for next/previous */
+@keyframes slideOutLeft {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(-100%); opacity: 0; }
+}
+
+@keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes slideOutRight {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(100%); opacity: 0; }
+}
+
+@keyframes slideInLeft {
+    from { transform: translateX(-100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+/* Morph animation for random/first/last/date */
+@keyframes morphOut {
+    from { 
+        transform: scale(1); 
+        opacity: 1; 
+        filter: blur(0px) brightness(1);
+    }
+    to { 
+        transform: scale(0.95); 
+        opacity: 0; 
+        filter: blur(8px) brightness(1.2);
+    }
+}
+
+@keyframes morphIn {
+    from { 
+        transform: scale(1.05); 
+        opacity: 0; 
+        filter: blur(8px) brightness(1.2);
+    }
+    to { 
+        transform: scale(1); 
+        opacity: 1; 
+        filter: blur(0px) brightness(1);
+    }
+}
+
+/* Animation classes */
+.slide-out-left {
+    animation: slideOutLeft 0.25s ease-out forwards;
+}
+
+.slide-in-right {
+    animation: slideInRight 0.25s ease-out forwards;
+}
+
+.slide-out-right {
+    animation: slideOutRight 0.25s ease-out forwards;
+}
+
+.slide-in-left {
+    animation: slideInLeft 0.25s ease-out forwards;
+}
+
+.morph-out {
+    animation: morphOut 0.2s ease-out forwards;
+}
+
+.morph-in {
+    animation: morphIn 0.25s ease-out forwards;
+}
+
+/* ========================================
    LOADING & TRANSITIONS
    ======================================== */
 
@@ -1035,6 +1118,44 @@ img#comic.loaded {
     .settings-icons-container {
         gap: 9px;
     }
+}
+
+/* ========================================
+   FOOTER
+   ======================================== */
+
+.app-footer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 6px 12px;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    text-align: center;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.7);
+    z-index: 100;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.app-footer a {
+    color: rgba(255, 255, 255, 0.85);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.app-footer a:hover {
+    color: #FFD700;
+}
+
+/* Hide footer in fullscreen/rotated mode */
+.rotated-state .app-footer,
+body:has(#comic-overlay) .app-footer {
+    display: none;
 }
 
 
