@@ -599,9 +599,9 @@ input[type="date"]:focus-visible {
   stroke: #000000;
 }
 
-/* Heart button - white icon */
+/* Heart button - black icon (unfilled state) */
 #favheart svg {
-  stroke: #ffffff;
+  stroke: #000000;
 }
 
 /* Share button - black icon */
@@ -627,8 +627,8 @@ input[type="date"]:focus-visible {
 /* When favorited - filled heart */
 #favheart svg[style*="fill: currentColor"],
 #favheart svg[style*="fill:currentColor"] {
-  fill: #ffffff !important;
-  stroke: #ffffff !important;
+  fill: #000000 !important;
+  stroke: #000000 !important;
 }
 
 @keyframes heart-beat {
