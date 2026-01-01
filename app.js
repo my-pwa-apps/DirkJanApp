@@ -1020,6 +1020,52 @@ function showShareDialog(content) {
 // ========================================
 
 /**
+ * Finds the latest available comic by starting at maxDate and going backwards
+ * @param {Date} startDate - The date to start searching from
+ * @param {Date} minDate - The minimum date to search back to (today)
+ * @returns {Promise<Date>} The date of the latest available comic
+ */
+async function findLatestAvailableComic(startDate, minDate) {
+  let testDate = new Date(startDate);
+  const minTime = minDate.getTime();
+  
+  while (testDate.getTime() >= minTime) {
+    // Skip Sundays (no comics)
+    if (testDate.getDay() === 0) {
+      testDate.setDate(testDate.getDate() - 1);
+      continue;
+    }
+    
+    // Format the date for the URL
+    const d = testDate.getDate();
+    const m = testDate.getMonth() + 1;
+    const y = testDate.getFullYear();
+    const formattedMonth = ("0" + m).slice(-2);
+    const formattedDay = ("0" + d).slice(-2);
+    const dateStr = `${y}${formattedMonth}${formattedDay}`;
+    const url = `https://dirkjan.nl/cartoon/${dateStr}`;
+    
+    try {
+      const response = await fetchWithFallback(url, false);
+      const text = await response.text();
+      
+      // Check if it's not a 404
+      if (!text.includes("error404")) {
+        return testDate;
+      }
+    } catch (error) {
+      // Network error, continue to previous day
+    }
+    
+    // Go back one day
+    testDate.setDate(testDate.getDate() - 1);
+  }
+  
+  // Fallback to minDate if nothing found
+  return minDate;
+}
+
+/**
  * Initializes the application on page load
  * Sets up initial date, favorites, and displays the first comic
  */  
@@ -1095,9 +1141,21 @@ function onLoad()
 		{
 			currentselectedDate = new Date(localStorage.getItem('lastcomic'));
 		}
+    CompareDates();
+    DisplayComic();
 	} else {
-    // If not remembering last comic, go to the latest available comic (maxDate)
-    currentselectedDate = new Date(maxDate);
+    // If not remembering last comic, find the latest available comic
+    const today = new Date();
+    if (today.getDay() === 0) {
+      today.setDate(today.getDate() - 1); // No comics on Sunday
+    }
+    
+    findLatestAvailableComic(maxDate, today).then(latestDate => {
+      currentselectedDate = latestDate;
+      CompareDates();
+      DisplayComic();
+    });
+    return; // Exit early, DisplayComic will be called in the promise
   }
   
   // Handle app shortcut for random comic
@@ -1105,10 +1163,9 @@ function onLoad()
     const start = new Date(comicstartDate);
     const end = new Date();
     currentselectedDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+    CompareDates();
+    DisplayComic();
   }
-  
-  CompareDates();
-  DisplayComic();
 }
 
 /**
