@@ -337,7 +337,8 @@ let formattedDate = '';         // Current formatted date for sharing (YYYY-MM-D
 let formattedComicDate = '';    // Date formatted for API calls (YYYYMMDD)
 let comicstartDate = CONFIG.COMIC_START_DATE;
 let currentselectedDate;        // Currently selected date object
-let maxDate;                    // Maximum available comic date
+let maxDate;                    // Maximum possible comic date (next Saturday)
+let latestAvailableDate;        // Actual latest available comic date (found on load)
 let isAnimating = false;        // Prevents overlapping animations
 
 // Parsing variables
@@ -1051,6 +1052,8 @@ async function findLatestAvailableComic(startDate, minDate) {
       
       // Check if it's not a 404
       if (!text.includes("error404")) {
+        // Store this as the latest available date for button state comparison
+        latestAvailableDate = new Date(testDate);
         return testDate;
       }
     } catch (error) {
@@ -1062,6 +1065,7 @@ async function findLatestAvailableComic(startDate, minDate) {
   }
   
   // Fallback to minDate if nothing found
+  latestAvailableDate = new Date(minDate);
   return minDate;
 }
 
@@ -1233,8 +1237,8 @@ function CurrentClick()
     const favslength = favs.length - 1;
     if (favslength >= 0) currentselectedDate = new Date(favs[favslength]);
   } else {
-    // Go to maxDate (next Saturday) - the latest possible comic date
-    currentselectedDate = new Date(maxDate);
+    // Go to the latest available comic date
+    currentselectedDate = new Date(latestAvailableDate || maxDate);
   }
   CompareDates();
   DisplayComic('morph');
@@ -1743,10 +1747,11 @@ function CompareDates() {
   const startDate = showFavsChecked && favs.length > 0 
     ? normalizeDate(favs[0]) 
     : normalizeDate(comicstartDate);
-    
+  
+  // Use latestAvailableDate if set, otherwise fall back to maxDate
   const endDate = showFavsChecked && favs.length > 0
     ? normalizeDate(favs[favs.length - 1])
-    : normalizeDate(maxDate);
+    : normalizeDate(latestAvailableDate || maxDate);
   
   // Calculate button states
   const buttonStates = {
