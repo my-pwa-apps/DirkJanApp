@@ -1054,6 +1054,8 @@ async function findLatestAvailableComic(startDate, minDate) {
       if (!text.includes("error404")) {
         // Store this as the latest available date for button state comparison
         latestAvailableDate = new Date(testDate);
+        // Update the date picker max to the latest available comic
+        updateDatePickerMax(latestAvailableDate);
         return testDate;
       }
     } catch (error) {
@@ -1066,7 +1068,27 @@ async function findLatestAvailableComic(startDate, minDate) {
   
   // Fallback to minDate if nothing found
   latestAvailableDate = new Date(minDate);
+  updateDatePickerMax(latestAvailableDate);
   return minDate;
+}
+
+/**
+ * Updates the max attribute on all date pickers
+ * @param {Date} maxDateValue - The maximum date to allow
+ */
+function updateDatePickerMax(maxDateValue) {
+  const d = maxDateValue.getDate();
+  const m = maxDateValue.getMonth() + 1;
+  const y = maxDateValue.getFullYear();
+  const formattedMonth = ("0" + m).slice(-2);
+  const formattedDay = ("0" + d).slice(-2);
+  const formattedMax = `${y}-${formattedMonth}-${formattedDay}`;
+  
+  const mainPicker = document.getElementById("DatePicker");
+  if (mainPicker) mainPicker.setAttribute("max", formattedMax);
+  
+  const rotatedPicker = document.getElementById("rotated-DatePicker");
+  if (rotatedPicker) rotatedPicker.setAttribute("max", formattedMax);
 }
 
 /**
