@@ -1173,11 +1173,8 @@ function CurrentClick()
     const favslength = favs.length - 1;
     if (favslength >= 0) currentselectedDate = new Date(favs[favslength]);
   } else {
-    // Get today's date, but if it's Sunday go to Saturday (no comics on Sunday)
-    currentselectedDate = new Date();
-    if (currentselectedDate.getDay() == 0) {
-      currentselectedDate.setDate(currentselectedDate.getDate() - 1);
-    }
+    // Go to maxDate (next Saturday) - the latest possible comic date
+    currentselectedDate = new Date(maxDate);
   }
   CompareDates();
   DisplayComic('morph');
@@ -1671,13 +1668,6 @@ function CompareDates() {
   const favs = loadFavs();
   const showFavsChecked = document.getElementById("showfavs").checked;
   
-  // Calculate the latest available comic date (today, or Saturday if Sunday)
-  let latestAvailable = new Date();
-  if (latestAvailable.getDay() === 0) {
-    latestAvailable.setDate(latestAvailable.getDate() - 1);
-  }
-  const latestDate = latestAvailable.setHours(0, 0, 0, 0);
-  
   // Normalize dates for comparison
   const normalizeDate = (date) => new Date(date).setHours(0, 0, 0, 0);
   const currentTime = normalizeDate(currentselectedDate);
@@ -1703,7 +1693,7 @@ function CompareDates() {
     First: currentTime <= startDate,
     Previous: currentTime <= startDate,
     Next: currentTime >= endDate,
-    Current: currentTime >= latestDate && !showFavsChecked,
+    Current: currentTime >= endDate && !showFavsChecked,
     Random: showFavsChecked && favs.length <= 1
   };
   
