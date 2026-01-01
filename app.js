@@ -1095,7 +1095,10 @@ function onLoad()
 		{
 			currentselectedDate = new Date(localStorage.getItem('lastcomic'));
 		}
-	}
+	} else {
+    // If not remembering last comic, go to the latest available comic (maxDate)
+    currentselectedDate = new Date(maxDate);
+  }
   
   // Handle app shortcut for random comic
   if (urlParams.get('random') === 'true') {
