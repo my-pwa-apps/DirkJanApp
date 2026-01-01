@@ -835,6 +835,8 @@ async function Share() {
   try {
     await shareWithImage(shareText, shareUrl);
   } catch (error) {
+    // If user cancelled the share dialog, just return
+    if (error.name === 'AbortError') return;
     if (isAndroid) {
       try {
         const androidShareText = `📸 DirkJan Comic from ${formattedDate}\n\n🖼️ Image: ${pictureUrl}\n\n📱 Get the app: ${shareUrl}`;
@@ -846,6 +848,8 @@ async function Share() {
           });
           return;
         } catch (error) {
+          // If user cancelled, stop trying
+          if (error.name === 'AbortError') return;
           // Try next method
         }
         
@@ -857,6 +861,8 @@ async function Share() {
           });
           return;
         } catch (error) {
+          // If user cancelled, stop trying
+          if (error.name === 'AbortError') return;
           // Try next method
         }
         
@@ -865,7 +871,10 @@ async function Share() {
           text: `${shareText}\n\n📸 Comic image: ${pictureUrl}\n\n🌐 App: ${shareUrl}`
         });
       } catch (androidError) {
-        fallbackShare(shareText, shareUrl);
+        // Only show fallback if it wasn't a user cancellation
+        if (androidError.name !== 'AbortError') {
+          fallbackShare(shareText, shareUrl);
+        }
       }
     } else {
       try {
@@ -875,7 +884,10 @@ async function Share() {
           url: shareUrl
         });
       } catch (textError) {
-        fallbackShare(shareText, shareUrl);
+        // Only show fallback if it wasn't a user cancellation
+        if (textError.name !== 'AbortError') {
+          fallbackShare(shareText, shareUrl);
+        }
       }
     }
   } finally {
@@ -976,6 +988,8 @@ async function shareWithImage(shareText, shareUrl) {
       await navigator.share(payload);
       return;
     } catch (err) {
+      // If user cancelled, re-throw to stop all attempts
+      if (err.name === 'AbortError') throw err;
       // Try next variant
     }
   }
