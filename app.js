@@ -1163,7 +1163,7 @@ function FirstClick()
 }
 
 /**
- * Navigates to the current/latest comic
+ * Navigates to the latest available comic
  * In favorites mode, goes to last favorite
  */
 function CurrentClick()
@@ -1173,10 +1173,7 @@ function CurrentClick()
     const favslength = favs.length - 1;
     if (favslength >= 0) currentselectedDate = new Date(favs[favslength]);
   } else {
-    currentselectedDate = new Date();
-    if (currentselectedDate.getDay() == 0) {
-      currentselectedDate.setDate(currentselectedDate.getDate()-1);
-    }
+    currentselectedDate = new Date(maxDate);
   }
   CompareDates();
   DisplayComic('morph');
@@ -1669,7 +1666,7 @@ function setButtonStates(states) {
 function CompareDates() {
   const favs = loadFavs();
   const showFavsChecked = document.getElementById("showfavs").checked;
-  const today = new Date().setHours(0, 0, 0, 0);
+  const latestDate = new Date(maxDate).setHours(0, 0, 0, 0);
   
   // Normalize dates for comparison
   const normalizeDate = (date) => new Date(date).setHours(0, 0, 0, 0);
@@ -1696,14 +1693,14 @@ function CompareDates() {
     First: currentTime <= startDate,
     Previous: currentTime <= startDate,
     Next: currentTime >= endDate,
-    Current: currentTime === today && !showFavsChecked,
+    Current: currentTime >= latestDate && !showFavsChecked,
     Random: showFavsChecked && favs.length <= 1
   };
   
-  // Special case: In favorites mode, if we're at the last favorite and it's today
+  // Special case: In favorites mode, if we're at the last favorite
   if (showFavsChecked && favs.length > 0) {
     const lastFavDate = normalizeDate(favs[favs.length - 1]);
-    if (currentTime === lastFavDate && lastFavDate === today) {
+    if (currentTime === lastFavDate) {
       buttonStates.Current = true;
     }
   }
@@ -1969,7 +1966,7 @@ function Rotate(applyRotation = true) {
       <button id="rotated-Next" class="toolbar-button" onclick="NextClick(); return false;" title="Volgende comic">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
-      <button id="rotated-Current" class="toolbar-button" onclick="CurrentClick(); return false;" title="Vandaag">
+      <button id="rotated-Current" class="toolbar-button" onclick="CurrentClick(); return false;" title="Laatste">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><circle cx="12" cy="16" r="2"/></svg>
       </button>
     `;
@@ -2150,7 +2147,7 @@ function handleTouchEnd(e) {
         // Swipe Left -> visually moves down -> Random
         RandomClick();
       } else {
-        // Swipe Right -> visually moves up -> Today
+        // Swipe Right -> visually moves up -> Latest
         CurrentClick();
       }
     }
@@ -2168,7 +2165,7 @@ function handleTouchEnd(e) {
     } else if (absY > absX && absY > CONFIG.SWIPE_MIN_DISTANCE) {
       // Vertical swipe
       if (deltaY < 0) {
-        // Swipe Up -> Today
+        // Swipe Up -> Latest
         CurrentClick();
       } else {
         // Swipe Down -> Random
@@ -2176,7 +2173,7 @@ function handleTouchEnd(e) {
       }
     }
   } else {
-    // Normal portrait mode: Horizontal for Next/Prev, Vertical for Random/Today
+    // Normal portrait mode: Horizontal for Next/Prev, Vertical for Random/Latest
     if (absX > absY && absX > CONFIG.SWIPE_MIN_DISTANCE) {
       // Horizontal swipe
       if (deltaX > 0) {
@@ -2192,7 +2189,7 @@ function handleTouchEnd(e) {
         // Swipe down -> Random
         RandomClick();
       } else {
-        // Swipe up -> Today
+        // Swipe up -> Latest
         CurrentClick();
       }
     }
@@ -3008,7 +3005,7 @@ document.addEventListener('keydown', function(e) {
       break;
       
     case 'End':
-      // End key - Current/Latest comic
+      // End key - Latest comic
       if (!document.getElementById('Current').disabled) {
         CurrentClick();
       }
