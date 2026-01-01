@@ -1173,7 +1173,11 @@ function CurrentClick()
     const favslength = favs.length - 1;
     if (favslength >= 0) currentselectedDate = new Date(favs[favslength]);
   } else {
-    currentselectedDate = new Date(maxDate);
+    // Get today's date, but if it's Sunday go to Saturday (no comics on Sunday)
+    currentselectedDate = new Date();
+    if (currentselectedDate.getDay() == 0) {
+      currentselectedDate.setDate(currentselectedDate.getDate() - 1);
+    }
   }
   CompareDates();
   DisplayComic('morph');
@@ -1666,7 +1670,13 @@ function setButtonStates(states) {
 function CompareDates() {
   const favs = loadFavs();
   const showFavsChecked = document.getElementById("showfavs").checked;
-  const latestDate = new Date(maxDate).setHours(0, 0, 0, 0);
+  
+  // Calculate the latest available comic date (today, or Saturday if Sunday)
+  let latestAvailable = new Date();
+  if (latestAvailable.getDay() === 0) {
+    latestAvailable.setDate(latestAvailable.getDate() - 1);
+  }
+  const latestDate = latestAvailable.setHours(0, 0, 0, 0);
   
   // Normalize dates for comparison
   const normalizeDate = (date) => new Date(date).setHours(0, 0, 0, 0);
@@ -1967,7 +1977,7 @@ function Rotate(applyRotation = true) {
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
       <button id="rotated-Current" class="toolbar-button" onclick="CurrentClick(); return false;" title="Laatste">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><circle cx="12" cy="16" r="2"/></svg>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
       </button>
     `;
     // Add overlay, comic, and toolbar in order
