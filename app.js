@@ -1190,7 +1190,12 @@ function onLoad()
       today.setDate(today.getDate() - 1); // No comics on Sunday
     }
     
-    findLatestAvailableComic(maxDate, today).then(latestDate => {
+    // Search back up to 7 days to find the latest available comic
+    // (handles cases where today's comic isn't published yet or holidays)
+    const searchMinDate = new Date(today);
+    searchMinDate.setDate(searchMinDate.getDate() - 7);
+    
+    findLatestAvailableComic(maxDate, searchMinDate).then(latestDate => {
       currentselectedDate = latestDate;
       CompareDates();
       DisplayComic();
