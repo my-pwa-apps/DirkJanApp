@@ -2170,6 +2170,26 @@ let touchEndY = 0;
 let touchStartTime = 0;
 
 /**
+ * Checks if navigation in a given direction is possible
+ * @param {string} direction - 'next', 'prev', 'first', 'current', 'random'
+ * @returns {boolean} True if navigation is allowed
+ */
+function canNavigate(direction) {
+  const buttonId = {
+    'next': 'Next',
+    'prev': 'Previous',
+    'first': 'First',
+    'current': 'Current',
+    'random': 'Random'
+  }[direction];
+  
+  if (!buttonId) return true;
+  
+  const button = document.getElementById(buttonId);
+  return button ? !button.disabled : true;
+}
+
+/**
  * Handles touch start event
  * Records initial touch position and time for swipe/tap detection
  * @param {TouchEvent} e - Touch event
@@ -2242,19 +2262,19 @@ function handleTouchEnd(e) {
       // Vertical swipe (becomes horizontal navigation due to rotation)
       if (deltaY < 0) {
         // Swipe Up -> visually moves right -> Next
-        NextClick();
+        if (canNavigate('next')) NextClick();
       } else {
         // Swipe Down -> visually moves left -> Previous
-        PreviousClick();
+        if (canNavigate('prev')) PreviousClick();
       }
     } else if (absX > absY && absX > CONFIG.SWIPE_MIN_DISTANCE) {
       // Horizontal swipe (becomes vertical navigation due to rotation)
       if (deltaX < 0) {
         // Swipe Left -> visually moves down -> Random
-        RandomClick();
+        if (canNavigate('random')) RandomClick();
       } else {
         // Swipe Right -> visually moves up -> Latest
-        CurrentClick();
+        if (canNavigate('current')) CurrentClick();
       }
     }
   } else if (isLandscapeFullscreen) {
@@ -2263,19 +2283,19 @@ function handleTouchEnd(e) {
       // Horizontal swipe
       if (deltaX < 0) {
         // Swipe Left -> Next
-        NextClick();
+        if (canNavigate('next')) NextClick();
       } else {
         // Swipe Right -> Previous
-        PreviousClick();
+        if (canNavigate('prev')) PreviousClick();
       }
     } else if (absY > absX && absY > CONFIG.SWIPE_MIN_DISTANCE) {
       // Vertical swipe
       if (deltaY < 0) {
         // Swipe Up -> Latest
-        CurrentClick();
+        if (canNavigate('current')) CurrentClick();
       } else {
         // Swipe Down -> Random
-        RandomClick();
+        if (canNavigate('random')) RandomClick();
       }
     }
   } else {
@@ -2284,19 +2304,19 @@ function handleTouchEnd(e) {
       // Horizontal swipe
       if (deltaX > 0) {
         // Swipe right -> Previous
-        PreviousClick();
+        if (canNavigate('prev')) PreviousClick();
       } else {
         // Swipe left -> Next
-        NextClick();
+        if (canNavigate('next')) NextClick();
       }
     } else if (absY > absX && absY > CONFIG.SWIPE_MIN_DISTANCE) {
       // Vertical swipe
       if (deltaY > 0) {
         // Swipe down -> Random
-        RandomClick();
+        if (canNavigate('random')) RandomClick();
       } else {
         // Swipe up -> Latest
-        CurrentClick();
+        if (canNavigate('current')) CurrentClick();
       }
     }
   }

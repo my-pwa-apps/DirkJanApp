@@ -892,7 +892,6 @@ input[type="date"]:focus-visible {
     filter: blur(15px);
     opacity: 0 !important;
 }
-}
 
 /* ========================================
    LOADING & TRANSITIONS
