@@ -1,6 +1,6 @@
 // Service Worker for DirkJan PWA
 // Cache versioning - increment when you need to force cache refresh
-const CACHE_VERSION = 'v96';
+const CACHE_VERSION = 'v97';
 const CACHE_NAME = `dirkjan-cache-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `dirkjan-runtime-${CACHE_VERSION}`;
 const IMAGE_CACHE = `dirkjan-images-${CACHE_VERSION}`;
@@ -81,8 +81,15 @@ async function cacheFirstStrategy(request, cacheName) {
   }
 
   try {
-    const networkResponse = await fetch(request);
-    if (networkResponse && networkResponse.status === 200) {
+    // For navigation requests, explicitly follow redirects and get final response
+    const fetchRequest = request.mode === 'navigate' 
+      ? new Request(request.url, { redirect: 'follow' })
+      : request;
+    
+    const networkResponse = await fetch(fetchRequest);
+    
+    // Only cache successful, non-redirected responses
+    if (networkResponse && networkResponse.status === 200 && !networkResponse.redirected) {
       const cache = await caches.open(cacheName);
       cache.put(request, networkResponse.clone());
     }
