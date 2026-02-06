@@ -55,7 +55,8 @@ const CONFIG = Object.freeze({
     SWIPE: 'stat',
     SHOW_FAVS: 'showfavs',
     LAST_DATE: 'lastdate',
-    SETTINGS_VISIBLE: 'settings'
+    SETTINGS_VISIBLE: 'settings',
+    KEYBOARD_HINT: 'keyboardHintSeen'
   })
 });
 
@@ -1114,72 +1115,38 @@ function onLoad()
   // Check URL parameters for app shortcuts
   const urlParams = new URLSearchParams(window.location.search);
   
-  comicstartDate = "2015/05/04";   
   currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
  
-  let favs = loadFavs();
+  const favs = loadFavs();
+  const showFavsEl = document.getElementById("showfavs");
 
-  if (favs == null) {
-    favs = [];
-  }
-  if (document.getElementById("showfavs").checked) {
+  if (favs.length === 0) {
+    showFavsEl.checked = false;
+    showFavsEl.disabled = true;
+  } else if (showFavsEl.checked) {
     currentselectedDate = new Date(favs[0]);
-    if (favs.length === 0) {
-      document.getElementById("showfavs").checked = false;
-      document.getElementById("showfavs").disabled = true;
-      currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
-    }
-  } else {
-    if (favs.length === 0) {
-      document.getElementById("showfavs").checked = false;
-      document.getElementById("showfavs").disabled = true;
-      currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
-    }
-    currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
   }
  
  maxDate = new Date();
 
-  if (currentselectedDate.getDay() == 0) 
-  {
-    currentselectedDate.setDate(currentselectedDate.getDate()-1);
+  if (currentselectedDate.getDay() === 0) {
+    currentselectedDate.setDate(currentselectedDate.getDate() - 1);
   }
 
-  switch (maxDate.getDay())
-  {
-    case 0:
-      maxDate.setDate(maxDate.getDate()+6);
-      break;
-    case 1:
-      maxDate.setDate(maxDate.getDate()+5);
-      break;
-    case 2:
-      maxDate.setDate(maxDate.getDate()+4);
-      break;
-    case 3:
-      maxDate.setDate(maxDate.getDate()+3);
-      break;
-    case 4:
-       maxDate.setDate(maxDate.getDate()+2);
-       break;
-    case 5:
-      maxDate.setDate(maxDate.getDate()+1);
-      break;
-    case 6:
-      maxDate.setDate(maxDate.getDate()+7);
-      break;
-    }
+  // Advance maxDate to next Saturday (or +7 days if already Saturday)
+  const daysUntilSaturday = ((6 - maxDate.getDay()) % 7) || 7;
+  maxDate.setDate(maxDate.getDate() + daysUntilSaturday);
 
   formatDate(maxDate);
   
-  formattedmaxDate = year+'-'+month+'-'+day;
+  const formattedmaxDate = year+'-'+month+'-'+day;
   document.getElementById("DatePicker").setAttribute("max", formattedmaxDate);
   
   if(document.getElementById("lastdate").checked)   
 	{
-		if(localStorage.getItem('lastcomic') !== null)
+		if(localStorage.getItem(CONFIG.STORAGE_KEYS.LAST_COMIC) !== null)
 		{
-			currentselectedDate = new Date(localStorage.getItem('lastcomic'));
+			currentselectedDate = new Date(localStorage.getItem(CONFIG.STORAGE_KEYS.LAST_COMIC));
 		}
     CompareDates();
     DisplayComic();
@@ -1332,8 +1299,8 @@ function DateChange()
   
   if (selectedDate) {
     currentselectedDate = new Date(selectedDate);
-    if (currentselectedDate.getDay() == 0) {
-      currentselectedDate.setDate(currentselectedDate.getDate()-1);
+    if (currentselectedDate.getDay() === 0) {
+      currentselectedDate.setDate(currentselectedDate.getDate() - 1);
     }
     CompareDates();
     DisplayComic('morph');
@@ -1413,7 +1380,7 @@ function DisplayComic(direction = null)
   
   const url = `https://dirkjan.nl/cartoon/${formattedComicDate}`;
 
-  localStorage.setItem('lastcomic', currentselectedDate);
+  localStorage.setItem(CONFIG.STORAGE_KEYS.LAST_COMIC, currentselectedDate);
   
   // Get comic elements
   const comicImg = document.getElementById("comic");
@@ -1436,7 +1403,7 @@ function DisplayComic(direction = null)
       siteBody = text;
       notFound = siteBody.includes("error404");
       
-      if (notFound == false)
+      if (!notFound)
       {
         // Extract image URL using multiple methods for reliability
         pictureUrl = extractComicImageUrl(siteBody);
@@ -1599,16 +1566,13 @@ function DisplayComic(direction = null)
       comicImg.alt = "Failed to load comic. Please try again later.";
     });
     
-  let favs = loadFavs();
-  if (favs == null) {
-    favs = [];
-  }
+  const favs = loadFavs();
   
   // Update heart icon based on favorite status
   const heartButton = document.getElementById("favheart");
   const heartSvg = heartButton ? heartButton.querySelector('svg') : null;
   
-  if (favs.indexOf(formattedDate) == -1) {
+  if (favs.indexOf(formattedDate) === -1) {
     // Not a favorite - unfilled heart
     if (heartSvg) {
       heartSvg.style.fill = 'none';
@@ -1823,13 +1787,6 @@ function CompareDates() {
     currentselectedDate = new Date(Date.UTC(year, month - 1, day, 12));
   }
 }
-
- /**
-  * Formats a date object into year, month, day components
-  * Sets global year, month, day variables
-  * @param {Date} datetoFormat - Date to format
-  * @deprecated Use UTILS.formatDate instead - this is handled by backward compat wrapper above
-  */
 
 // ========================================
 // COMIC ROTATION & FULLSCREEN
@@ -2643,85 +2600,42 @@ if (document.readyState === 'loading') {
   initializeMobileButtonStates();
 }
 
-setStatus = document.getElementById("swipe");
-setStatus.onclick = function()
-{    
-  if(document.getElementById("swipe").checked)
-  {
-    localStorage.setItem('stat', "true");
-  }
-  else
-  {
-    localStorage.setItem('stat', "false");
-	}
-}
+// Settings click handlers
+document.getElementById("swipe").onclick = function() {
+  localStorage.setItem(CONFIG.STORAGE_KEYS.SWIPE, this.checked ? "true" : "false");
+};
 
-setStatus = document.getElementById('lastdate');
-setStatus.onclick = function()
-{
-  if(document.getElementById('lastdate').checked) 
-  {
-    localStorage.setItem('lastdate', "true");
-  }
-  else
-  {
-    localStorage.setItem('lastdate', "false");
-  }
-}
+document.getElementById('lastdate').onclick = function() {
+  localStorage.setItem(CONFIG.STORAGE_KEYS.LAST_DATE, this.checked ? "true" : "false");
+};
 
-setStatus = document.getElementById('showfavs');
-setStatus.onclick = function()
-{
+document.getElementById('showfavs').onclick = function() {
   const favs = loadFavs();
-  if (document.getElementById('showfavs').checked) {
-    localStorage.setItem('showfavs', "true");
+  if (this.checked) {
+    localStorage.setItem(CONFIG.STORAGE_KEYS.SHOW_FAVS, "true");
     if (favs.indexOf(formattedDate) === -1 && favs.length) {
       currentselectedDate = new Date(favs[0]);
     }
   } else {
-    localStorage.setItem('showfavs', "false");
+    localStorage.setItem(CONFIG.STORAGE_KEYS.SHOW_FAVS, "false");
   }
   CompareDates();
   DisplayComic();
+};
+
+// Load settings from localStorage
+document.getElementById("swipe").checked = localStorage.getItem(CONFIG.STORAGE_KEYS.SWIPE) === "true";
+document.getElementById("showfavs").checked = localStorage.getItem(CONFIG.STORAGE_KEYS.SHOW_FAVS) === "true";
+document.getElementById("lastdate").checked = localStorage.getItem(CONFIG.STORAGE_KEYS.LAST_DATE) === "true";
+
+{
+  const settingsPanel = document.getElementById("settingsDIV");
+  if (localStorage.getItem(CONFIG.STORAGE_KEYS.SETTINGS_VISIBLE) === "true" && settingsPanel) {
+    settingsPanel.classList.add('visible');
+  } else if (settingsPanel) {
+    settingsPanel.classList.remove('visible');
+  }
 }
-
-getStatus = localStorage.getItem('stat');
-  if (getStatus == "true")
-  {
-    document.getElementById("swipe").checked = true;
-  }
-  else
-  {
-    document.getElementById("swipe").checked = false;
-  }
-
-getStatus = localStorage.getItem('showfavs');
-  if (getStatus == "true")
-  {
-    document.getElementById("showfavs").checked = true;
-  }
-  else
-  {
-    document.getElementById("showfavs").checked = false;
-  }
-
-getStatus = localStorage.getItem('lastdate');
-    if (getStatus == "true")
-    {
-      document.getElementById("lastdate").checked = true;
-    }
-    else
-    {
-      document.getElementById("lastdate").checked = false;
-    }
-
-getStatus = localStorage.getItem('settings');
-    const settingsPanel = document.getElementById("settingsDIV");
-    if (getStatus == "true" && settingsPanel) {
-      settingsPanel.classList.add('visible');
-    } else if (settingsPanel) {
-      settingsPanel.classList.remove('visible');
-    }
 
 // ========================================
 // SETTINGS & FAVORITES UI
@@ -2774,7 +2688,7 @@ function HideSettings()
   // Toggle visibility using class
   if (panel.classList.contains('visible')) {
     panel.classList.remove('visible');
-    localStorage.setItem('settings', "false");
+    localStorage.setItem(CONFIG.STORAGE_KEYS.SETTINGS_VISIBLE, "false");
   } else {
     // Before showing, ensure saved position is applied
     const savedPosRaw = localStorage.getItem(CONFIG.STORAGE_KEYS.SETTINGS_POS);
@@ -2786,7 +2700,7 @@ function HideSettings()
     }
     
     panel.classList.add('visible');
-    localStorage.setItem('settings', "true");
+    localStorage.setItem(CONFIG.STORAGE_KEYS.SETTINGS_VISIBLE, "true");
   }
 }
 
@@ -3163,7 +3077,6 @@ document.addEventListener('keydown', function(e) {
 // ========================================
 // COMIC PRELOADING FOR SMOOTHER NAVIGATION
 // ========================================
-const MAX_PRELOAD_CACHE = 20; // Limit memory usage
 let preloadedComics = new Map();
 
 function preloadAdjacentComics() {
@@ -3183,8 +3096,8 @@ function preloadAdjacentComics() {
   preloadComic(prevDate);
   
   // Clean up old preloaded comics if cache is too large
-  if (preloadedComics.size > MAX_PRELOAD_CACHE) {
-    const keysToDelete = Array.from(preloadedComics.keys()).slice(0, preloadedComics.size - MAX_PRELOAD_CACHE);
+  if (preloadedComics.size > CONFIG.MAX_PRELOAD_CACHE) {
+    const keysToDelete = Array.from(preloadedComics.keys()).slice(0, preloadedComics.size - CONFIG.MAX_PRELOAD_CACHE);
     keysToDelete.forEach(key => preloadedComics.delete(key));
   }
 }
@@ -3241,7 +3154,7 @@ function showKeyboardShortcutsHint() {
     return; // Skip showing hint on mobile/touch devices
   }
   
-  const hasSeenHint = localStorage.getItem('keyboardHintSeen');
+  const hasSeenHint = localStorage.getItem(CONFIG.STORAGE_KEYS.KEYBOARD_HINT);
   
   if (!hasSeenHint) {
     setTimeout(() => {
@@ -3256,7 +3169,7 @@ function showKeyboardShortcutsHint() {
             Space/R : Random<br>
             F : Favorite
           </div>
-          <button onclick="this.parentElement.parentElement.remove(); localStorage.setItem('keyboardHintSeen', 'true');" style="margin-top: 12px; padding: 6px 12px; background: linear-gradient(45deg, #f09819 0%, #ff8c00 100%); border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: bold; width: 100%;">Got it!</button>
+          <button onclick="this.parentElement.parentElement.remove(); localStorage.setItem('${CONFIG.STORAGE_KEYS.KEYBOARD_HINT}', 'true');" style="margin-top: 12px; padding: 6px 12px; background: linear-gradient(45deg, #f09819 0%, #ff8c00 100%); border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: bold; width: 100%;">Got it!</button>
         </div>
       `;
       document.body.appendChild(hint);
@@ -3271,7 +3184,7 @@ function showKeyboardShortcutsHint() {
             if (hintEl.parentElement) {
               hintEl.parentElement.removeChild(hintEl);
             }
-            localStorage.setItem('keyboardHintSeen', 'true');
+            localStorage.setItem(CONFIG.STORAGE_KEYS.KEYBOARD_HINT, 'true');
           }, 500);
         }
       }, 8000);
