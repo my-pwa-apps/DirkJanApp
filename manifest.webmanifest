@@ -2,7 +2,7 @@
     "id": "./",
     "name": "Daily DirkJan Comics",
     "short_name": "DirkJan",
-    "description": "Lees dagelijks de nieuwste DirkJan strips met deze handige app. Inclusief favoriten, swipe navigatie en offline ondersteuning.",
+    "description": "Lees dagelijks de nieuwste DirkJan strips met deze handige app. Inclusief favorieten, swipe navigatie en offline ondersteuning.",
     "start_url": "./",
     "scope": "./",
     "display": "standalone",

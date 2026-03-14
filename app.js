@@ -341,6 +341,7 @@ let currentselectedDate;        // Currently selected date object
 let maxDate;                    // Maximum possible comic date (next Saturday)
 let latestAvailableDate;        // Actual latest available comic date (found on load)
 let isAnimating = false;        // Prevents overlapping animations
+let notFoundRetries = 0;        // Prevents infinite 404 recursion
 
 // Parsing variables
 let siteBody, notFound;
@@ -955,7 +956,9 @@ async function shareWithImage(shareText, shareUrl) {
   if (!/jpe?g/i.test(blob.type)) {
     finalFile = await new Promise((resolve, reject) => {
       const img = new Image();
+      const objectUrl = URL.createObjectURL(blob);
       img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
         const canvas = document.createElement('canvas');
         canvas.width = img.width; canvas.height = img.height;
         canvas.getContext('2d').drawImage(img, 0, 0);
@@ -964,8 +967,11 @@ async function shareWithImage(shareText, shareUrl) {
           resolve(new File([jBlob], `dirkjan-comic-${formattedDate}.jpg`, { type: 'image/jpeg' }));
         }, 'image/jpeg', 0.9);
       };
-      img.onerror = () => reject(new Error('Image load for conversion failed'));
-      img.src = URL.createObjectURL(blob);
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error('Image load for conversion failed'));
+      };
+      img.src = objectUrl;
     });
   } else {
     finalFile = new File([blob], `dirkjan-comic-${formattedDate}.jpg`, { type: 'image/jpeg' });
@@ -1228,7 +1234,7 @@ function FirstClick()
     const favs = loadFavs();
     if (favs.length) currentselectedDate = new Date(favs[0]);
   } else {
-    currentselectedDate = new Date(Date.UTC(1978, 5, 19,12));
+    currentselectedDate = new Date(comicstartDate);
   }
   CompareDates();
   DisplayComic('morph');
@@ -1405,6 +1411,7 @@ function DisplayComic(direction = null)
       
       if (!notFound)
       {
+        notFoundRetries = 0; // Reset 404 retry counter on success
         // Extract image URL using multiple methods for reliability
         pictureUrl = extractComicImageUrl(siteBody);
         
@@ -1538,6 +1545,14 @@ function DisplayComic(direction = null)
         // Comic not found (404) - try to navigate to find a valid comic
         comicImg.classList.remove('loading');
         isAnimating = false; // Release animation lock before retry
+        notFoundRetries++;
+        
+        // Prevent infinite recursion - stop after 10 retries
+        if (notFoundRetries > 10) {
+          notFoundRetries = 0;
+          comicImg.alt = "No comic found for this date.";
+          return;
+        }
         
         // Use captured animation type to avoid race conditions
         // (user might have clicked different button while fetch was in progress)
@@ -2593,13 +2608,6 @@ function initializeMobileButtonStates() {
   }, { passive: true });
 }
 
-// Initialize mobile button states when DOM is ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initializeMobileButtonStates);
-} else {
-  initializeMobileButtonStates();
-}
-
 // Settings click handlers
 document.getElementById("swipe").onclick = function() {
   localStorage.setItem(CONFIG.STORAGE_KEYS.SWIPE, this.checked ? "true" : "false");
@@ -2673,7 +2681,6 @@ function Addfav()
   }
   saveFavs(favs);
   CompareDates();
-  DisplayComic();
 }
 
 /**
