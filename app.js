@@ -2795,6 +2795,10 @@ function showInstallPromotion() {
   if (isAppInstalled()) {
     return;
   }
+
+  if (!deferredPrompt || document.getElementById('pwa-install-button')) {
+    return;
+  }
   
   const installButton = document.createElement('button');
   installButton.innerText = 'Install App';
@@ -2814,6 +2818,11 @@ function showInstallPromotion() {
   document.body.appendChild(installButton);
 
   installButton.addEventListener('click', () => {
+    if (!deferredPrompt) {
+      installButton.remove();
+      return;
+    }
+
     // Hide the app provided install promotion
     installButton.style.display = 'none';
     // Show the install prompt

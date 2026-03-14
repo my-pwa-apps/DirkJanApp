@@ -54,16 +54,12 @@
     {
       "src": "./screenshots/screenshot1.png",
       "sizes": "736x1252",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "DirkJan comic viewer met navigatie"
+        "type": "image/png"
     },
     {
       "src": "./screenshots/screenshot2.png",
       "sizes": "739x1254",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "DirkJan instellingen en favorieten"
+        "type": "image/png"
     }
   ],
   "shortcuts": [
