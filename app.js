@@ -1221,6 +1221,10 @@ function PreviousClick()
     }
   } else {
     currentselectedDate.setDate(currentselectedDate.getDate() - 1);
+    // Skip Sundays (no comics published on Sundays)
+    if (currentselectedDate.getDay() === 0) {
+      currentselectedDate.setDate(currentselectedDate.getDate() - 1);
+    }
   }
   CompareDates();
   DisplayComic('prev');
@@ -1240,6 +1244,10 @@ function NextClick()
     }
   } else {
     currentselectedDate.setDate(currentselectedDate.getDate() + 1);
+    // Skip Sundays (no comics published on Sundays)
+    if (currentselectedDate.getDay() === 0) {
+      currentselectedDate.setDate(currentselectedDate.getDate() + 1);
+    }
   }
   CompareDates();
   DisplayComic('next');
@@ -1294,6 +1302,10 @@ function RandomClick()
     const start = new Date(comicstartDate);
     const end = new Date();
     currentselectedDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+    // Skip Sundays (no comics published on Sundays)
+    if (currentselectedDate.getDay() === 0) {
+      currentselectedDate.setDate(currentselectedDate.getDate() - 1);
+    }
   }
   CompareDates();
   DisplayComic('morph');
