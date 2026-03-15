@@ -176,18 +176,34 @@ async function fetchWithFallback(url, enableRacing = true) {
   }
   
   // Racing mode: if primary is slow, start backup attempts
+  // Use AbortController to cancel backup timer when primary resolves
+  const raceController = new AbortController();
+  let backupTimerId;
+  
   try {
     return await Promise.race([
-      primaryAttempt,
+      primaryAttempt.then(result => {
+        clearTimeout(backupTimerId);
+        raceController.abort();
+        return result;
+      }),
       // Start racing with other proxies after a delay if primary is slow
       (async () => {
-        await new Promise(resolve => setTimeout(resolve, CONFIG.FETCH_TIMEOUT_FAST));
+        await new Promise((resolve, reject) => {
+          backupTimerId = setTimeout(resolve, CONFIG.FETCH_TIMEOUT_FAST);
+          raceController.signal.addEventListener('abort', () => reject(new Error('Primary succeeded')));
+        });
         // Primary is taking too long, try backups in parallel
         return await tryBackupProxies(url, bestProxyIndex, startTime);
       })()
     ]);
   } catch (error) {
+    clearTimeout(backupTimerId);
+    raceController.abort();
     if (error.name === 'NotFoundError') throw error; // Don't retry 404s
+    if (error.message === 'Primary succeeded') {
+      return await primaryAttempt; // Primary already resolved
+    }
     // Both primary and racing failed, try remaining sequentially
     return await tryRemainingProxies(url, bestProxyIndex, startTime);
   }
@@ -3134,14 +3150,16 @@ function preloadAdjacentComics() {
   
   const currentDate = new Date(formattedDate);
   
-  // Preload next comic
+  // Preload next comic (skip Sundays - no comics published)
   const nextDate = new Date(currentDate);
   nextDate.setDate(nextDate.getDate() + 1);
+  if (nextDate.getDay() === 0) nextDate.setDate(nextDate.getDate() + 1);
   preloadComic(nextDate);
   
-  // Preload previous comic
+  // Preload previous comic (skip Sundays - no comics published)
   const prevDate = new Date(currentDate);
   prevDate.setDate(prevDate.getDate() - 1);
+  if (prevDate.getDay() === 0) prevDate.setDate(prevDate.getDate() - 1);
   preloadComic(prevDate);
   
   // Clean up old preloaded comics if cache is too large
