@@ -170,6 +170,7 @@ async function fetchWithFallback(url, enableRacing = true) {
     try {
       return await primaryAttempt;
     } catch (error) {
+      if (error.name === 'NotFoundError') throw error; // Don't retry 404s
       return await tryRemainingProxies(url, bestProxyIndex, startTime);
     }
   }
@@ -186,6 +187,7 @@ async function fetchWithFallback(url, enableRacing = true) {
       })()
     ]);
   } catch (error) {
+    if (error.name === 'NotFoundError') throw error; // Don't retry 404s
     // Both primary and racing failed, try remaining sequentially
     return await tryRemainingProxies(url, bestProxyIndex, startTime);
   }
@@ -256,11 +258,15 @@ async function tryProxy(url, proxyIndex, startTime) {
       cache: 'no-cache' // Prevent stale cached errors
     });
     
+    if (response.status === 404) {
+      // Content doesn't exist on origin - proxy worked fine, don't penalize it
+      const err = new Error('HTTP 404');
+      err.name = 'NotFoundError';
+      throw err;
+    }
+    
     if (!response.ok) {
-      const errorMsg = `HTTP ${response.status}`;
-      console.warn(`✗ Proxy ${proxyIndex} (${proxyName}) ${errorMsg}`);
-      updateProxyStats(proxyIndex, false, 0);
-      throw new Error(errorMsg);
+      throw new Error(`HTTP ${response.status}`);
     }
     
     // Success
@@ -270,6 +276,10 @@ async function tryProxy(url, proxyIndex, startTime) {
     return response;
     
   } catch (error) {
+    if (error.name === 'NotFoundError') {
+      console.warn(`✗ Proxy ${proxyIndex} (${proxyName}): 404 content not found`);
+      throw error; // Don't penalize proxy — origin returned 404
+    }
     const errorType = error.name === 'TimeoutError' ? 'timeout' : 
                       error.name === 'AbortError' ? 'aborted' : 
                       error.message;
@@ -295,7 +305,17 @@ async function tryBackupProxies(url, excludeIndex, startTime) {
   }
   
   // Return first successful response
-  return await Promise.any(attempts);
+  try {
+    return await Promise.any(attempts);
+  } catch (aggregateError) {
+    // If any proxy got a 404, the content doesn't exist — propagate it
+    if (aggregateError.errors && aggregateError.errors.some(e => e.name === 'NotFoundError')) {
+      const err = new Error('HTTP 404');
+      err.name = 'NotFoundError';
+      throw err;
+    }
+    throw aggregateError;
+  }
 }
 
 /**
@@ -314,6 +334,7 @@ async function tryRemainingProxies(url, excludeIndex, startTime) {
     try {
       return await tryProxy(url, i, startTime);
     } catch (error) {
+      if (error.name === 'NotFoundError') throw error; // Content doesn't exist, stop trying
       errors.push(`Proxy ${i}: ${error.message}`);
     }
   }
