@@ -1740,7 +1740,9 @@ function animateRotatedComic(rotatedComic, newSrc, direction) {
     // Copy inline styles to preserve positioning, but override transform transition
     outgoingClone.style.cssText = rotatedComic.style.cssText;
     outgoingClone.style.transition = 'filter 0.5s ease-in-out, opacity 0.5s ease-in-out';
-    outgoingClone.style.transform = rotatedComic.style.transform || 'none'; // Lock current transform, no animation
+    // Use computed transform to capture CSS class transforms (e.g. translate(-50%, -50%) from .fullscreen-landscape)
+    const computedTransform = getComputedStyle(rotatedComic).transform;
+    outgoingClone.style.transform = computedTransform || 'none';
     document.body.appendChild(outgoingClone);
     
     // Reset the main rotated comic to prevent sliding
@@ -2348,7 +2350,25 @@ document.addEventListener('touchstart', handleTouchStart, { passive: false });
 document.addEventListener('touchmove', handleTouchMove, { passive: false });
 document.addEventListener('touchend', handleTouchEnd, { passive: true });
 
-// Add click handler for comic rotation
+// Add click handler for comic → landscape fullscreen on non-PWA or iOS
+(function() {
+  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) || 
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isNonPWA = !isAppInstalled();
+  
+  if (isIOS || isNonPWA) {
+    document.getElementById('comic')?.addEventListener('click', function(e) {
+      // Don't trigger if already in fullscreen or if it was a swipe
+      const rotatedComic = document.getElementById('rotated-comic');
+      if (rotatedComic) return;
+      if (this.className.includes('normal')) {
+        e.preventDefault();
+        Rotate(false); // Enter landscape fullscreen without rotation
+      }
+    });
+  }
+})();
+
 // Add orientation change listener
 window.addEventListener('orientationchange', function() {
   setTimeout(() => {
