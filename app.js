@@ -101,10 +101,10 @@ function showUpdateNotification() {
   const notification = document.createElement('div');
   notification.id = 'update-notification';
   notification.innerHTML = `
-    <div style="position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.9); color: white; padding: 15px 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); z-index: 10004; max-width: 90%; text-align: center; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);">
-      <div style="font-weight: bold; margin-bottom: 8px;">🎉 Nieuwe versie beschikbaar!</div>
-      <button onclick="updateApp()" style="margin: 5px; padding: 8px 16px; background: linear-gradient(45deg, #f09819 0%, #ff8c00 100%); border: none; border-radius: 8px; color: white; cursor: pointer; font-weight: bold;">Updaten</button>
-      <button onclick="dismissUpdate()" style="margin: 5px; padding: 8px 16px; background: rgba(255,255,255,0.2); border: none; border-radius: 8px; color: white; cursor: pointer;">Later</button>
+    <div class="update-notification-inner">
+      <div class="update-notification-title">🎉 Nieuwe versie beschikbaar!</div>
+      <button onclick="updateApp()" class="update-notification-btn update-notification-btn-primary">Updaten</button>
+      <button onclick="dismissUpdate()" class="update-notification-btn update-notification-btn-secondary">Later</button>
     </div>
   `;
   document.body.appendChild(notification);
@@ -122,8 +122,11 @@ function updateApp() {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.getRegistration().then(registration => {
       if (registration && registration.waiting) {
+        // Listen for controller change before reloading to ensure new SW is active
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          window.location.reload();
+        }, { once: true });
         registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-        window.location.reload();
       }
     });
   }
@@ -144,6 +147,9 @@ function dismissUpdate() {
 // ========================================
 // CORS PROXY SYSTEM
 // ========================================
+
+// AbortController for cancelling in-flight comic fetches on re-navigation
+let currentFetchController = null;
 
 // Track which proxy is currently working best
 let workingProxyIndex = 0;
@@ -382,7 +388,6 @@ let notFoundRetries = 0;        // Prevents infinite 404 recursion
 
 // Parsing variables
 let siteBody, notFound;
-let year, month, day;
 
 // Favorites cache
 let _cachedFavs = null;
@@ -402,16 +407,19 @@ const UTILS = {
   },
   
   /**
-   * Formats a date object into YYYY-MM-DD components
+   * Formats a date object into components
    * @param {Date} datetoFormat - Date to format
-   * @returns {void} Sets global year, month, day variables
+   * @returns {{year: number, month: string, day: string}} Formatted date parts
    */
   formatDate(datetoFormat) {
-    day = datetoFormat.getDate();
-    month = datetoFormat.getMonth() + 1;
-    year = datetoFormat.getFullYear();
-    month = ("0" + month).slice(-2);
-    day = ("0" + day).slice(-2);
+    const d = datetoFormat.getDate();
+    const m = datetoFormat.getMonth() + 1;
+    const y = datetoFormat.getFullYear();
+    return {
+      year: y,
+      month: ("0" + m).slice(-2),
+      day: ("0" + d).slice(-2)
+    };
   },
   
   /**
@@ -481,9 +489,7 @@ function storeToolbarPosition(top, left, toolbarEl, overrides = {}) {
   } catch (_) {}
 }
 
-// Backward compatibility - delegate to UTILS
-const formatDate = (datetoFormat) => UTILS.formatDate(datetoFormat);
-const safeJSONParse = (str, fallback) => UTILS.safeJSONParse(str, fallback);
+
 
 // ========================================
 // FAVORITES MANAGEMENT
@@ -852,7 +858,7 @@ function makeDraggable(element, dragHandle, storageKey, onDragStart = null, onDr
  */
 async function Share() {
   if (!pictureUrl) {
-    alert('Sorry, no comic is available to share at this moment.');
+    alert('Sorry, er is geen strip beschikbaar om te delen.');
     return;
   }
 
@@ -1047,11 +1053,11 @@ async function shareWithImage(shareText, shareUrl) {
  */
 function fallbackShare(text, url) {
 	// Try to copy to clipboard with image URL included
-	const shareContent = `${text}\n${url}\n\nComic image: ${pictureUrl}`;
+	const shareContent = `${text}\n${url}\n\nStripafbeelding: ${pictureUrl}`;
 	
 	if (navigator.clipboard && navigator.clipboard.writeText) {
 		navigator.clipboard.writeText(shareContent).then(() => {
-			alert('Comic link and image URL copied to clipboard! You can now paste it anywhere to share.');
+			alert('Link en afbeeldings-URL gekopieerd naar klembord!');
 		}).catch(() => {
 			// Final fallback - show the content to copy manually
 			showShareDialog(shareContent);
@@ -1067,10 +1073,9 @@ function fallbackShare(text, url) {
  * @param {string} content - Content to share
  */
 function showShareDialog(content) {
-	// Create a more user-friendly dialog
-	const userCopied = prompt('Copy this text to share the comic (includes both link and image URL):\n\n(Tip: Select all with Ctrl+A, then copy with Ctrl+C)', content);
+	const userCopied = prompt('Kopieer deze tekst om de strip te delen:\n\n(Tip: Selecteer alles met Ctrl+A, kopieer met Ctrl+C)', content);
 	if (userCopied !== null) {
-		alert('Thanks for sharing DirkJan comics!');
+		alert('Bedankt voor het delen van DirkJan!');
 	}
 }
 
@@ -1180,9 +1185,9 @@ function onLoad()
   const daysUntilSaturday = ((6 - maxDate.getDay()) % 7) || 7;
   maxDate.setDate(maxDate.getDate() + daysUntilSaturday);
 
-  formatDate(maxDate);
+  const maxDateParts = UTILS.formatDate(maxDate);
   
-  const formattedmaxDate = year+'-'+month+'-'+day;
+  const formattedmaxDate = maxDateParts.year+'-'+maxDateParts.month+'-'+maxDateParts.day;
   document.getElementById("DatePicker").setAttribute("max", formattedmaxDate);
   
   if(document.getElementById("lastdate").checked)   
@@ -1421,10 +1426,10 @@ function DisplayComic(direction = null)
   const capturedAnimationType = direction;
   
   try {
-    formatDate(currentselectedDate);
+    const dateParts = UTILS.formatDate(currentselectedDate);
 
-  formattedDate = year+"-"+month+"-"+day;
-  formattedComicDate = year+month+day;
+  formattedDate = dateParts.year+"-"+dateParts.month+"-"+dateParts.day;
+  formattedComicDate = dateParts.year+dateParts.month+dateParts.day;
   document.getElementById('DatePicker').value = formattedDate;
   
   // Also sync the rotated date picker if it exists
@@ -1448,13 +1453,22 @@ function DisplayComic(direction = null)
     comicImg.classList.remove('loaded');
   }
   
+  // Cancel any previous in-flight fetch to prevent stale results from overwriting
+  if (currentFetchController) {
+    currentFetchController.abort();
+  }
+  currentFetchController = new AbortController();
+  const fetchSignal = currentFetchController.signal;
+  
   fetchWithFallback(url)
     .then(function(response)
 	{
+      if (fetchSignal.aborted) throw new DOMException('Aborted', 'AbortError');
       return response.text();
     })
     .then(function(text)
 	{
+      if (fetchSignal.aborted) throw new DOMException('Aborted', 'AbortError');
       siteBody = text;
       notFound = siteBody.includes("error404");
       
@@ -1576,11 +1590,17 @@ function DisplayComic(direction = null)
         // Run animation
         animateTransition().then(() => {
           isAnimating = false; // Release animation lock
-          comicImg.alt = `DirkJan strip van ${day}-${month}-${year} door Mark Retera`;
+          comicImg.alt = `DirkJan strip van ${dateParts.day}-${dateParts.month}-${dateParts.year} door Mark Retera`;
           comicImg.classList.remove('loading', 'slide-in-left', 'slide-in-right');
           // Only add loaded class if no animation was performed (avoids opacity flash)
           if (!direction) {
             comicImg.classList.add('loaded');
+          }
+          
+          // Announce comic change to screen readers
+          const statusEl = document.getElementById('comic-status');
+          if (statusEl) {
+            statusEl.textContent = `Strip van ${dateParts.day}-${dateParts.month}-${dateParts.year} geladen`;
           }
           
           // Also update the rotated comic if it exists (with animation)
@@ -1625,9 +1645,11 @@ function DisplayComic(direction = null)
       }
     })
     .catch(function(error) {
+      // Ignore aborted fetches (superseded by a newer navigation)
+      if (error.name === 'AbortError') return;
       comicImg.classList.remove('loading');
       comicImg.src = ""; // Clear the image
-      comicImg.alt = "Failed to load comic. Please try again later.";
+      comicImg.alt = "Kan strip niet laden. Probeer het later opnieuw.";
     });
     
   const favs = loadFavs();
@@ -1661,7 +1683,7 @@ function DisplayComic(direction = null)
     if (comicImg) {
       comicImg.classList.remove('loading');
       comicImg.src = "";
-      comicImg.alt = "Failed to display comic. Please try again.";
+      comicImg.alt = "Kan strip niet weergeven. Probeer het opnieuw.";
     }
   }
 }
@@ -1846,11 +1868,11 @@ function CompareDates() {
   
   // Adjust current date if out of bounds
   if (currentTime < startDate) {
-    formatDate(new Date(startDate));
-    currentselectedDate = new Date(Date.UTC(year, month - 1, day, 12));
+    const sp = UTILS.formatDate(new Date(startDate));
+    currentselectedDate = new Date(Date.UTC(sp.year, sp.month - 1, sp.day, 12));
   } else if (currentTime > endDate) {
-    formatDate(new Date(endDate));
-    currentselectedDate = new Date(Date.UTC(year, month - 1, day, 12));
+    const ep = UTILS.formatDate(new Date(endDate));
+    currentselectedDate = new Date(Date.UTC(ep.year, ep.month - 1, ep.day, 12));
   }
 }
 
@@ -2701,9 +2723,10 @@ document.getElementById('showfavs').onclick = function() {
 };
 
 // Load settings from localStorage
-document.getElementById("swipe").checked = localStorage.getItem(CONFIG.STORAGE_KEYS.SWIPE) === "true";
+// Swipe and lastdate default to true for new users (null means never set)
+document.getElementById("swipe").checked = localStorage.getItem(CONFIG.STORAGE_KEYS.SWIPE) !== "false";
 document.getElementById("showfavs").checked = localStorage.getItem(CONFIG.STORAGE_KEYS.SHOW_FAVS) === "true";
-document.getElementById("lastdate").checked = localStorage.getItem(CONFIG.STORAGE_KEYS.LAST_DATE) === "true";
+document.getElementById("lastdate").checked = localStorage.getItem(CONFIG.STORAGE_KEYS.LAST_DATE) !== "false";
 
 {
   const settingsPanel = document.getElementById("settingsDIV");
@@ -2870,20 +2893,9 @@ function showInstallPromotion() {
   }
   
   const installButton = document.createElement('button');
-  installButton.innerText = 'Install App';
+  installButton.innerText = 'Installeer App';
   installButton.id = 'pwa-install-button';
-  installButton.style.position = 'fixed';
-  installButton.style.bottom = '10px';
-  installButton.style.right = '10px';
-  installButton.style.padding = '10px 20px';
-  installButton.style.backgroundColor = '#F09819';
-  installButton.style.color = 'white';
-  installButton.style.border = 'none';
-  installButton.style.borderRadius = '5px';
-  installButton.style.cursor = 'pointer';
-  installButton.style.zIndex = '9999';
-  installButton.style.fontWeight = 'bold';
-  installButton.style.boxShadow = '0 2px 5px rgba(0,0,0,0.3)';
+  installButton.className = 'pwa-install-button';
   document.body.appendChild(installButton);
 
   installButton.addEventListener('click', () => {
@@ -3248,15 +3260,15 @@ function showKeyboardShortcutsHint() {
       const hint = document.createElement('div');
       hint.id = 'keyboard-hint';
       hint.innerHTML = `
-        <div style="position: fixed; bottom: 20px; right: 20px; background: rgba(0,0,0,0.85); color: white; padding: 15px 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 10003; max-width: 300px; font-size: 14px; backdrop-filter: blur(10px);">
-          <div style="font-weight: bold; margin-bottom: 10px; font-size: 16px;">⌨️ Keyboard Shortcuts</div>
-          <div style="line-height: 1.6;">
-            ← → : Previous/Next<br>
-            Home/End : First/Latest<br>
-            Space/R : Random<br>
-            F : Favorite
+        <div class="keyboard-hint-inner">
+          <div class="keyboard-hint-title">⌨️ Sneltoetsen</div>
+          <div class="keyboard-hint-body">
+            ← → : Vorige/Volgende<br>
+            Home/End : Eerste/Laatste<br>
+            Spatie/R : Willekeurig<br>
+            F : Favoriet
           </div>
-          <button onclick="this.parentElement.parentElement.remove(); localStorage.setItem('${CONFIG.STORAGE_KEYS.KEYBOARD_HINT}', 'true');" style="margin-top: 12px; padding: 6px 12px; background: linear-gradient(45deg, #f09819 0%, #ff8c00 100%); border: none; border-radius: 6px; color: white; cursor: pointer; font-weight: bold; width: 100%;">Got it!</button>
+          <button onclick="this.parentElement.parentElement.remove(); localStorage.setItem('${CONFIG.STORAGE_KEYS.KEYBOARD_HINT}', 'true');" class="keyboard-hint-btn">Begrepen!</button>
         </div>
       `;
       document.body.appendChild(hint);

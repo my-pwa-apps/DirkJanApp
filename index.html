@@ -72,9 +72,8 @@
     </script>
 </head>
 <body onload="onLoad()">
-    <h1 hidden>Daily DirkJan Comics - Dagelijkse Nederlandse Strip van Mark Retera</h1>
-    <p hidden>Lees elke dag de nieuwste DirkJan strip. Deze gratis webapp biedt toegang tot het volledige archief van DirkJan comics sinds 2015. Bekijk de strip van vandaag, ontdek willekeurige comics, navigeer met swipe-gebaren, en bewaar je favoriete strips. Perfect voor fans van Nederlandse humor en cartoons.</p>
-    <a class="skip-link" href="#comic">Skip to comic</a>
+    <h1 class="visually-hidden">Daily DirkJan Comics - Dagelijkse Nederlandse Strip van Mark Retera</h1>
+    <a class="skip-link" href="#comic">Ga naar strip</a>
     
     <div class="logo" role="banner">
         <a href="https://dirkjan.nl" target="_blank" rel="noopener">
@@ -129,7 +128,8 @@
             </div>
 
         <div id="comic-wrapper" class="comic-wrapper">
-            <img id="comic" class="normal" alt="Loading DirkJan comic...">
+            <img id="comic" class="normal" alt="DirkJan strip laden...">
+            <div id="comic-status" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
         </div>
 
         <div class="settings-icons-container" role="group" aria-label="Acties">
@@ -154,7 +154,7 @@
             </button>
         </div>
 
-        <div id="settingsDIV" class="settings-panel" aria-label="Instellingen" role="region">
+        <div id="settingsDIV" class="settings-panel" aria-label="Instellingen" role="dialog" aria-modal="false">
             <div class="settings-header" id="settingsHeader">
                 <h3>Instellingen</h3>
                 <button class="settings-close" onclick="HideSettings()" aria-label="Sluiten">&times;</button>
