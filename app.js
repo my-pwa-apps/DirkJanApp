@@ -3181,18 +3181,23 @@ function preloadAdjacentComics() {
   if (!formattedDate) return;
   
   const currentDate = new Date(formattedDate);
+  const startDate = new Date(CONFIG.COMIC_START_DATE);
   
   // Preload next comic (skip Sundays - no comics published)
   const nextDate = new Date(currentDate);
   nextDate.setDate(nextDate.getDate() + 1);
   if (nextDate.getDay() === 0) nextDate.setDate(nextDate.getDate() + 1);
-  preloadComic(nextDate);
+  if (nextDate <= (latestAvailableDate || maxDate)) {
+    preloadComic(nextDate);
+  }
   
   // Preload previous comic (skip Sundays - no comics published)
   const prevDate = new Date(currentDate);
   prevDate.setDate(prevDate.getDate() - 1);
   if (prevDate.getDay() === 0) prevDate.setDate(prevDate.getDate() - 1);
-  preloadComic(prevDate);
+  if (prevDate >= startDate) {
+    preloadComic(prevDate);
+  }
   
   // Clean up old preloaded comics if cache is too large
   if (preloadedComics.size > CONFIG.MAX_PRELOAD_CACHE) {
