@@ -1,6 +1,6 @@
 // Service Worker for DirkJan PWA
 // Cache versioning - increment when you need to force cache refresh
-const CACHE_VERSION = 'v105';
+const CACHE_VERSION = 'v106';
 const CACHE_NAME = `dirkjan-cache-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `dirkjan-runtime-${CACHE_VERSION}`;
 const IMAGE_CACHE = `dirkjan-images-${CACHE_VERSION}`;
@@ -14,7 +14,7 @@ const PRECACHE_ASSETS = [
   './manifest.webmanifest',
   './dirk-jan-tekst.svg',
   './favicon-32x32.webp',
-  './android-chrome-192x192.png'
+  './android-chrome-192x192.webp'
 ];
 
 // Maximum cache sizes
