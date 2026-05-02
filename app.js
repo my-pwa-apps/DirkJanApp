@@ -1016,7 +1016,23 @@ function showShareDialog(content) {
 // ========================================
 
 /**
- * Finds the latest available comic by starting at maxDate and going backwards
+ * Gets the latest comic date candidate without probing future dates
+ * @param {Date} baseDate - Date to normalize, defaults to today
+ * @returns {Date} Latest candidate date, with Sundays moved back to Saturday
+ */
+function getLatestComicCandidateDate(baseDate = new Date()) {
+  const candidateDate = new Date(baseDate);
+  candidateDate.setHours(0, 0, 0, 0);
+
+  if (candidateDate.getDay() === 0) {
+    candidateDate.setDate(candidateDate.getDate() - 1);
+  }
+
+  return candidateDate;
+}
+
+/**
+ * Finds the latest available comic by starting at startDate and going backwards
  * @param {Date} startDate - The date to start searching from
  * @param {Date} minDate - The minimum date to search back to (today)
  * @returns {Promise<Date>} The date of the latest available comic
@@ -1132,17 +1148,14 @@ function onLoad()
     DisplayComic();
 	} else {
     // If not remembering last comic, find the latest available comic
-    const today = new Date();
-    if (today.getDay() === 0) {
-      today.setDate(today.getDate() - 1); // No comics on Sunday
-    }
+    const today = getLatestComicCandidateDate();
     
     // Search back up to 7 days to find the latest available comic
     // (handles cases where today's comic isn't published yet or holidays)
     const searchMinDate = new Date(today);
     searchMinDate.setDate(searchMinDate.getDate() - 7);
     
-    findLatestAvailableComic(maxDate, searchMinDate).then(latestDate => {
+    findLatestAvailableComic(today, searchMinDate).then(latestDate => {
       currentselectedDate = latestDate;
       CompareDates();
       DisplayComic();
@@ -1233,8 +1246,8 @@ function CurrentClick()
     const favslength = favs.length - 1;
     if (favslength >= 0) currentselectedDate = new Date(favs[favslength]);
   } else {
-    // Go to the latest available comic date
-    currentselectedDate = new Date(latestAvailableDate || maxDate);
+    // Go to the latest available comic date without falling into future dates
+    currentselectedDate = new Date(latestAvailableDate || getLatestComicCandidateDate());
   }
   CompareDates();
   DisplayComic('morph');
@@ -1773,10 +1786,10 @@ function CompareDates() {
     ? normalizeDate(favs[0]) 
     : normalizeDate(comicstartDate);
   
-  // Use latestAvailableDate if set, otherwise fall back to maxDate
+  // Use latestAvailableDate if set, otherwise fall back to today/Saturday rather than future maxDate
   const endDate = showFavsChecked && favs.length > 0
     ? normalizeDate(favs[favs.length - 1])
-    : normalizeDate(latestAvailableDate || maxDate);
+    : normalizeDate(latestAvailableDate || getLatestComicCandidateDate());
   
   // Calculate button states
   const buttonStates = {

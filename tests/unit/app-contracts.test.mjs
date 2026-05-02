@@ -33,6 +33,13 @@ test('preloading does not probe beyond a known latest or current date', () => {
   assert.match(appSource, /if \(nextDate <= preloadMaxDate\)/);
 });
 
+test('latest comic lookup starts from today instead of the future date picker maximum', () => {
+  assert.match(appSource, /function getLatestComicCandidateDate\(baseDate = new Date\(\)\)/);
+  assert.match(appSource, /findLatestAvailableComic\(today, searchMinDate\)/);
+  assert.doesNotMatch(appSource, /findLatestAvailableComic\(maxDate, searchMinDate\)/);
+  assert.match(appSource, /latestAvailableDate \|\| getLatestComicCandidateDate\(\)/);
+});
+
 test('screen-reader-only headings remain visually hidden', () => {
   assert.match(cssSource, /\.visually-hidden\s*\{/);
   assert.match(cssSource, /position:\s*absolute !important/);
