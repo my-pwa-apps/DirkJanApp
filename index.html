@@ -172,9 +172,18 @@
                     <input type="checkbox" id="lastdate" checked>
                     <label for="lastdate" class="labels">Onthou laatste comic bij exit/refresh</label>
                 </div>
-                <div class="setting-item">
-                    <input type="checkbox" id="startlatest">
-                    <label for="startlatest" class="labels">Start met nieuwste beschikbare comic</label>
+                <div class="setting-item setting-item-stack">
+                    <span class="setting-group-label">Start met</span>
+                    <div class="setting-radio-group" role="radiogroup" aria-label="Start met">
+                        <label class="setting-radio-option" for="starttoday">
+                            <input type="radio" id="starttoday" name="startupmode" value="today" checked>
+                            <span>Vandaag</span>
+                        </label>
+                        <label class="setting-radio-option" for="startlatest">
+                            <input type="radio" id="startlatest" name="startupmode" value="latest">
+                            <span>Nieuwste beschikbaar</span>
+                        </label>
+                    </div>
                 </div>
             </div>
         </div>

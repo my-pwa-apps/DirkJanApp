@@ -45,6 +45,7 @@ test('latest comic lookup starts from today instead of the future date picker ma
   assert.match(appSource, /function discoverLatestAvailableComic\(\)/);
   assert.match(appSource, /return findLatestAvailableComic\(latestCandidate, searchMinDate\)/);
   assert.match(appSource, /START_LATEST: 'startlatest'/);
+  assert.match(appSource, /document\.getElementById\('starttoday'\)\.onclick/);
   assert.match(appSource, /document\.getElementById\("startlatest"\)\.checked/);
   assert.doesNotMatch(appSource, /findLatestAvailableComic\(maxDate, searchMinDate\)/);
   assert.match(appSource, /latestAvailableDate \|\| getLatestComicCandidateDate\(\)/);

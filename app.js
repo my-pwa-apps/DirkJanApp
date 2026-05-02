@@ -2713,8 +2713,12 @@ document.getElementById('lastdate').onclick = function() {
   localStorage.setItem(CONFIG.STORAGE_KEYS.LAST_DATE, this.checked ? "true" : "false");
 };
 
+document.getElementById('starttoday').onclick = function() {
+  localStorage.setItem(CONFIG.STORAGE_KEYS.START_LATEST, "false");
+};
+
 document.getElementById('startlatest').onclick = function() {
-  localStorage.setItem(CONFIG.STORAGE_KEYS.START_LATEST, this.checked ? "true" : "false");
+  localStorage.setItem(CONFIG.STORAGE_KEYS.START_LATEST, "true");
 };
 
 document.getElementById('showfavs').onclick = function() {
@@ -2736,7 +2740,11 @@ document.getElementById('showfavs').onclick = function() {
 document.getElementById("swipe").checked = localStorage.getItem(CONFIG.STORAGE_KEYS.SWIPE) !== "false";
 document.getElementById("showfavs").checked = localStorage.getItem(CONFIG.STORAGE_KEYS.SHOW_FAVS) === "true";
 document.getElementById("lastdate").checked = localStorage.getItem(CONFIG.STORAGE_KEYS.LAST_DATE) !== "false";
-document.getElementById("startlatest").checked = localStorage.getItem(CONFIG.STORAGE_KEYS.START_LATEST) === "true";
+{
+  const startAtLatest = localStorage.getItem(CONFIG.STORAGE_KEYS.START_LATEST) === "true";
+  document.getElementById("starttoday").checked = !startAtLatest;
+  document.getElementById("startlatest").checked = startAtLatest;
+}
 
 {
   const settingsPanel = document.getElementById("settingsDIV");

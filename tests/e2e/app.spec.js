@@ -14,6 +14,8 @@ test('core comic workflow boots with mocked DirkJan content', async ({ page }) =
   await page.getByRole('button', { name: 'Instellingen' }).click();
   await expect(page.locator('#settingsDIV')).toHaveClass(/visible/);
   await expect(page.locator('#swipe')).toBeChecked();
+  await expect(page.getByRole('radio', { name: 'Vandaag' })).toBeChecked();
+  await expect(page.getByRole('radio', { name: 'Nieuwste beschikbaar' })).not.toBeChecked();
   await expect(page.locator('#startlatest')).not.toBeChecked();
   await page.getByRole('button', { name: 'Sluiten' }).click();
   await expect(page.locator('#settingsDIV')).not.toHaveClass(/visible/);
@@ -77,6 +79,17 @@ test('startup can be configured to show latest available comic', async ({ page }
   await expect(page.locator('#DatePicker')).toHaveValue('2026-05-08');
   expect(result.proxyRequests.some(url => url.includes('20260508'))).toBe(true);
   expect(result.proxyRequests.some(url => url.includes('20260509'))).toBe(false);
+  expect(result.errors).toEqual([]);
+});
+
+test('startup mode radio setting persists user choice', async ({ page }) => {
+  const result = await openApp(page);
+
+  await page.getByRole('button', { name: 'Instellingen' }).click();
+  await page.getByRole('radio', { name: 'Nieuwste beschikbaar' }).check();
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('startlatest'))).toBe('true');
+  await page.getByRole('radio', { name: 'Vandaag' }).check();
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('startlatest'))).toBe('false');
   expect(result.errors).toEqual([]);
 });
 

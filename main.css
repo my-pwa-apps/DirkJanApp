@@ -491,6 +491,51 @@ input[type="date"]:focus-visible {
     align-items: center;
 }
 
+.setting-item-stack {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.setting-group-label {
+    color: #333;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 20px;
+}
+
+.setting-radio-group {
+    display: grid;
+    gap: 8px;
+}
+
+.setting-radio-option {
+    align-items: center;
+    background: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(240, 152, 25, 0.25);
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    gap: 10px;
+    padding: 10px;
+}
+
+.setting-radio-option input[type="radio"] {
+    accent-color: #F09819;
+    cursor: pointer;
+    flex-shrink: 0;
+    height: 18px;
+    margin: 0;
+    width: 18px;
+}
+
+.setting-radio-option span {
+    color: #333;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 18px;
+}
+
 /* ========================================
    ACTION ICONS
    ======================================== */
@@ -1110,6 +1155,14 @@ img#comic.loaded {
     
     .setting-item label {
         font-size: 14px;
+    }
+
+    .setting-group-label {
+        font-size: 14px;
+    }
+
+    .setting-radio-option {
+        padding: 8px;
     }
 }
 
