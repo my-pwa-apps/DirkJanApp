@@ -518,6 +518,13 @@ input[type="date"]:focus-visible {
     display: flex;
     gap: 10px;
     padding: 10px;
+    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.setting-radio-option:has(input[type="radio"]:checked) {
+    background: rgba(240, 152, 25, 0.18);
+    border-color: rgba(240, 152, 25, 0.85);
+    box-shadow: inset 0 0 0 1px rgba(240, 152, 25, 0.35);
 }
 
 .setting-radio-option input[type="radio"] {
@@ -534,6 +541,10 @@ input[type="date"]:focus-visible {
     font-size: 14px;
     font-weight: 500;
     line-height: 18px;
+}
+
+.setting-radio-option:has(input[type="radio"]:checked) span {
+    font-weight: 700;
 }
 
 /* ========================================

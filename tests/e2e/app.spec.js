@@ -86,9 +86,11 @@ test('startup mode radio setting persists user choice', async ({ page }) => {
   const result = await openApp(page);
 
   await page.getByRole('button', { name: 'Instellingen' }).click();
-  await page.getByRole('radio', { name: 'Nieuwste beschikbaar' }).check();
+  await page.getByText('Nieuwste beschikbaar').click();
+  await expect(page.getByRole('radio', { name: 'Nieuwste beschikbaar' })).toBeChecked();
   await expect.poll(() => page.evaluate(() => localStorage.getItem('startlatest'))).toBe('true');
-  await page.getByRole('radio', { name: 'Vandaag' }).check();
+  await page.getByText('Vandaag').click();
+  await expect(page.getByRole('radio', { name: 'Vandaag' })).toBeChecked();
   await expect.poll(() => page.evaluate(() => localStorage.getItem('startlatest'))).toBe('false');
   expect(result.errors).toEqual([]);
 });

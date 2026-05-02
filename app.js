@@ -2713,13 +2713,19 @@ document.getElementById('lastdate').onclick = function() {
   localStorage.setItem(CONFIG.STORAGE_KEYS.LAST_DATE, this.checked ? "true" : "false");
 };
 
-document.getElementById('starttoday').onclick = function() {
-  localStorage.setItem(CONFIG.STORAGE_KEYS.START_LATEST, "false");
-};
+function setStartupMode(startAtLatest) {
+  document.getElementById("starttoday").checked = !startAtLatest;
+  document.getElementById("startlatest").checked = startAtLatest;
+  localStorage.setItem(CONFIG.STORAGE_KEYS.START_LATEST, startAtLatest ? "true" : "false");
+}
 
-document.getElementById('startlatest').onclick = function() {
-  localStorage.setItem(CONFIG.STORAGE_KEYS.START_LATEST, "true");
-};
+document.getElementById('starttoday').addEventListener('change', function() {
+  if (this.checked) setStartupMode(false);
+});
+
+document.getElementById('startlatest').addEventListener('change', function() {
+  if (this.checked) setStartupMode(true);
+});
 
 document.getElementById('showfavs').onclick = function() {
   const favs = loadFavs();
@@ -2742,8 +2748,7 @@ document.getElementById("showfavs").checked = localStorage.getItem(CONFIG.STORAG
 document.getElementById("lastdate").checked = localStorage.getItem(CONFIG.STORAGE_KEYS.LAST_DATE) !== "false";
 {
   const startAtLatest = localStorage.getItem(CONFIG.STORAGE_KEYS.START_LATEST) === "true";
-  document.getElementById("starttoday").checked = !startAtLatest;
-  document.getElementById("startlatest").checked = startAtLatest;
+  setStartupMode(startAtLatest);
 }
 
 {
