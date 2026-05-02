@@ -33,6 +33,28 @@ test('proxy fallback recovers when the preferred worker fails', async ({ page })
   expect(result.errors).toEqual([]);
 });
 
+test('stale future last comic is clamped before startup fetches', async ({ page }) => {
+  const result = await openApp(page, {
+    initialStorage: {
+      lastdate: 'true',
+      lastcomic: 'Sat May 09 2026 00:00:00 GMT+0200'
+    }
+  });
+
+  await expect(page.locator('#DatePicker')).toHaveValue('2026-05-08');
+  expect(result.proxyRequests.some(url => url.includes('20260509'))).toBe(false);
+  expect(result.proxyRequests.some(url => url.includes('20260508'))).toBe(true);
+  expect(result.errors).toEqual([]);
+});
+
+test('latest startup lookup includes prepublished weekdays without probing Saturday', async ({ page }) => {
+  const result = await openApp(page);
+
+  await expect(page.locator('#DatePicker')).toHaveValue('2026-05-08');
+  expect(result.proxyRequests.some(url => url.includes('20260509'))).toBe(false);
+  expect(result.proxyRequests.some(url => url.includes('20260508'))).toBe(true);
+});
+
 test('corrupt localStorage favorites recover without breaking boot', async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem('favs', '{bad json');

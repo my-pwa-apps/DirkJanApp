@@ -29,15 +29,22 @@ test('comic extraction supports DirkJan article and WordPress image markup', () 
 });
 
 test('preloading does not probe beyond a known latest or current date', () => {
-  assert.match(appSource, /const preloadMaxDate = latestAvailableDate \? new Date\(latestAvailableDate\) : today/);
-  assert.match(appSource, /if \(nextDate <= preloadMaxDate\)/);
+  assert.match(appSource, /if \(notFound \|\| !latestAvailableDate\) return/);
+  assert.match(appSource, /const preloadMaxDate = new Date\(latestAvailableDate\)/);
+  assert.match(appSource, /const nextPublishDate = moveToComicPublishDate\(nextDate, 1\)/);
+  assert.match(appSource, /if \(nextPublishDate <= preloadMaxDate\)/);
 });
 
 test('latest comic lookup starts from today instead of the future date picker maximum', () => {
+  assert.match(appSource, /function isComicPublishDate\(dateValue\)/);
+  assert.match(appSource, /function moveToComicPublishDate\(dateValue, direction\)/);
   assert.match(appSource, /function getLatestComicCandidateDate\(baseDate = new Date\(\)\)/);
+  assert.match(appSource, /const daysUntilFriday = \(5 - candidateDate\.getDay\(\) \+ 7\) % 7/);
+  assert.match(appSource, /function clampToLatestComicCandidate\(dateValue\)/);
   assert.match(appSource, /findLatestAvailableComic\(today, searchMinDate\)/);
   assert.doesNotMatch(appSource, /findLatestAvailableComic\(maxDate, searchMinDate\)/);
   assert.match(appSource, /latestAvailableDate \|\| getLatestComicCandidateDate\(\)/);
+  assert.match(appSource, /currentselectedDate = clampToLatestComicCandidate\(localStorage\.getItem\(CONFIG\.STORAGE_KEYS\.LAST_COMIC\)\)/);
 });
 
 test('screen-reader-only headings remain visually hidden', () => {

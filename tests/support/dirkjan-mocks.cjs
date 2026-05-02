@@ -64,7 +64,7 @@ async function mockExternalServices(page, options = {}) {
 }
 
 async function openApp(page, options = {}) {
-  await page.addInitScript(() => {
+  await page.addInitScript(initialStorage => {
     Object.defineProperty(navigator, 'serviceWorker', {
       value: {
         register: () => Promise.resolve({
@@ -79,11 +79,12 @@ async function openApp(page, options = {}) {
 
     try {
       localStorage.clear();
-      localStorage.setItem('lastdate', 'false');
+      const storageEntries = initialStorage || { lastdate: 'false' };
+      Object.entries(storageEntries).forEach(([key, value]) => localStorage.setItem(key, value));
     } catch {
       // Some browser engines restrict storage before the document origin exists.
     }
-  });
+  }, options.initialStorage || null);
 
   const requestLog = await mockExternalServices(page, options);
   const errors = [];

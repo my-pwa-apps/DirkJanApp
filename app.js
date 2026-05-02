@@ -313,7 +313,7 @@ let formattedDate = '';         // Current formatted date for sharing (YYYY-MM-D
 let formattedComicDate = '';    // Date formatted for API calls (YYYYMMDD)
 let comicstartDate = CONFIG.COMIC_START_DATE;
 let currentselectedDate;        // Currently selected date object
-let maxDate;                    // Maximum possible comic date (next Saturday)
+let maxDate;                    // Maximum possible comic date (next Friday)
 let latestAvailableDate;        // Actual latest available comic date (found on load)
 let isAnimating = false;        // Prevents overlapping animations
 let notFoundRetries = 0;        // Prevents infinite 404 recursion
@@ -1016,19 +1016,62 @@ function showShareDialog(content) {
 // ========================================
 
 /**
- * Gets the latest comic date candidate without probing future dates
+ * Checks whether DirkJan publishes a comic for the given date
+ * @param {Date} dateValue - Date to check
+ * @returns {boolean} True for weekdays, false for weekends
+ */
+function isComicPublishDate(dateValue) {
+  const day = dateValue.getDay();
+  return day !== 0 && day !== 6;
+}
+
+/**
+ * Moves a date to the nearest comic publish date
+ * @param {Date} dateValue - Date to normalize
+ * @param {number} direction - Direction to move, -1 for previous, 1 for next
+ * @returns {Date} A weekday comic date
+ */
+function moveToComicPublishDate(dateValue, direction) {
+  const publishDate = new Date(dateValue);
+  publishDate.setHours(0, 0, 0, 0);
+
+  while (!isComicPublishDate(publishDate)) {
+    publishDate.setDate(publishDate.getDate() + direction);
+  }
+
+  return publishDate;
+}
+
+/**
+ * Gets the latest comic date candidate, including prepublished weekdays
  * @param {Date} baseDate - Date to normalize, defaults to today
- * @returns {Date} Latest candidate date, with Sundays moved back to Saturday
+ * @returns {Date} Latest candidate date at the next Friday publication window
  */
 function getLatestComicCandidateDate(baseDate = new Date()) {
   const candidateDate = new Date(baseDate);
   candidateDate.setHours(0, 0, 0, 0);
-
-  if (candidateDate.getDay() === 0) {
-    candidateDate.setDate(candidateDate.getDate() - 1);
-  }
+  const daysUntilFriday = (5 - candidateDate.getDay() + 7) % 7;
+  candidateDate.setDate(candidateDate.getDate() + daysUntilFriday);
 
   return candidateDate;
+}
+
+/**
+ * Keeps stored or manually selected dates from requesting future comics
+ * @param {Date|string} dateValue - Date to validate
+ * @returns {Date} A safe comic date at or before the latest candidate date
+ */
+function clampToLatestComicCandidate(dateValue) {
+  const latestCandidate = getLatestComicCandidateDate();
+  const candidateDate = new Date(dateValue);
+
+  if (Number.isNaN(candidateDate.getTime())) {
+    return latestCandidate;
+  }
+
+  const normalizedDate = moveToComicPublishDate(candidateDate, -1);
+
+  return normalizedDate > latestCandidate ? latestCandidate : normalizedDate;
 }
 
 /**
@@ -1042,9 +1085,9 @@ async function findLatestAvailableComic(startDate, minDate) {
   const minTime = minDate.getTime();
   
   while (testDate.getTime() >= minTime) {
-    // Skip Sundays (no comics)
-    if (testDate.getDay() === 0) {
-      testDate.setDate(testDate.getDate() - 1);
+    // Skip weekends (no comic dates)
+    if (!isComicPublishDate(testDate)) {
+      testDate = moveToComicPublishDate(testDate, -1);
       continue;
     }
     
@@ -1125,13 +1168,10 @@ function onLoad()
  
  maxDate = new Date();
 
-  if (currentselectedDate.getDay() === 0) {
-    currentselectedDate.setDate(currentselectedDate.getDate() - 1);
-  }
+  currentselectedDate = moveToComicPublishDate(currentselectedDate, -1);
 
-  // Advance maxDate to next Saturday (or +7 days if already Saturday)
-  const daysUntilSaturday = ((6 - maxDate.getDay()) % 7) || 7;
-  maxDate.setDate(maxDate.getDate() + daysUntilSaturday);
+  // Advance maxDate to the next Friday publication window
+  maxDate = getLatestComicCandidateDate(maxDate);
 
   const maxDateParts = UTILS.formatDate(maxDate);
   
@@ -1142,7 +1182,7 @@ function onLoad()
 	{
 		if(localStorage.getItem(CONFIG.STORAGE_KEYS.LAST_COMIC) !== null)
 		{
-			currentselectedDate = new Date(localStorage.getItem(CONFIG.STORAGE_KEYS.LAST_COMIC));
+      currentselectedDate = clampToLatestComicCandidate(localStorage.getItem(CONFIG.STORAGE_KEYS.LAST_COMIC));
 		}
     CompareDates();
     DisplayComic();
@@ -1187,10 +1227,7 @@ function PreviousClick()
     }
   } else {
     currentselectedDate.setDate(currentselectedDate.getDate() - 1);
-    // Skip Sundays (no comics published on Sundays)
-    if (currentselectedDate.getDay() === 0) {
-      currentselectedDate.setDate(currentselectedDate.getDate() - 1);
-    }
+    currentselectedDate = moveToComicPublishDate(currentselectedDate, -1);
   }
   CompareDates();
   DisplayComic('prev');
@@ -1210,10 +1247,7 @@ function NextClick()
     }
   } else {
     currentselectedDate.setDate(currentselectedDate.getDate() + 1);
-    // Skip Sundays (no comics published on Sundays)
-    if (currentselectedDate.getDay() === 0) {
-      currentselectedDate.setDate(currentselectedDate.getDate() + 1);
-    }
+    currentselectedDate = moveToComicPublishDate(currentselectedDate, 1);
   }
   CompareDates();
   DisplayComic('next');
@@ -1268,10 +1302,7 @@ function RandomClick()
     const start = new Date(comicstartDate);
     const end = new Date();
     currentselectedDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
-    // Skip Sundays (no comics published on Sundays)
-    if (currentselectedDate.getDay() === 0) {
-      currentselectedDate.setDate(currentselectedDate.getDate() - 1);
-    }
+    currentselectedDate = moveToComicPublishDate(currentselectedDate, -1);
   }
   CompareDates();
   DisplayComic('morph');
@@ -1303,10 +1334,7 @@ function DateChange()
   }
   
   if (selectedDate) {
-    currentselectedDate = new Date(selectedDate);
-    if (currentselectedDate.getDay() === 0) {
-      currentselectedDate.setDate(currentselectedDate.getDate() - 1);
-    }
+    currentselectedDate = clampToLatestComicCandidate(selectedDate);
     CompareDates();
     DisplayComic('morph');
   }
@@ -1786,7 +1814,7 @@ function CompareDates() {
     ? normalizeDate(favs[0]) 
     : normalizeDate(comicstartDate);
   
-  // Use latestAvailableDate if set, otherwise fall back to today/Saturday rather than future maxDate
+  // Use latestAvailableDate if set, otherwise fall back to the latest weekday candidate rather than maxDate
   const endDate = showFavsChecked && favs.length > 0
     ? normalizeDate(favs[favs.length - 1])
     : normalizeDate(latestAvailableDate || getLatestComicCandidateDate());
@@ -3124,29 +3152,27 @@ let preloadedComics = new Map();
 function preloadAdjacentComics() {
   // Preload next and previous comics in the background
   if (!formattedDate) return;
+  if (notFound || !latestAvailableDate) return;
   
   const currentDate = new Date(formattedDate);
   const startDate = new Date(CONFIG.COMIC_START_DATE);
-  const today = new Date();
-  if (today.getDay() === 0) today.setDate(today.getDate() - 1);
-  today.setHours(0, 0, 0, 0);
-  const preloadMaxDate = latestAvailableDate ? new Date(latestAvailableDate) : today;
+  const preloadMaxDate = new Date(latestAvailableDate);
   preloadMaxDate.setHours(0, 0, 0, 0);
   
-  // Preload next comic (skip Sundays - no comics published)
+  // Preload next comic (skip weekends - no comic dates)
   const nextDate = new Date(currentDate);
   nextDate.setDate(nextDate.getDate() + 1);
-  if (nextDate.getDay() === 0) nextDate.setDate(nextDate.getDate() + 1);
-  if (nextDate <= preloadMaxDate) {
-    preloadComic(nextDate);
+  const nextPublishDate = moveToComicPublishDate(nextDate, 1);
+  if (nextPublishDate <= preloadMaxDate) {
+    preloadComic(nextPublishDate);
   }
   
-  // Preload previous comic (skip Sundays - no comics published)
+  // Preload previous comic (skip weekends - no comic dates)
   const prevDate = new Date(currentDate);
   prevDate.setDate(prevDate.getDate() - 1);
-  if (prevDate.getDay() === 0) prevDate.setDate(prevDate.getDate() - 1);
-  if (prevDate >= startDate) {
-    preloadComic(prevDate);
+  const prevPublishDate = moveToComicPublishDate(prevDate, -1);
+  if (prevPublishDate >= startDate) {
+    preloadComic(prevPublishDate);
   }
   
   // Clean up old preloaded comics if cache is too large
