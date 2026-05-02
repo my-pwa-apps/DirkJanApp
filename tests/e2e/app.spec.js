@@ -16,6 +16,7 @@ test('core comic workflow boots with mocked DirkJan content', async ({ page }) =
   await expect(page.locator('#swipe')).toBeChecked();
   await expect(page.getByRole('radio', { name: 'Vandaag' })).toBeChecked();
   await expect(page.getByRole('radio', { name: 'Nieuwste beschikbaar' })).not.toBeChecked();
+  await expect(page.getByRole('radio', { name: 'Laatst gelezen comic' })).not.toBeChecked();
   await expect(page.locator('#startlatest')).not.toBeChecked();
   await page.getByRole('button', { name: 'Sluiten' }).click();
   await expect(page.locator('#settingsDIV')).not.toHaveClass(/visible/);
@@ -39,7 +40,7 @@ test('proxy fallback recovers when the preferred worker fails', async ({ page })
 test('stale future last comic is clamped before startup fetches', async ({ page }) => {
   const result = await openApp(page, {
     initialStorage: {
-      lastdate: 'true',
+      startmode: 'last',
       lastcomic: 'Sat May 09 2026 00:00:00 GMT+0200'
     }
   });
@@ -71,8 +72,7 @@ test('latest button advances from today to newer prepublished comic', async ({ p
 test('startup can be configured to show latest available comic', async ({ page }) => {
   const result = await openApp(page, {
     initialStorage: {
-      lastdate: 'false',
-      startlatest: 'true'
+      startmode: 'latest'
     }
   });
 
@@ -88,18 +88,24 @@ test('startup mode radio setting persists user choice', async ({ page }) => {
   await page.getByRole('button', { name: 'Instellingen' }).click();
   await page.getByText('Nieuwste beschikbaar').click();
   await expect(page.getByRole('radio', { name: 'Nieuwste beschikbaar' })).toBeChecked();
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('startmode'))).toBe('latest');
   await expect.poll(() => page.evaluate(() => localStorage.getItem('startlatest'))).toBe('true');
+  await page.getByText('Laatst gelezen comic').click();
+  await expect(page.getByRole('radio', { name: 'Laatst gelezen comic' })).toBeChecked();
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('startmode'))).toBe('last');
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('lastdate'))).toBe('true');
   await page.getByText('Vandaag').click();
   await expect(page.getByRole('radio', { name: 'Vandaag' })).toBeChecked();
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('startmode'))).toBe('today');
   await expect.poll(() => page.evaluate(() => localStorage.getItem('startlatest'))).toBe('false');
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('lastdate'))).toBe('false');
   expect(result.errors).toEqual([]);
 });
 
 test('latest startup setting overrides remembered older comic', async ({ page }) => {
   const result = await openApp(page, {
     initialStorage: {
-      lastdate: 'true',
-      startlatest: 'true',
+      startmode: 'latest',
       lastcomic: 'Fri May 01 2026 00:00:00 GMT+0200'
     }
   });
@@ -113,7 +119,7 @@ test('latest startup setting overrides remembered older comic', async ({ page })
 test('remembered older comic stays put while newer comic remains available', async ({ page }) => {
   const result = await openApp(page, {
     initialStorage: {
-      lastdate: 'true',
+      startmode: 'last',
       lastcomic: 'Fri May 01 2026 00:00:00 GMT+0200'
     }
   });
@@ -124,6 +130,32 @@ test('remembered older comic stays put while newer comic remains available', asy
   expect(result.proxyRequests.some(url => url.includes('20260509'))).toBe(false);
   await page.getByRole('button', { name: 'Laatste' }).click();
   await expect(page.locator('#DatePicker')).toHaveValue('2026-05-08');
+  expect(result.errors).toEqual([]);
+});
+
+test('latest navigation falls back to the nearest available comic instead of random', async ({ page }) => {
+  const result = await openApp(page, {
+    unavailableDates: ['20260508']
+  });
+
+  await expect(page.locator('#DatePicker')).toHaveValue('2026-05-02');
+  await page.getByRole('button', { name: 'Laatste' }).click();
+  await expect(page.locator('#DatePicker')).toHaveValue('2026-05-07');
+  expect(result.proxyRequests.some(url => url.includes('20260508'))).toBe(true);
+  expect(result.proxyRequests.some(url => url.includes('20260507'))).toBe(true);
+  expect(result.errors).toEqual([]);
+});
+
+test('unavailable manual date falls back without persisting the failed date', async ({ page }) => {
+  const result = await openApp(page, {
+    unavailableDates: ['20260504']
+  });
+
+  await page.locator('#DatePicker').fill('2026-05-04');
+  await page.locator('#DatePicker').dispatchEvent('input');
+
+  await expect(page.locator('#DatePicker')).toHaveValue('2026-05-02');
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('lastcomic'))).not.toContain('May 04 2026');
   expect(result.errors).toEqual([]);
 });
 

@@ -194,7 +194,7 @@ function sanitizeUpstreamResponse(upstreamResponse) {
     headers.delete(header);
   }
 
-  headers.set('x-proxy-by', 'garfieldapp-corsproxy');
+  headers.set('x-proxy-by', 'dirkjanapp-corsproxy');
   headers.set('x-proxy-target', upstreamResponse.url);
   headers.set('vary', 'Origin');
 

@@ -11,22 +11,17 @@
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://dirkjanapp.pages.dev/">
     <meta property="og:title" content="Daily DirkJan Comics - Nederlandse Strip Webapp">
     <meta property="og:description" content="Lees dagelijks de nieuwste DirkJan strip van Mark Retera. Navigeer door het volledige archief, ontdek willekeurige comics en bewaar je favorieten.">
-    <meta property="og:image" content="https://dirkjanapp.pages.dev/android-chrome-512x512.png">
     <meta property="og:locale" content="nl_NL">
     <meta property="og:site_name" content="Daily DirkJan Comics">
     
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:url" content="https://dirkjanapp.pages.dev/">
     <meta property="twitter:title" content="Daily DirkJan Comics - Nederlandse Strip Webapp">
     <meta property="twitter:description" content="Lees dagelijks de nieuwste DirkJan strip van Mark Retera. Navigeer door het volledige archief, ontdek willekeurige comics en bewaar je favorieten.">
-    <meta property="twitter:image" content="https://dirkjanapp.pages.dev/android-chrome-512x512.png">
     
     <title>Daily DirkJan Comics - Nederlandse Strip Webapp | Dagelijkse DirkJan van Mark Retera</title>
-    <link rel="canonical" href="https://dirkjanapp.pages.dev">
     <link rel="stylesheet" href="./main.css">
     <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.webp">
     <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32x32.webp">
@@ -40,7 +35,6 @@
       "@type": "WebApplication",
       "name": "Daily DirkJan Comics",
       "description": "Lees dagelijks de nieuwste DirkJan strip van Mark Retera. Ontdek ook willekeurige comics, favorieten en navigeer eenvoudig door het hele archief sinds 2015.",
-      "url": "https://dirkjanapp.pages.dev/",
       "applicationCategory": "Entertainment",
       "operatingSystem": "All",
       "browserRequirements": "Requires JavaScript. Requires HTML5.",
@@ -52,8 +46,7 @@
       "inLanguage": "nl-NL",
       "creator": {
         "@type": "Organization",
-        "name": "Daily DirkJan App",
-        "url": "https://dirkjanapp.pages.dev/"
+                "name": "Daily DirkJan App"
       },
       "about": {
         "@type": "ComicSeries",
@@ -168,13 +161,9 @@
                     <input type="checkbox" id="showfavs">
                     <label for="showfavs" class="labels">Alleen favorieten tonen</label>
                 </div>
-                <div class="setting-item">
-                    <input type="checkbox" id="lastdate" checked>
-                    <label for="lastdate" class="labels">Onthou laatste comic bij exit/refresh</label>
-                </div>
                 <div class="setting-item setting-item-stack">
-                    <span class="setting-group-label">Start met</span>
-                    <div class="setting-radio-group" role="radiogroup" aria-label="Start met">
+                    <span class="setting-group-label">Start bij openen met</span>
+                    <div class="setting-radio-group" role="radiogroup" aria-label="Start bij openen met">
                         <label class="setting-radio-option" for="starttoday">
                             <input type="radio" id="starttoday" name="startupmode" value="today" checked>
                             <span>Vandaag</span>
@@ -182,6 +171,10 @@
                         <label class="setting-radio-option" for="startlatest">
                             <input type="radio" id="startlatest" name="startupmode" value="latest">
                             <span>Nieuwste beschikbaar</span>
+                        </label>
+                        <label class="setting-radio-option" for="startlast">
+                            <input type="radio" id="startlast" name="startupmode" value="last">
+                            <span>Laatst gelezen comic</span>
                         </label>
                     </div>
                 </div>

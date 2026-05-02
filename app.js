@@ -12,6 +12,7 @@ const CONFIG = Object.freeze({
   ROTATION_DEBOUNCE: 300,              // Rotation debounce delay in ms
   NOTIFICATION_AUTO_HIDE: 8000,        // Auto-hide notification after 8s
   KEYBOARD_HINT_DELAY: 2000,           // Show keyboard hint after 2s
+  DEBUG_LOGGING: false,
   
   // CORS Proxies (in priority order)
   CORS_PROXIES: [
@@ -55,6 +56,7 @@ const CONFIG = Object.freeze({
     SHOW_FAVS: 'showfavs',
     LAST_DATE: 'lastdate',
     START_LATEST: 'startlatest',
+    START_MODE: 'startmode',
     SETTINGS_VISIBLE: 'settings',
     KEYBOARD_HINT: 'keyboardHintSeen'
   })
@@ -161,14 +163,12 @@ let proxyResponseTimes = new Array(CONFIG.CORS_PROXIES.length).fill(0); // Track
  * Fetches a URL with intelligent CORS proxy fallback
  * Tries the Cloudflare Worker first, then public fallbacks ordered by recent performance
  * @param {string} url - The URL to fetch
- * @param {boolean} enableRacing - Kept for call compatibility; fallbacks are sequential
  * @returns {Promise<Response>} The fetch response
  * @throws {Error} If all fetch attempts fail
  */
-async function fetchWithFallback(url, enableRacing = true) {
+async function fetchWithFallback(url) {
   const startTime = performance.now();
   const primaryProxyIndex = PRIMARY_PROXY_INDEX;
-  void enableRacing;
 
   // Always try the Cloudflare Worker first, then score public fallbacks.
   try {
@@ -258,18 +258,18 @@ async function tryProxy(url, proxyIndex, startTime) {
     // Success
     const responseTime = performance.now() - startTime;
     updateProxyStats(proxyIndex, true, responseTime);
-    console.log(`✓ Proxy ${proxyIndex} (${proxyName}) in ${responseTime.toFixed(0)}ms`);
+    if (CONFIG.DEBUG_LOGGING) console.log(`Proxy ${proxyIndex} (${proxyName}) in ${responseTime.toFixed(0)}ms`);
     return response;
     
   } catch (error) {
     if (error.name === 'NotFoundError') {
-      console.warn(`✗ Proxy ${proxyIndex} (${proxyName}): 404 content not found`);
+      if (CONFIG.DEBUG_LOGGING) console.warn(`Proxy ${proxyIndex} (${proxyName}): 404 content not found`);
       throw error; // Don't penalize proxy — origin returned 404
     }
     const errorType = error.name === 'TimeoutError' ? 'timeout' : 
                       error.name === 'AbortError' ? 'aborted' : 
                       error.message;
-    console.warn(`✗ Proxy ${proxyIndex} (${proxyName}):`, errorType);
+    if (CONFIG.DEBUG_LOGGING) console.warn(`Proxy ${proxyIndex} (${proxyName}):`, errorType);
     updateProxyStats(proxyIndex, false, 0);
     throw error;
   }
@@ -296,11 +296,11 @@ async function tryRemainingProxies(url, excludeIndex, startTime) {
   
   // Reset failure counts if all proxies are struggling
   if (proxyFailureCount.every(count => count > 2)) {
-    console.log('Resetting proxy failure counts');
+    if (CONFIG.DEBUG_LOGGING) console.log('Resetting proxy failure counts');
     proxyFailureCount.fill(0);
   }
   
-  console.error('All proxies failed:', errors.join('; '));
+  if (CONFIG.DEBUG_LOGGING) console.error('All proxies failed:', errors.join('; '));
   throw new Error(`All proxies failed: ${errors.join(', ')}`);
 }
 
@@ -320,7 +320,7 @@ let isAnimating = false;        // Prevents overlapping animations
 let notFoundRetries = 0;        // Prevents infinite 404 recursion
 
 // Parsing variables
-let siteBody, notFound;
+let notFound;
 
 // Favorites cache
 let _cachedFavs = null;
@@ -796,7 +796,7 @@ async function Share() {
   }
 
   const shareText = `Check out this DirkJan comic from ${formattedDate}!`;
-  const shareUrl = 'https://dirkjanapp.pages.dev';
+  const shareUrl = new URL('./', window.location.href).href;
   const isAndroid = /Android/i.test(navigator.userAgent);
 
   if (!navigator.share) {
@@ -1084,6 +1084,20 @@ function clampToLatestComicCandidate(dateValue) {
 }
 
 /**
+ * Gets the configured startup mode, migrating older settings when present
+ * @returns {'today'|'latest'|'last'} Startup mode
+ */
+function getStartupMode() {
+  const storedMode = localStorage.getItem(CONFIG.STORAGE_KEYS.START_MODE);
+  if (['today', 'latest', 'last'].includes(storedMode)) return storedMode;
+
+  if (localStorage.getItem(CONFIG.STORAGE_KEYS.START_LATEST) === 'true') return 'latest';
+  if (localStorage.getItem(CONFIG.STORAGE_KEYS.LAST_DATE) === 'true') return 'last';
+
+  return 'today';
+}
+
+/**
  * Finds the latest available comic by starting at startDate and going backwards
  * @param {Date} startDate - The date to start searching from
  * @param {Date} minDate - The minimum date to search back to (today)
@@ -1110,7 +1124,7 @@ async function findLatestAvailableComic(startDate, minDate) {
     const url = `https://dirkjan.nl/cartoon/${dateStr}`;
     
     try {
-      const response = await fetchWithFallback(url, false);
+      const response = await fetchWithFallback(url);
       const text = await response.text();
       
       // Check if it's not a 404
@@ -1198,19 +1212,19 @@ function onLoad()
   const formattedmaxDate = maxDateParts.year+'-'+maxDateParts.month+'-'+maxDateParts.day;
   document.getElementById("DatePicker").setAttribute("max", formattedmaxDate);
   
+  const startupMode = getStartupMode();
 
-
-  if(document.getElementById("startlatest").checked && !document.getElementById("showfavs").checked)
+  if(startupMode === 'latest' && !document.getElementById("showfavs").checked)
 	{
     discoverLatestAvailableComic().then(latestDate => {
       currentselectedDate = latestDate;
       CompareDates();
-      DisplayComic();
+      DisplayComic(null, 'nearest');
     });
     return; // Exit early, DisplayComic will be called in the promise
 	}
 
-  if(document.getElementById("lastdate").checked)   
+  if(startupMode === 'last')   
 	{
 		const storedLastComic = localStorage.getItem(CONFIG.STORAGE_KEYS.LAST_COMIC);
 		if(storedLastComic !== null)
@@ -1241,7 +1255,7 @@ function onLoad()
     const end = new Date();
     currentselectedDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
     CompareDates();
-    DisplayComic();
+    DisplayComic('morph', 'random');
   }
 }
 
@@ -1298,7 +1312,7 @@ function FirstClick()
     currentselectedDate = new Date(comicstartDate);
   }
   CompareDates();
-  DisplayComic('morph');
+  DisplayComic('morph', 'nearest');
 }
 
 /**
@@ -1312,11 +1326,19 @@ function CurrentClick()
     const favslength = favs.length - 1;
     if (favslength >= 0) currentselectedDate = new Date(favs[favslength]);
   } else {
+    if (!latestAvailableDate) {
+      discoverLatestAvailableComic().then(latestDate => {
+        currentselectedDate = latestDate;
+        CompareDates();
+        DisplayComic('morph', 'nearest');
+      });
+      return;
+    }
     // Go to the latest available comic date without falling into future dates
-    currentselectedDate = new Date(latestAvailableDate || getLatestComicCandidateDate());
+    currentselectedDate = new Date(latestAvailableDate);
   }
   CompareDates();
-  DisplayComic('morph');
+  DisplayComic('morph', 'nearest');
 }
 
 /**
@@ -1337,7 +1359,7 @@ function RandomClick()
     currentselectedDate = moveToComicPublishDate(currentselectedDate, -1);
   }
   CompareDates();
-  DisplayComic('morph');
+  DisplayComic('morph', 'random');
 }
 
 /**
@@ -1368,7 +1390,7 @@ function DateChange()
   if (selectedDate) {
     currentselectedDate = clampToLatestComicCandidate(selectedDate);
     CompareDates();
-    DisplayComic('morph');
+    DisplayComic('morph', 'nearest');
   }
 }
 
@@ -1419,8 +1441,9 @@ function extractComicImageUrl(html) {
  * Fetches and displays the current comic
  * Handles loading states, errors, animations, and updates UI
  * @param {string} direction - Optional: 'next', 'prev', or 'morph' for transition animation
+ * @param {string} notFoundBehavior - 'nearest' to walk backward, 'random' for random retries
  */
-function DisplayComic(direction = null)
+function DisplayComic(direction = null, notFoundBehavior = 'nearest')
 {
   // Prevent overlapping animations - if animating, skip animation for this call
   if (isAnimating && direction) {
@@ -1445,8 +1468,6 @@ function DisplayComic(direction = null)
   
   const url = `https://dirkjan.nl/cartoon/${formattedComicDate}`;
 
-  localStorage.setItem(CONFIG.STORAGE_KEYS.LAST_COMIC, currentselectedDate);
-  
   // Get comic elements
   const comicImg = document.getElementById("comic");
   const wrapper = document.getElementById('comic-wrapper');
@@ -1474,7 +1495,7 @@ function DisplayComic(direction = null)
     .then(function(text)
 	{
       if (fetchSignal.aborted) throw new DOMException('Aborted', 'AbortError');
-      siteBody = text;
+      const siteBody = text;
       notFound = siteBody.includes("error404");
       
       if (!notFound)
@@ -1486,6 +1507,7 @@ function DisplayComic(direction = null)
         if (!pictureUrl) {
           throw new Error('Could not extract comic image URL from page');
         }
+        localStorage.setItem(CONFIG.STORAGE_KEYS.LAST_COMIC, currentselectedDate);
         
         // Animate transition based on direction
         const animateTransition = () => {
@@ -1630,13 +1652,13 @@ function DisplayComic(direction = null)
         
         // Use captured animation type to avoid race conditions
         // (user might have clicked different button while fetch was in progress)
-        if (capturedAnimationType === 'morph') {
+        if (notFoundBehavior === 'random') {
           // Pick a new random date and try again with morph animation
           const start = new Date(comicstartDate);
           const end = new Date();
           currentselectedDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
           CompareDates();
-          DisplayComic('morph');
+          DisplayComic('morph', 'random');
         } else if (capturedAnimationType === 'next') {
           // We were going next, keep trying next
           NextClick();
@@ -1644,8 +1666,18 @@ function DisplayComic(direction = null)
           // We were going previous, keep trying previous
           PreviousClick();
         } else {
-          // No animation direction - just try next
-          NextClick();
+          const startDate = new Date(comicstartDate);
+          currentselectedDate.setDate(currentselectedDate.getDate() - 1);
+          currentselectedDate = moveToComicPublishDate(currentselectedDate, -1);
+
+          if (currentselectedDate < startDate) {
+            notFoundRetries = 0;
+            comicImg.alt = "Geen strip gevonden voor deze datum.";
+            return;
+          }
+
+          CompareDates();
+          DisplayComic('morph', 'nearest');
         }
       }
     })
@@ -1846,10 +1878,12 @@ function CompareDates() {
     ? normalizeDate(favs[0]) 
     : normalizeDate(comicstartDate);
   
-  // Use latestAvailableDate if set, otherwise fall back to the latest preview candidate rather than maxDate
+  // Use a discovered latest when available; otherwise avoid clamping the currently selected date.
   const endDate = showFavsChecked && favs.length > 0
     ? normalizeDate(favs[favs.length - 1])
-    : normalizeDate(latestAvailableDate || getLatestComicCandidateDate());
+    : latestAvailableDate
+      ? normalizeDate(latestAvailableDate)
+      : Math.max(normalizeDate(getStartupComicDate()), currentTime);
   
   // Calculate button states
   const buttonStates = {
@@ -2287,10 +2321,8 @@ function handleTouchEnd(e) {
 	const deltaY = touchEndY - touchStartY;
 	const deltaTime = Date.now() - touchStartTime;
 	
-	// Check if this was a tap (not a swipe)
 	const absX = Math.abs(deltaX);
 	const absY = Math.abs(deltaY);
-	const isTap = absX < CONFIG.TAP_MAX_MOVEMENT && absY < CONFIG.TAP_MAX_MOVEMENT && deltaTime < CONFIG.TAP_MAX_TIME;
 	
 	// For swipe navigation, check if swipe is enabled
 	if (!document.getElementById("swipe").checked) return;
@@ -2709,22 +2741,26 @@ document.getElementById("swipe").onclick = function() {
   localStorage.setItem(CONFIG.STORAGE_KEYS.SWIPE, this.checked ? "true" : "false");
 };
 
-document.getElementById('lastdate').onclick = function() {
-  localStorage.setItem(CONFIG.STORAGE_KEYS.LAST_DATE, this.checked ? "true" : "false");
-};
-
-function setStartupMode(startAtLatest) {
-  document.getElementById("starttoday").checked = !startAtLatest;
-  document.getElementById("startlatest").checked = startAtLatest;
-  localStorage.setItem(CONFIG.STORAGE_KEYS.START_LATEST, startAtLatest ? "true" : "false");
+function setStartupMode(mode) {
+  const startupMode = ['today', 'latest', 'last'].includes(mode) ? mode : 'today';
+  document.getElementById("starttoday").checked = startupMode === 'today';
+  document.getElementById("startlatest").checked = startupMode === 'latest';
+  document.getElementById("startlast").checked = startupMode === 'last';
+  localStorage.setItem(CONFIG.STORAGE_KEYS.START_MODE, startupMode);
+  localStorage.setItem(CONFIG.STORAGE_KEYS.START_LATEST, startupMode === 'latest' ? "true" : "false");
+  localStorage.setItem(CONFIG.STORAGE_KEYS.LAST_DATE, startupMode === 'last' ? "true" : "false");
 }
 
 document.getElementById('starttoday').addEventListener('change', function() {
-  if (this.checked) setStartupMode(false);
+  if (this.checked) setStartupMode('today');
 });
 
 document.getElementById('startlatest').addEventListener('change', function() {
-  if (this.checked) setStartupMode(true);
+  if (this.checked) setStartupMode('latest');
+});
+
+document.getElementById('startlast').addEventListener('change', function() {
+  if (this.checked) setStartupMode('last');
 });
 
 document.getElementById('showfavs').onclick = function() {
@@ -2742,14 +2778,10 @@ document.getElementById('showfavs').onclick = function() {
 };
 
 // Load settings from localStorage
-// Swipe and lastdate default to true for new users (null means never set)
+// Swipe defaults to true for new users (null means never set)
 document.getElementById("swipe").checked = localStorage.getItem(CONFIG.STORAGE_KEYS.SWIPE) !== "false";
 document.getElementById("showfavs").checked = localStorage.getItem(CONFIG.STORAGE_KEYS.SHOW_FAVS) === "true";
-document.getElementById("lastdate").checked = localStorage.getItem(CONFIG.STORAGE_KEYS.LAST_DATE) !== "false";
-{
-  const startAtLatest = localStorage.getItem(CONFIG.STORAGE_KEYS.START_LATEST) === "true";
-  setStartupMode(startAtLatest);
-}
+setStartupMode(getStartupMode());
 
 {
   const settingsPanel = document.getElementById("settingsDIV");
@@ -3252,7 +3284,7 @@ function preloadComic(date) {
   
   const url = `https://dirkjan.nl/cartoon/${preloadFormattedComicDate}`;
   
-  fetchWithFallback(url, false) // Disable racing for background preloading
+  fetchWithFallback(url)
     .then(response => response.text())
     .then(text => {
       if (text.includes("error404")) return;

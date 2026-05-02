@@ -45,12 +45,18 @@ test('latest comic lookup starts from today instead of the future date picker ma
   assert.match(appSource, /function discoverLatestAvailableComic\(\)/);
   assert.match(appSource, /return findLatestAvailableComic\(latestCandidate, searchMinDate\)/);
   assert.match(appSource, /START_LATEST: 'startlatest'/);
+  assert.match(appSource, /START_MODE: 'startmode'/);
+  assert.match(appSource, /function getStartupMode\(\)/);
   assert.match(appSource, /document\.getElementById\('starttoday'\)\.addEventListener\('change'/);
+  assert.match(appSource, /document\.getElementById\('startlast'\)\.addEventListener\('change'/);
   assert.match(appSource, /document\.getElementById\("startlatest"\)\.checked/);
   assert.doesNotMatch(appSource, /findLatestAvailableComic\(maxDate, searchMinDate\)/);
-  assert.match(appSource, /latestAvailableDate \|\| getLatestComicCandidateDate\(\)/);
+  assert.doesNotMatch(appSource, /latestAvailableDate \|\| getLatestComicCandidateDate\(\)/);
   assert.match(appSource, /currentselectedDate = clampToLatestComicCandidate\(storedLastComic\)/);
   assert.match(appSource, /currentselectedDate = getStartupComicDate\(\)/);
+  assert.match(appSource, /DisplayComic\('morph', 'random'\)/);
+  assert.match(appSource, /DisplayComic\('morph', 'nearest'\)/);
+  assert.doesNotMatch(appSource, /const isTap =/);
 });
 
 test('screen-reader-only headings remain visually hidden', () => {
@@ -63,4 +69,5 @@ test('manifest keeps PWA orientation controlled by application code', () => {
   assert.equal(manifest.orientation, 'any');
   assert.equal(manifest.display, 'standalone');
   assert.ok(manifest.icons.some(icon => icon.sizes === '512x512'));
+  assert.ok(manifest.shortcuts.every(shortcut => shortcut.url.startsWith('./')));
 });

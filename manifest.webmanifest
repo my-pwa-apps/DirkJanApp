@@ -103,14 +103,14 @@
       "name": "Vandaag",
       "short_name": "Vandaag",
       "description": "Open vandaag's strip",
-      "url": "/",
+      "url": "./",
       "icons": [{ "src": "./android-chrome-192x192.webp", "sizes": "192x192", "type": "image/webp" }]
     },
     {
       "name": "Random",
       "short_name": "Random",
       "description": "Open willekeurige strip",
-      "url": "/?random=true",
+      "url": "./?random=true",
       "icons": [{ "src": "./android-chrome-192x192.webp", "sizes": "192x192", "type": "image/webp" }]
     }
   ],

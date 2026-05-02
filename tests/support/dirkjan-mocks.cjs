@@ -19,10 +19,31 @@ function comicHtml(targetUrl = 'https://dirkjan.nl/cartoon/20260502') {
   return `<!doctype html><html><body><article class="cartoon"><img src="${imageUrl}" alt="DirkJan ${date}"></article></body></html>`;
 }
 
+function notFoundHtml() {
+  return '<!doctype html><html><body class="error404"><main>Niet gevonden</main></body></html>';
+}
+
 async function mockExternalServices(page, options = {}) {
   const context = page.context();
   const proxyFailuresRemaining = { count: options.proxyFailures || 0 };
   const proxyRequests = [];
+  const unavailableDates = new Set(options.unavailableDates || []);
+
+  const fulfillComicPage = route => {
+    const requestUrl = new URL(route.request().url());
+    const targetUrl = requestUrl.hostname === 'corsproxy.garfieldapp.workers.dev'
+      ? decodeURIComponent(requestUrl.search.slice(1))
+      : route.request().url();
+    const date = targetUrl.match(/(\d{8})/)?.[1];
+    proxyRequests.push(targetUrl);
+
+    route.fulfill({
+      status: 200,
+      contentType: 'text/html; charset=utf-8',
+      body: unavailableDates.has(date) ? notFoundHtml() : comicHtml(targetUrl),
+      headers: corsHeaders
+    });
+  };
 
   await context.route('https://static.cloudflareinsights.com/**', route => {
     route.fulfill({ status: 200, contentType: 'text/javascript; charset=utf-8', body: '', headers: corsHeaders });
@@ -39,25 +60,23 @@ async function mockExternalServices(page, options = {}) {
   await context.route('https://corsproxy.garfieldapp.workers.dev/**', route => {
     const requestUrl = new URL(route.request().url());
     const targetUrl = decodeURIComponent(requestUrl.search.slice(1));
-    proxyRequests.push(targetUrl);
 
     if (proxyFailuresRemaining.count > 0) {
       proxyFailuresRemaining.count -= 1;
+      proxyRequests.push(targetUrl);
       route.fulfill({ status: 502, contentType: 'text/plain; charset=utf-8', body: 'proxy failure', headers: corsHeaders });
       return;
     }
 
-    route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: comicHtml(targetUrl), headers: corsHeaders });
+    fulfillComicPage(route);
   });
 
   await context.route('https://api.codetabs.com/**', route => {
-    proxyRequests.push(route.request().url());
-    route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: comicHtml(route.request().url()), headers: corsHeaders });
+    fulfillComicPage(route);
   });
 
   await context.route('https://api.allorigins.win/**', route => {
-    proxyRequests.push(route.request().url());
-    route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: comicHtml(route.request().url()), headers: corsHeaders });
+    fulfillComicPage(route);
   });
 
   return { proxyRequests };
@@ -116,6 +135,7 @@ async function openApp(page, options = {}) {
 module.exports = {
   comicHtml,
   mockExternalServices,
+  notFoundHtml,
   openApp,
   transparentPng
 };
