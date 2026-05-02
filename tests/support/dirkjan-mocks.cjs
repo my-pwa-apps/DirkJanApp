@@ -28,6 +28,7 @@ async function mockExternalServices(page, options = {}) {
   const proxyFailuresRemaining = { count: options.proxyFailures || 0 };
   const proxyRequests = [];
   const unavailableDates = new Set(options.unavailableDates || []);
+  const httpNotFoundDates = new Set(options.httpNotFoundDates || []);
 
   const fulfillComicPage = route => {
     const requestUrl = new URL(route.request().url());
@@ -38,9 +39,9 @@ async function mockExternalServices(page, options = {}) {
     proxyRequests.push(targetUrl);
 
     route.fulfill({
-      status: 200,
+      status: httpNotFoundDates.has(date) ? 404 : 200,
       contentType: 'text/html; charset=utf-8',
-      body: unavailableDates.has(date) ? notFoundHtml() : comicHtml(targetUrl),
+      body: unavailableDates.has(date) || httpNotFoundDates.has(date) ? notFoundHtml() : comicHtml(targetUrl),
       headers: corsHeaders
     });
   };

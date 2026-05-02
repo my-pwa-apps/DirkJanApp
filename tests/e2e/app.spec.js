@@ -159,6 +159,40 @@ test('unavailable manual date falls back without persisting the failed date', as
   expect(result.errors).toEqual([]);
 });
 
+test('http 404 Saturday skips forward while navigating next', async ({ page }) => {
+  const result = await openApp(page, {
+    httpNotFoundDates: ['20260418']
+  });
+
+  await page.locator('#DatePicker').fill('2026-04-17');
+  await page.locator('#DatePicker').dispatchEvent('input');
+  await expect(page.locator('#DatePicker')).toHaveValue('2026-04-17');
+  await expect(page.locator('#comic-status')).toHaveText(/17-04-2026 geladen/);
+
+  await page.getByRole('button', { name: 'Volgende' }).click();
+  await expect(page.locator('#DatePicker')).toHaveValue('2026-04-20');
+  expect(result.proxyRequests.some(url => url.includes('20260418'))).toBe(true);
+  expect(result.proxyRequests.some(url => url.includes('20260420'))).toBe(true);
+  expect(result.errors).toEqual([]);
+});
+
+test('http 404 Saturday skips backward while navigating previous', async ({ page }) => {
+  const result = await openApp(page, {
+    httpNotFoundDates: ['20260418']
+  });
+
+  await page.locator('#DatePicker').fill('2026-04-20');
+  await page.locator('#DatePicker').dispatchEvent('input');
+  await expect(page.locator('#DatePicker')).toHaveValue('2026-04-20');
+  await expect(page.locator('#comic-status')).toHaveText(/20-04-2026 geladen/);
+
+  await page.getByRole('button', { name: 'Vorige' }).click();
+  await expect(page.locator('#DatePicker')).toHaveValue('2026-04-17');
+  expect(result.proxyRequests.some(url => url.includes('20260418'))).toBe(true);
+  expect(result.proxyRequests.some(url => url.includes('20260417'))).toBe(true);
+  expect(result.errors).toEqual([]);
+});
+
 test('corrupt localStorage favorites recover without breaking boot', async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem('favs', '{bad json');

@@ -1452,6 +1452,50 @@ function DisplayComic(direction = null, notFoundBehavior = 'nearest')
   
   // Capture animation type at start to avoid race conditions in 404 handler
   const capturedAnimationType = direction;
+
+  const handleMissingComic = (comicImg) => {
+    if (comicImg) comicImg.classList.remove('loading');
+    isAnimating = false;
+    notFoundRetries++;
+
+    if (notFoundRetries > 10) {
+      notFoundRetries = 0;
+      if (comicImg) comicImg.alt = "Geen strip gevonden voor deze datum.";
+      return;
+    }
+
+    if (notFoundBehavior === 'random') {
+      const start = new Date(comicstartDate);
+      const end = new Date();
+      currentselectedDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+      CompareDates();
+      DisplayComic('morph', 'random');
+      return;
+    }
+
+    if (capturedAnimationType === 'next') {
+      NextClick();
+      return;
+    }
+
+    if (capturedAnimationType === 'prev') {
+      PreviousClick();
+      return;
+    }
+
+    const startDate = new Date(comicstartDate);
+    currentselectedDate.setDate(currentselectedDate.getDate() - 1);
+    currentselectedDate = moveToComicPublishDate(currentselectedDate, -1);
+
+    if (currentselectedDate < startDate) {
+      notFoundRetries = 0;
+      if (comicImg) comicImg.alt = "Geen strip gevonden voor deze datum.";
+      return;
+    }
+
+    CompareDates();
+    DisplayComic('morph', 'nearest');
+  };
   
   try {
     const dateParts = UTILS.formatDate(currentselectedDate);
@@ -1639,51 +1683,16 @@ function DisplayComic(direction = null, notFoundBehavior = 'nearest')
       else
       {
         // Comic not found (404) - try to navigate to find a valid comic
-        comicImg.classList.remove('loading');
-        isAnimating = false; // Release animation lock before retry
-        notFoundRetries++;
-        
-        // Prevent infinite recursion - stop after 10 retries
-        if (notFoundRetries > 10) {
-          notFoundRetries = 0;
-          comicImg.alt = "No comic found for this date.";
-          return;
-        }
-        
-        // Use captured animation type to avoid race conditions
-        // (user might have clicked different button while fetch was in progress)
-        if (notFoundBehavior === 'random') {
-          // Pick a new random date and try again with morph animation
-          const start = new Date(comicstartDate);
-          const end = new Date();
-          currentselectedDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
-          CompareDates();
-          DisplayComic('morph', 'random');
-        } else if (capturedAnimationType === 'next') {
-          // We were going next, keep trying next
-          NextClick();
-        } else if (capturedAnimationType === 'prev') {
-          // We were going previous, keep trying previous
-          PreviousClick();
-        } else {
-          const startDate = new Date(comicstartDate);
-          currentselectedDate.setDate(currentselectedDate.getDate() - 1);
-          currentselectedDate = moveToComicPublishDate(currentselectedDate, -1);
-
-          if (currentselectedDate < startDate) {
-            notFoundRetries = 0;
-            comicImg.alt = "Geen strip gevonden voor deze datum.";
-            return;
-          }
-
-          CompareDates();
-          DisplayComic('morph', 'nearest');
-        }
+        handleMissingComic(comicImg);
       }
     })
     .catch(function(error) {
       // Ignore aborted fetches (superseded by a newer navigation)
       if (error.name === 'AbortError') return;
+      if (error.name === 'NotFoundError') {
+        handleMissingComic(comicImg);
+        return;
+      }
       comicImg.classList.remove('loading');
       comicImg.src = ""; // Clear the image
       comicImg.alt = "Kan strip niet laden. Probeer het later opnieuw.";
