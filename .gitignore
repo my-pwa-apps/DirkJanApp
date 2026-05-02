@@ -4,3 +4,10 @@
 !.dev.vars.example
 .env*
 !.env.example
+
+# node/test artifacts
+node_modules/
+playwright-report/
+playwright-report-cross-browser/
+test-results/
+tests/lighthouse-report.json
