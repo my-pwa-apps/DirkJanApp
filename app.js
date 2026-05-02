@@ -17,12 +17,11 @@ const CONFIG = Object.freeze({
   CORS_PROXIES: [
     'https://corsproxy.garfieldapp.workers.dev/?',
     'https://api.codetabs.com/v1/proxy?quest=',
-    'https://corsproxy.io/?'
+    'https://api.allorigins.win/raw?url='
   ],
   
   // Fetch timeouts
   FETCH_TIMEOUT: 10000,                // 10 second timeout for HTML
-  FETCH_TIMEOUT_FAST: 5000,            // 5 second fast attempt timeout
   IMAGE_FETCH_TIMEOUT: 8000,           // 8 second timeout for images
   
   // Swipe detection
@@ -153,89 +152,53 @@ let currentFetchController = null;
 
 // Track which proxy is currently working best
 let workingProxyIndex = 0;
-let proxyFailureCount = [0, 0, 0]; // One for each proxy
-let proxyResponseTimes = [0, 0, 0]; // Track average response times in ms
+const PRIMARY_PROXY_INDEX = 0;
+let proxyFailureCount = new Array(CONFIG.CORS_PROXIES.length).fill(0); // One for each proxy
+let proxyResponseTimes = new Array(CONFIG.CORS_PROXIES.length).fill(0); // Track average response times in ms
 
 /**
  * Fetches a URL with intelligent CORS proxy fallback
- * Uses parallel racing for faster fallback and tracks proxy performance
+ * Tries the Cloudflare Worker first, then public fallbacks ordered by recent performance
  * @param {string} url - The URL to fetch
- * @param {boolean} enableRacing - If true, races proxies after a delay for faster fallback
+ * @param {boolean} enableRacing - Kept for call compatibility; fallbacks are sequential
  * @returns {Promise<Response>} The fetch response
  * @throws {Error} If all fetch attempts fail
  */
 async function fetchWithFallback(url, enableRacing = true) {
   const startTime = performance.now();
-  const bestProxyIndex = getBestProxyIndex();
-  
-  // Try the best performing proxy first
-  const primaryAttempt = tryProxy(url, bestProxyIndex, startTime);
-  
-  if (!enableRacing) {
-    // Simple mode: just try primary then fallback
-    try {
-      return await primaryAttempt;
-    } catch (error) {
-      if (error.name === 'NotFoundError') throw error; // Don't retry 404s
-      return await tryRemainingProxies(url, bestProxyIndex, startTime);
-    }
-  }
-  
-  // Racing mode: if primary is slow, start backup attempts
-  // Use AbortController to cancel backup timer when primary resolves
-  const raceController = new AbortController();
-  let backupTimerId;
-  
+  const primaryProxyIndex = PRIMARY_PROXY_INDEX;
+  void enableRacing;
+
+  // Always try the Cloudflare Worker first, then score public fallbacks.
   try {
-    return await Promise.race([
-      primaryAttempt.then(result => {
-        clearTimeout(backupTimerId);
-        raceController.abort();
-        return result;
-      }),
-      // Start racing with other proxies after a delay if primary is slow
-      (async () => {
-        await new Promise((resolve, reject) => {
-          backupTimerId = setTimeout(resolve, CONFIG.FETCH_TIMEOUT_FAST);
-          raceController.signal.addEventListener('abort', () => reject(new Error('Primary succeeded')));
-        });
-        // Primary is taking too long, try backups in parallel
-        return await tryBackupProxies(url, bestProxyIndex, startTime);
-      })()
-    ]);
+    return await tryProxy(url, primaryProxyIndex, startTime);
   } catch (error) {
-    clearTimeout(backupTimerId);
-    raceController.abort();
     if (error.name === 'NotFoundError') throw error; // Don't retry 404s
-    if (error.message === 'Primary succeeded') {
-      return await primaryAttempt; // Primary already resolved
-    }
-    // Both primary and racing failed, try remaining sequentially
-    return await tryRemainingProxies(url, bestProxyIndex, startTime);
+    return await tryRemainingProxies(url, primaryProxyIndex, startTime);
   }
 }
 
 /**
- * Gets the best proxy index based on success rate and response time
- * @returns {number} Index of the best performing proxy
+ * Scores a proxy based on success rate and response time
+ * @param {number} proxyIndex - Proxy index
+ * @returns {number} Higher score means a better proxy
  */
-function getBestProxyIndex() {
-  let bestIndex = workingProxyIndex;
-  let bestScore = -Infinity;
-  
-  for (let i = 0; i < CONFIG.CORS_PROXIES.length; i++) {
-    // Heavily penalize failures, reward fast response times
-    const failurePenalty = proxyFailureCount[i] * 2000;
-    const avgTime = proxyResponseTimes[i] || 1500; // Default to 1.5s if unknown
-    const score = 10000 / (avgTime + failurePenalty + 1);
-    
-    if (score > bestScore) {
-      bestScore = score;
-      bestIndex = i;
-    }
-  }
-  
-  return bestIndex;
+function getProxyScore(proxyIndex) {
+  const failurePenalty = proxyFailureCount[proxyIndex] * 2000;
+  const avgTime = proxyResponseTimes[proxyIndex] || 1500; // Default to 1.5s if unknown
+  return 10000 / (avgTime + failurePenalty + 1);
+}
+
+/**
+ * Gets public fallback proxies ordered by recent performance
+ * @param {number} excludeIndex - Proxy to exclude from the order
+ * @returns {number[]} Proxy indexes ordered from best to worst
+ */
+function getPublicProxyOrder(excludeIndex = PRIMARY_PROXY_INDEX) {
+  return CONFIG.CORS_PROXIES
+    .map((_, index) => index)
+    .filter(index => index !== excludeIndex)
+    .sort((a, b) => getProxyScore(b) - getProxyScore(a));
 }
 
 /**
@@ -312,35 +275,6 @@ async function tryProxy(url, proxyIndex, startTime) {
 }
 
 /**
- * Tries backup proxies in parallel (racing)
- * @param {string} url - URL to fetch
- * @param {number} excludeIndex - Proxy to exclude (already trying)
- * @param {number} startTime - Start time for tracking
- * @returns {Promise<Response>}
- */
-async function tryBackupProxies(url, excludeIndex, startTime) {
-  const attempts = [];
-  
-  for (let i = 0; i < CONFIG.CORS_PROXIES.length; i++) {
-    if (i === excludeIndex) continue;
-    attempts.push(tryProxy(url, i, startTime));
-  }
-  
-  // Return first successful response
-  try {
-    return await Promise.any(attempts);
-  } catch (aggregateError) {
-    // If any proxy got a 404, the content doesn't exist — propagate it
-    if (aggregateError.errors && aggregateError.errors.some(e => e.name === 'NotFoundError')) {
-      const err = new Error('HTTP 404');
-      err.name = 'NotFoundError';
-      throw err;
-    }
-    throw aggregateError;
-  }
-}
-
-/**
  * Tries remaining proxies sequentially as final fallback
  * @param {string} url - URL to fetch
  * @param {number} excludeIndex - Proxy already tried
@@ -349,10 +283,8 @@ async function tryBackupProxies(url, excludeIndex, startTime) {
  */
 async function tryRemainingProxies(url, excludeIndex, startTime) {
   const errors = [];
-  
-  for (let i = 0; i < CONFIG.CORS_PROXIES.length; i++) {
-    if (i === excludeIndex) continue;
-    
+
+  for (const i of getPublicProxyOrder(excludeIndex)) {
     try {
       return await tryProxy(url, i, startTime);
     } catch (error) {
@@ -3182,12 +3114,17 @@ function preloadAdjacentComics() {
   
   const currentDate = new Date(formattedDate);
   const startDate = new Date(CONFIG.COMIC_START_DATE);
+  const today = new Date();
+  if (today.getDay() === 0) today.setDate(today.getDate() - 1);
+  today.setHours(0, 0, 0, 0);
+  const preloadMaxDate = latestAvailableDate ? new Date(latestAvailableDate) : today;
+  preloadMaxDate.setHours(0, 0, 0, 0);
   
   // Preload next comic (skip Sundays - no comics published)
   const nextDate = new Date(currentDate);
   nextDate.setDate(nextDate.getDate() + 1);
   if (nextDate.getDay() === 0) nextDate.setDate(nextDate.getDate() + 1);
-  if (nextDate <= (latestAvailableDate || maxDate)) {
+  if (nextDate <= preloadMaxDate) {
     preloadComic(nextDate);
   }
   

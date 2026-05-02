@@ -13,7 +13,10 @@ const HOP_BY_HOP_HEADERS = new Set([
   'trailer',
   'transfer-encoding',
   'upgrade',
-  'content-length'
+  'content-length',
+  'link',
+  'content-security-policy',
+  'content-security-policy-report-only'
 ]);
 
 const HTML_CACHE_TTL = 600;
@@ -82,8 +85,10 @@ export default {
 
     const cacheKey = new Request(upstreamUrl.toString(), { method: request.method });
     const cache = caches.default;
+    const clientCacheControl = request.headers.get('cache-control') || '';
+    const bypassCache = clientCacheControl.includes('no-cache') || clientCacheControl.includes('no-store');
 
-    if (request.method === 'GET') {
+    if (request.method === 'GET' && !bypassCache) {
       const cached = await cache.match(cacheKey);
       if (cached) {
         return withCors(request, cached, true);
@@ -113,7 +118,7 @@ export default {
 
     const response = sanitizeUpstreamResponse(upstreamResponse);
 
-    if (request.method === 'GET' && upstreamResponse.ok) {
+    if (request.method === 'GET' && upstreamResponse.ok && !bypassCache) {
       ctx.waitUntil(cache.put(cacheKey, response.clone()));
     }
 
