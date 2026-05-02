@@ -38,13 +38,18 @@ test('preloading does not probe beyond a known latest or current date', () => {
 test('latest comic lookup starts from today instead of the future date picker maximum', () => {
   assert.match(appSource, /function isComicPublishDate\(dateValue\)/);
   assert.match(appSource, /function moveToComicPublishDate\(dateValue, direction\)/);
+  assert.match(appSource, /function getStartupComicDate\(baseDate = new Date\(\)\)/);
   assert.match(appSource, /function getLatestComicCandidateDate\(baseDate = new Date\(\)\)/);
   assert.match(appSource, /const daysUntilFriday = \(5 - candidateDate\.getDay\(\) \+ 7\) % 7/);
   assert.match(appSource, /function clampToLatestComicCandidate\(dateValue\)/);
-  assert.match(appSource, /findLatestAvailableComic\(today, searchMinDate\)/);
+  assert.match(appSource, /function discoverLatestAvailableComic\(\)/);
+  assert.match(appSource, /return findLatestAvailableComic\(latestCandidate, searchMinDate\)/);
+  assert.match(appSource, /START_LATEST: 'startlatest'/);
+  assert.match(appSource, /document\.getElementById\("startlatest"\)\.checked/);
   assert.doesNotMatch(appSource, /findLatestAvailableComic\(maxDate, searchMinDate\)/);
   assert.match(appSource, /latestAvailableDate \|\| getLatestComicCandidateDate\(\)/);
-  assert.match(appSource, /currentselectedDate = clampToLatestComicCandidate\(localStorage\.getItem\(CONFIG\.STORAGE_KEYS\.LAST_COMIC\)\)/);
+  assert.match(appSource, /currentselectedDate = clampToLatestComicCandidate\(storedLastComic\)/);
+  assert.match(appSource, /currentselectedDate = getStartupComicDate\(\)/);
 });
 
 test('screen-reader-only headings remain visually hidden', () => {

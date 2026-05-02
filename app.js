@@ -54,6 +54,7 @@ const CONFIG = Object.freeze({
     SWIPE: 'stat',
     SHOW_FAVS: 'showfavs',
     LAST_DATE: 'lastdate',
+    START_LATEST: 'startlatest',
     SETTINGS_VISIBLE: 'settings',
     KEYBOARD_HINT: 'keyboardHintSeen'
   })
@@ -1018,11 +1019,10 @@ function showShareDialog(content) {
 /**
  * Checks whether DirkJan publishes a comic for the given date
  * @param {Date} dateValue - Date to check
- * @returns {boolean} True for weekdays, false for weekends
+ * @returns {boolean} True for comic dates, false for Sundays
  */
 function isComicPublishDate(dateValue) {
-  const day = dateValue.getDay();
-  return day !== 0 && day !== 6;
+  return dateValue.getDay() !== 0;
 }
 
 /**
@@ -1040,6 +1040,15 @@ function moveToComicPublishDate(dateValue, direction) {
   }
 
   return publishDate;
+}
+
+/**
+ * Gets the startup comic date for users who do not resume their last comic
+ * @param {Date} baseDate - Date to normalize, defaults to today
+ * @returns {Date} Today's comic date, with Sundays moved back to Saturday
+ */
+function getStartupComicDate(baseDate = new Date()) {
+  return moveToComicPublishDate(baseDate, -1);
 }
 
 /**
@@ -1085,7 +1094,7 @@ async function findLatestAvailableComic(startDate, minDate) {
   const minTime = minDate.getTime();
   
   while (testDate.getTime() >= minTime) {
-    // Skip weekends (no comic dates)
+    // Skip Sundays (no comic dates)
     if (!isComicPublishDate(testDate)) {
       testDate = moveToComicPublishDate(testDate, -1);
       continue;
@@ -1124,6 +1133,17 @@ async function findLatestAvailableComic(startDate, minDate) {
   latestAvailableDate = new Date(minDate);
   updateDatePickerMax(latestAvailableDate);
   return minDate;
+}
+
+/**
+ * Finds the latest available comic in the current prepublication window
+ * @returns {Promise<Date>} The latest available comic date
+ */
+function discoverLatestAvailableComic() {
+  const latestCandidate = getLatestComicCandidateDate();
+  const searchMinDate = new Date(latestCandidate);
+  searchMinDate.setDate(searchMinDate.getDate() - 7);
+  return findLatestAvailableComic(latestCandidate, searchMinDate);
 }
 
 /**
@@ -1168,7 +1188,7 @@ function onLoad()
  
  maxDate = new Date();
 
-  currentselectedDate = moveToComicPublishDate(currentselectedDate, -1);
+  currentselectedDate = getStartupComicDate(currentselectedDate);
 
   // Advance maxDate to the next Friday publication window
   maxDate = getLatestComicCandidateDate(maxDate);
@@ -1178,29 +1198,41 @@ function onLoad()
   const formattedmaxDate = maxDateParts.year+'-'+maxDateParts.month+'-'+maxDateParts.day;
   document.getElementById("DatePicker").setAttribute("max", formattedmaxDate);
   
-  if(document.getElementById("lastdate").checked)   
+
+
+  if(document.getElementById("startlatest").checked && !document.getElementById("showfavs").checked)
 	{
-		if(localStorage.getItem(CONFIG.STORAGE_KEYS.LAST_COMIC) !== null)
-		{
-      currentselectedDate = clampToLatestComicCandidate(localStorage.getItem(CONFIG.STORAGE_KEYS.LAST_COMIC));
-		}
-    CompareDates();
-    DisplayComic();
-	} else {
-    // If not remembering last comic, find the latest available comic
-    const today = getLatestComicCandidateDate();
-    
-    // Search back up to 7 days to find the latest available comic
-    // (handles cases where today's comic isn't published yet or holidays)
-    const searchMinDate = new Date(today);
-    searchMinDate.setDate(searchMinDate.getDate() - 7);
-    
-    findLatestAvailableComic(today, searchMinDate).then(latestDate => {
+    discoverLatestAvailableComic().then(latestDate => {
       currentselectedDate = latestDate;
       CompareDates();
       DisplayComic();
     });
     return; // Exit early, DisplayComic will be called in the promise
+	}
+
+  if(document.getElementById("lastdate").checked)   
+	{
+		const storedLastComic = localStorage.getItem(CONFIG.STORAGE_KEYS.LAST_COMIC);
+		if(storedLastComic !== null)
+		{
+			currentselectedDate = clampToLatestComicCandidate(storedLastComic);
+		}
+    CompareDates();
+    DisplayComic();
+
+    discoverLatestAvailableComic().then(latestDate => {
+      if (document.getElementById("showfavs").checked) return;
+      void latestDate;
+      CompareDates();
+    });
+	} else {
+    currentselectedDate = getStartupComicDate();
+    CompareDates();
+    DisplayComic();
+
+    discoverLatestAvailableComic().then(() => {
+      CompareDates();
+    });
   }
   
   // Handle app shortcut for random comic
@@ -1814,7 +1846,7 @@ function CompareDates() {
     ? normalizeDate(favs[0]) 
     : normalizeDate(comicstartDate);
   
-  // Use latestAvailableDate if set, otherwise fall back to the latest weekday candidate rather than maxDate
+  // Use latestAvailableDate if set, otherwise fall back to the latest preview candidate rather than maxDate
   const endDate = showFavsChecked && favs.length > 0
     ? normalizeDate(favs[favs.length - 1])
     : normalizeDate(latestAvailableDate || getLatestComicCandidateDate());
@@ -2681,6 +2713,10 @@ document.getElementById('lastdate').onclick = function() {
   localStorage.setItem(CONFIG.STORAGE_KEYS.LAST_DATE, this.checked ? "true" : "false");
 };
 
+document.getElementById('startlatest').onclick = function() {
+  localStorage.setItem(CONFIG.STORAGE_KEYS.START_LATEST, this.checked ? "true" : "false");
+};
+
 document.getElementById('showfavs').onclick = function() {
   const favs = loadFavs();
   if (this.checked) {
@@ -2700,6 +2736,7 @@ document.getElementById('showfavs').onclick = function() {
 document.getElementById("swipe").checked = localStorage.getItem(CONFIG.STORAGE_KEYS.SWIPE) !== "false";
 document.getElementById("showfavs").checked = localStorage.getItem(CONFIG.STORAGE_KEYS.SHOW_FAVS) === "true";
 document.getElementById("lastdate").checked = localStorage.getItem(CONFIG.STORAGE_KEYS.LAST_DATE) !== "false";
+document.getElementById("startlatest").checked = localStorage.getItem(CONFIG.STORAGE_KEYS.START_LATEST) === "true";
 
 {
   const settingsPanel = document.getElementById("settingsDIV");
@@ -3159,7 +3196,7 @@ function preloadAdjacentComics() {
   const preloadMaxDate = new Date(latestAvailableDate);
   preloadMaxDate.setHours(0, 0, 0, 0);
   
-  // Preload next comic (skip weekends - no comic dates)
+  // Preload next comic (skip Sundays - no comic dates)
   const nextDate = new Date(currentDate);
   nextDate.setDate(nextDate.getDate() + 1);
   const nextPublishDate = moveToComicPublishDate(nextDate, 1);
@@ -3167,7 +3204,7 @@ function preloadAdjacentComics() {
     preloadComic(nextPublishDate);
   }
   
-  // Preload previous comic (skip weekends - no comic dates)
+  // Preload previous comic (skip Sundays - no comic dates)
   const prevDate = new Date(currentDate);
   prevDate.setDate(prevDate.getDate() - 1);
   const prevPublishDate = moveToComicPublishDate(prevDate, -1);

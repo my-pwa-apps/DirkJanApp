@@ -14,6 +14,7 @@ test('core comic workflow boots with mocked DirkJan content', async ({ page }) =
   await page.getByRole('button', { name: 'Instellingen' }).click();
   await expect(page.locator('#settingsDIV')).toHaveClass(/visible/);
   await expect(page.locator('#swipe')).toBeChecked();
+  await expect(page.locator('#startlatest')).not.toBeChecked();
   await page.getByRole('button', { name: 'Sluiten' }).click();
   await expect(page.locator('#settingsDIV')).not.toHaveClass(/visible/);
 
@@ -47,12 +48,68 @@ test('stale future last comic is clamped before startup fetches', async ({ page 
   expect(result.errors).toEqual([]);
 });
 
-test('latest startup lookup includes prepublished weekdays without probing Saturday', async ({ page }) => {
+test('startup shows today when last comic is not remembered', async ({ page }) => {
   const result = await openApp(page);
 
-  await expect(page.locator('#DatePicker')).toHaveValue('2026-05-08');
+  await expect(page.locator('#DatePicker')).toHaveValue('2026-05-02');
+  expect(result.proxyRequests.some(url => url.includes('20260502'))).toBe(true);
   expect(result.proxyRequests.some(url => url.includes('20260509'))).toBe(false);
   expect(result.proxyRequests.some(url => url.includes('20260508'))).toBe(true);
+});
+
+test('latest button advances from today to newer prepublished comic', async ({ page }) => {
+  const result = await openApp(page);
+
+  await expect(page.locator('#DatePicker')).toHaveValue('2026-05-02');
+  await page.getByRole('button', { name: 'Laatste' }).click();
+  await expect(page.locator('#DatePicker')).toHaveValue('2026-05-08');
+  expect(result.proxyRequests.some(url => url.includes('20260509'))).toBe(false);
+});
+
+test('startup can be configured to show latest available comic', async ({ page }) => {
+  const result = await openApp(page, {
+    initialStorage: {
+      lastdate: 'false',
+      startlatest: 'true'
+    }
+  });
+
+  await expect(page.locator('#DatePicker')).toHaveValue('2026-05-08');
+  expect(result.proxyRequests.some(url => url.includes('20260508'))).toBe(true);
+  expect(result.proxyRequests.some(url => url.includes('20260509'))).toBe(false);
+  expect(result.errors).toEqual([]);
+});
+
+test('latest startup setting overrides remembered older comic', async ({ page }) => {
+  const result = await openApp(page, {
+    initialStorage: {
+      lastdate: 'true',
+      startlatest: 'true',
+      lastcomic: 'Fri May 01 2026 00:00:00 GMT+0200'
+    }
+  });
+
+  await expect(page.locator('#DatePicker')).toHaveValue('2026-05-08');
+  expect(result.proxyRequests.some(url => url.includes('20260508'))).toBe(true);
+  expect(result.proxyRequests.some(url => url.includes('20260509'))).toBe(false);
+  expect(result.errors).toEqual([]);
+});
+
+test('remembered older comic stays put while newer comic remains available', async ({ page }) => {
+  const result = await openApp(page, {
+    initialStorage: {
+      lastdate: 'true',
+      lastcomic: 'Fri May 01 2026 00:00:00 GMT+0200'
+    }
+  });
+
+  await expect(page.locator('#DatePicker')).toHaveValue('2026-05-01');
+  expect(result.proxyRequests.some(url => url.includes('20260501'))).toBe(true);
+  expect(result.proxyRequests.some(url => url.includes('20260508'))).toBe(true);
+  expect(result.proxyRequests.some(url => url.includes('20260509'))).toBe(false);
+  await page.getByRole('button', { name: 'Laatste' }).click();
+  await expect(page.locator('#DatePicker')).toHaveValue('2026-05-08');
+  expect(result.errors).toEqual([]);
 });
 
 test('corrupt localStorage favorites recover without breaking boot', async ({ page }) => {
