@@ -28,12 +28,9 @@ const CONFIG = Object.freeze({
   // Swipe detection
   SWIPE_MIN_DISTANCE: 50,              // Minimum swipe distance in px
   SWIPE_MAX_TIME: 500,                 // Maximum swipe time in ms
-  TAP_MAX_MOVEMENT: 10,                // Maximum movement for tap detection in px
-  TAP_MAX_TIME: 300,                   // Maximum time for tap detection in ms
   
   // Toolbar snapping
   SNAP_THRESHOLD: 80,                  // Distance in px within which toolbar snaps to optimal position
-  SNAP_ZONE_VERTICAL_PADDING: 40,      // Vertical padding for snap zone detection
   
   // Cache limits
   MAX_PRELOAD_CACHE: 20,               // Maximum preloaded comics
@@ -1226,8 +1223,9 @@ function onLoad()
 
   if(startupMode === 'last')   
 	{
+		const showFavsChecked = document.getElementById("showfavs").checked;
 		const storedLastComic = localStorage.getItem(CONFIG.STORAGE_KEYS.LAST_COMIC);
-		if(storedLastComic !== null)
+		if(!showFavsChecked && storedLastComic !== null)
 		{
 			currentselectedDate = clampToLatestComicCandidate(storedLastComic);
 		}
@@ -1240,7 +1238,9 @@ function onLoad()
       CompareDates();
     });
 	} else {
-    currentselectedDate = getStartupComicDate();
+    if (!document.getElementById("showfavs").checked) {
+      currentselectedDate = getStartupComicDate();
+    }
     CompareDates();
     DisplayComic();
 
@@ -1551,7 +1551,8 @@ function DisplayComic(direction = null, notFoundBehavior = 'nearest')
         if (!pictureUrl) {
           throw new Error('Could not extract comic image URL from page');
         }
-        localStorage.setItem(CONFIG.STORAGE_KEYS.LAST_COMIC, currentselectedDate);
+        // Store as YYYY-MM-DD for stable, locale-independent parsing
+        localStorage.setItem(CONFIG.STORAGE_KEYS.LAST_COMIC, formattedDate);
         
         // Animate transition based on direction
         const animateTransition = () => {
@@ -1932,12 +1933,10 @@ function CompareDates() {
 let isRotating = false;
 
 /**
- * Toggles comic rotation to fullscreen mode
- * Handles both entering and exiting fullscreen with optional 90-degree rotation
- * Includes tap detection and swipe support in fullscreen mode
- * @param {boolean} applyRotation - Whether to apply 90-degree rotation (default: true)
+ * Toggles landscape fullscreen mode for the comic
+ * Handles both entering and exiting fullscreen, with swipe support
  */
-function Rotate(applyRotation = true) {
+function Rotate() {
   // Prevent rapid double-calls
   if (isRotating) {
     return;
@@ -2133,9 +2132,7 @@ function Rotate(applyRotation = true) {
     overlay.style.zIndex = '10000';    // Clone the comic image
     const clonedComic = element.cloneNode(true);
     clonedComic.id = 'rotated-comic';
-    // Apply rotation class only if requested (for portrait mode)
-    // In landscape mode, we show fullscreen without rotation
-    clonedComic.className = applyRotation ? "rotate" : "fullscreen-landscape";
+    clonedComic.className = "fullscreen-landscape";
     clonedComic.style.display = 'block'; // Ensure visible
     
     // Create the fullscreen toolbar
@@ -2174,12 +2171,7 @@ function Rotate(applyRotation = true) {
     document.body.appendChild(clonedComic);
     document.body.appendChild(fullscreenToolbar);
 
-    // Add rotated class to toolbar for SVG rotation only if in rotated mode (not landscape)
-    if (applyRotation) {
-      fullscreenToolbar.classList.add('rotated');
-    } else {
-      fullscreenToolbar.classList.add('landscape-toolbar');
-    }
+    fullscreenToolbar.classList.add('landscape-toolbar');
 
     // Call CompareDates to set initial button states
     CompareDates();
@@ -2223,9 +2215,6 @@ function Rotate(applyRotation = true) {
     overlay.addEventListener('click', function() {
       Rotate(); // Call Rotate again to exit fullscreen
     });
-  }
-  else if (element.className.includes("rotate")) {
-    element.className = 'normal';
   }
   
   } catch (error) {
@@ -2339,36 +2328,12 @@ function handleTouchEnd(e) {
 	// Check if the swipe is valid (meets distance and time requirements)
   if (deltaTime > CONFIG.SWIPE_MAX_TIME) return;
 	
-	// Check if we're in fullscreen/rotated mode and which type
+	// Check if we're in landscape fullscreen mode
   const rotatedComic = document.getElementById('rotated-comic');
-  const isInFullscreen = rotatedComic !== null;
-  const isRotated = isInFullscreen && rotatedComic.className.includes('rotate');
-  const isLandscapeFullscreen = isInFullscreen && rotatedComic.className.includes('fullscreen-landscape');
+  const isLandscapeFullscreen = rotatedComic !== null && rotatedComic.className.includes('fullscreen-landscape');
 	
 	// Determine swipe direction based on mode
-	if (isRotated) {
-    // Rotated mode (90° clockwise): Swipe gestures follow the rotation
-    // Physical up/down becomes logical left/right, physical left/right becomes logical up/down
-    if (absY > absX && absY > CONFIG.SWIPE_MIN_DISTANCE) {
-      // Vertical swipe (becomes horizontal navigation due to rotation)
-      if (deltaY < 0) {
-        // Swipe Up -> visually moves right -> Next
-        if (canNavigate('next')) NextClick();
-      } else {
-        // Swipe Down -> visually moves left -> Previous
-        if (canNavigate('prev')) PreviousClick();
-      }
-    } else if (absX > absY && absX > CONFIG.SWIPE_MIN_DISTANCE) {
-      // Horizontal swipe (becomes vertical navigation due to rotation)
-      if (deltaX < 0) {
-        // Swipe Left -> visually moves down -> Random
-        if (canNavigate('random')) RandomClick();
-      } else {
-        // Swipe Right -> visually moves up -> Latest
-        if (canNavigate('current')) CurrentClick();
-      }
-    }
-  } else if (isLandscapeFullscreen) {
+	if (isLandscapeFullscreen) {
     // Landscape fullscreen (no rotation): Normal horizontal/vertical mapping
     if (absX > absY && absX > CONFIG.SWIPE_MIN_DISTANCE) {
       // Horizontal swipe
@@ -2431,7 +2396,7 @@ document.addEventListener('touchend', handleTouchEnd, { passive: true });
       if (rotatedComic) return;
       if (this.className.includes('normal')) {
         e.preventDefault();
-        Rotate(false); // Enter landscape fullscreen without rotation
+        Rotate(); // Enter landscape fullscreen
       }
     });
   }
@@ -2450,7 +2415,7 @@ window.addEventListener('orientationchange', function() {
         // Not in fullscreen yet - enter landscape fullscreen mode
         const comic = document.getElementById('comic');
         if (comic && comic.className.includes('normal')) {
-          Rotate(false); // Enter fullscreen WITHOUT rotation (device is already landscape)
+          Rotate(); // Enter landscape fullscreen (device is already landscape)
         }
       } else {
         // Already in fullscreen - just reposition
@@ -2974,9 +2939,6 @@ function showInstallPromotion() {
     deferredPrompt.prompt();
     // Wait for the user to respond to the prompt
     deferredPrompt.userChoice.then((choiceResult) => {
-      if (choiceResult.outcome === 'accepted') {
-        console.log('User accepted the install prompt');
-      }
       deferredPrompt = null;
     });
   });
@@ -3007,49 +2969,34 @@ function maximizeRotatedImage(imgElement) {
     return;
   }
   
-  // Check if this is a landscape fullscreen (no rotation) or rotated mode
-  const isLandscapeMode = imgElement.className.includes('fullscreen-landscape');
-  const isRotatedMode = imgElement.className.includes('rotate');
-  
-  // For a rotated image, the visual width is the original height, and vice versa
-  // But for landscape mode, use natural dimensions
-  const rotatedWidth = isLandscapeMode ? naturalWidth : naturalHeight;
-  const rotatedHeight = isLandscapeMode ? naturalHeight : naturalWidth;
+  // Landscape fullscreen uses the image's natural dimensions (no rotation)
+  const displayWidth = naturalWidth;
+  const displayHeight = naturalHeight;
   
   // Calculate the scale factor needed to fit the image within the viewport
   let scale;
-  if (rotatedWidth / rotatedHeight > viewportWidth / viewportHeight) {
+  if (displayWidth / displayHeight > viewportWidth / viewportHeight) {
     // Image is wider than viewport (relative to aspect ratios)
-    scale = viewportWidth / rotatedWidth;
+    scale = viewportWidth / displayWidth;
   } else {
     // Image is taller than viewport (relative to aspect ratios)
-    scale = viewportHeight / rotatedHeight;
+    scale = viewportHeight / displayHeight;
   }
   
   // Make the image slightly smaller (90% of the calculated size)
-  scale = scale * 0.9;
+  scale = scale * CONFIG.ROTATED_IMAGE_SCALE;
   
   // Apply dimension with calculated scale
   imgElement.style.width = `${naturalWidth * scale}px`;
   imgElement.style.height = `${naturalHeight * scale}px`;
   
-  // Position element - but let CSS handle the transform for rotation
+  // Position element
   imgElement.style.position = 'fixed';
   
-  // Set positioning based on mode
-  if (isLandscapeMode) {
-    // In landscape mode, position higher to avoid toolbar overlap
-    // Set explicit positioning for landscape mode
-    imgElement.style.top = '40%';
-    imgElement.style.left = '50%';
-    imgElement.style.transformOrigin = 'center center';
-  } else if (isRotatedMode) {
-    // In rotated mode, let CSS handle positioning completely
-    // Don't set top/left inline to avoid conflicts with CSS transform
-    imgElement.style.top = '';
-    imgElement.style.left = '';
-    imgElement.style.transformOrigin = '';
-  }
+  // In landscape mode, position higher to avoid toolbar overlap
+  imgElement.style.top = '40%';
+  imgElement.style.left = '50%';
+  imgElement.style.transformOrigin = 'center center';
   imgElement.style.maxWidth = 'none';
   imgElement.style.maxHeight = 'none';
   imgElement.style.zIndex = '10001'; // Higher than the overlay
@@ -3358,8 +3305,8 @@ function showKeyboardShortcutsHint() {
             localStorage.setItem(CONFIG.STORAGE_KEYS.KEYBOARD_HINT, 'true');
           }, 500);
         }
-      }, 8000);
-    }, 2000); // Show after 2 seconds
+      }, CONFIG.NOTIFICATION_AUTO_HIDE);
+    }, CONFIG.KEYBOARD_HINT_DELAY); // Show after a short delay
   }
 }
 

@@ -326,24 +326,6 @@ input[type="date"]:focus-visible {
     position: relative;
 }
 
-.rotate {
-    max-height: 95vh;
-    max-width: 95vw;
-    width: auto;
-    height: auto;
-    object-fit: contain;
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.19), 0 6px 6px rgba(0, 0, 0, 0.23);
-    border-radius: 4px;
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%) rotate(90deg);
-    transform-origin: center center;
-    z-index: 10001;
-    cursor: pointer;
-    pointer-events: auto;
-}
-
 .fullscreen-landscape {
     max-height: 95vh;
     max-width: 95vw;
@@ -718,24 +700,7 @@ input[type="date"]:focus-visible {
     height: 24px;
 }
 
-.fullscreen-toolbar.rotated {
-    flex-direction: column;
-    padding: 16px 10px;
-    max-height: 80vh;
-    max-width: 70px;
-    top: 50%;
-    left: 20px;
-    bottom: auto;
-    transform: translateY(-50%);
-    gap: 10px;
-}
-
-.fullscreen-toolbar.rotated .toolbar-button {
-    margin: 0;
-}
-
 #rotated-comic {
-    left: calc(50% + 40px) !important;
     margin-left: 0 !important;
     margin-bottom: 0 !important;
 }
@@ -744,23 +709,6 @@ input[type="date"]:focus-visible {
     left: 50% !important;
     top: 40% !important;
     transform: translate(-50%, -50%) !important;
-}
-
-.fullscreen-toolbar.rotated .toolbar-button:nth-child(1) .toolbar-svg,
-.fullscreen-toolbar.rotated .toolbar-button:nth-child(2) .toolbar-svg,
-.fullscreen-toolbar.rotated .toolbar-button:nth-child(5) .toolbar-svg {
-    transform: rotate(90deg);
-}
-
-.fullscreen-toolbar.rotated .toolbar-button:nth-child(3) .toolbar-svg,
-.fullscreen-toolbar.rotated .toolbar-button:nth-child(4) .toolbar-svg,
-.fullscreen-toolbar.rotated .toolbar-button:nth-child(6) .toolbar-svg,
-.fullscreen-toolbar.rotated .toolbar-button:nth-child(7) .toolbar-svg {
-    transform: rotate(-90deg);
-}
-
-.fullscreen-toolbar:not(.rotated) .toolbar-svg {
-    transform: none;
 }
 
 .fullscreen-toolbar.landscape-toolbar {
@@ -862,25 +810,6 @@ input[type="date"]:focus-visible {
 #rotated-comic {
     transition: transform 0.4s ease-out;
     opacity: 1;
-}
-
-/* Slide animations for rotated comics (with 90deg rotation) */
-#rotated-comic.rotate.slide-out-left,
-.rotated-comic-outgoing.rotate.slide-out-left {
-    transform: translate(-50%, calc(-50% - 100vh - 20px)) rotate(90deg) !important;
-}
-
-#rotated-comic.rotate.slide-out-right,
-.rotated-comic-outgoing.rotate.slide-out-right {
-    transform: translate(-50%, calc(-50% + 100vh + 20px)) rotate(90deg) !important;
-}
-
-#rotated-comic.rotate.slide-in-left {
-    transform: translate(-50%, calc(-50% + 100vh + 20px)) rotate(90deg) !important;
-}
-
-#rotated-comic.rotate.slide-in-right {
-    transform: translate(-50%, calc(-50% - 100vh - 20px)) rotate(90deg) !important;
 }
 
 /* Slide animations for landscape fullscreen (no rotation) */
