@@ -1,8 +1,6 @@
 const { test, expect } = require('@playwright/test');
 
 test.describe('production smoke', () => {
-  test.skip(process.env.RUN_PROD_SMOKE !== '1', 'Set RUN_PROD_SMOKE=1 to run against production without mocks.');
-
   test('deployed app boots and exposes core controls', async ({ page }) => {
     const consoleErrors = [];
     page.on('console', message => {

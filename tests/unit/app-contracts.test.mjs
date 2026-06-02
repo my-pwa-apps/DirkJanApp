@@ -36,10 +36,11 @@ test('preloading does not probe beyond a known latest or current date', () => {
 });
 
 test('latest comic lookup starts from today instead of the future date picker maximum', () => {
+  assert.match(appSource, /function getCurrentDate\(\)/);
   assert.match(appSource, /function isComicPublishDate\(dateValue\)/);
   assert.match(appSource, /function moveToComicPublishDate\(dateValue, direction\)/);
-  assert.match(appSource, /function getStartupComicDate\(baseDate = new Date\(\)\)/);
-  assert.match(appSource, /function getLatestComicCandidateDate\(baseDate = new Date\(\)\)/);
+  assert.match(appSource, /function getStartupComicDate\(baseDate = getCurrentDate\(\)\)/);
+  assert.match(appSource, /function getLatestComicCandidateDate\(baseDate = getCurrentDate\(\)\)/);
   assert.match(appSource, /const daysUntilFriday = \(5 - candidateDate\.getDay\(\) \+ 7\) % 7/);
   assert.match(appSource, /function clampToLatestComicCandidate\(dateValue\)/);
   assert.match(appSource, /function discoverLatestAvailableComic\(\)/);

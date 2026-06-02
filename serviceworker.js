@@ -1,6 +1,6 @@
 // Service Worker for DirkJan PWA
 // Cache versioning - increment when you need to force cache refresh
-const CACHE_VERSION = 'v125';
+const CACHE_VERSION = 'v128';
 const CACHE_NAME = `dirkjan-cache-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `dirkjan-runtime-${CACHE_VERSION}`;
 const IMAGE_CACHE = `dirkjan-images-${CACHE_VERSION}`;
@@ -57,6 +57,11 @@ self.addEventListener('fetch', event => {
   const url = new URL(request.url);
   const { destination } = request;
 
+  // Do not intercept analytics / third-party requests; they are optional and may fail in some environments.
+  if (['static.cloudflareinsights.com', 'cloudflareinsights.com', 'www.cloudflareinsights.com'].includes(url.hostname)) {
+    return;
+  }
+
   // Strategy: Cache First for app shell (HTML, CSS, JS, SVG)
   if (['document', 'style', 'script'].includes(destination) || url.pathname.endsWith('.svg')) {
     event.respondWith(cacheFirstStrategy(request, CACHE_NAME));
@@ -95,11 +100,17 @@ async function cacheFirstStrategy(request, cacheName) {
     }
     return networkResponse;
   } catch (error) {
-    // If fetch fails and it's an HTML request, return offline page
+    // If fetch fails and it's an HTML request, return offline page.
+    // For optional assets (e.g. analytics or third-party script) fail open instead of throwing.
     if (request.headers.get('accept')?.includes('text/html')) {
       return caches.match('./offline.html');
     }
-    throw error;
+
+    return new Response('', {
+      status: 200,
+      statusText: 'OK',
+      headers: { 'Content-Type': 'text/plain;charset=UTF-8' }
+    });
   }
 }
 

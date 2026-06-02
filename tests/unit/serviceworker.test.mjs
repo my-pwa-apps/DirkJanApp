@@ -26,6 +26,11 @@ test('activation removes stale caches while preserving the current cache set', (
   assert.match(source, /self\.clients\.claim\(\)/);
 });
 
+test('third-party analytics requests are bypassed and fetch failures fail open', () => {
+  assert.match(source, /static\.cloudflareinsights\.com|cloudflareinsights\.com/);
+  assert.match(source, /return new Response\('', \{\s*status: 200/);
+});
+
 test('offline and cache limits are covered by service worker strategies', () => {
   assert.match(source, /const MAX_IMAGE_CACHE_SIZE = 50/);
   assert.match(source, /const MAX_RUNTIME_CACHE_SIZE = 30/);

@@ -84,7 +84,11 @@ async function mockExternalServices(page, options = {}) {
 }
 
 async function openApp(page, options = {}) {
-  await page.addInitScript(initialStorage => {
+  const testNow = options.now || '2026-05-02T12:00:00.000Z';
+
+  await page.addInitScript((initData) => {
+    const { initialStorage, testNow: fixedNow } = initData;
+    window.__TEST_NOW__ = fixedNow;
     Object.defineProperty(navigator, 'serviceWorker', {
       value: {
         register: () => Promise.resolve({
@@ -104,7 +108,7 @@ async function openApp(page, options = {}) {
     } catch {
       // Some browser engines restrict storage before the document origin exists.
     }
-  }, options.initialStorage || null);
+  }, { initialStorage: options.initialStorage || null, testNow });
 
   const requestLog = await mockExternalServices(page, options);
   const errors = [];

@@ -55,7 +55,9 @@ const CONFIG = Object.freeze({
     START_LATEST: 'startlatest',
     START_MODE: 'startmode',
     SETTINGS_VISIBLE: 'settings',
-    KEYBOARD_HINT: 'keyboardHintSeen'
+    KEYBOARD_HINT: 'keyboardHintSeen',
+    DARK_MODE: 'darkmode',
+    SHUFFLE: 'shuffle'
   })
 });
 
@@ -315,6 +317,10 @@ let maxDate;                    // Maximum possible comic date (next Friday)
 let latestAvailableDate;        // Actual latest available comic date (found on load)
 let isAnimating = false;        // Prevents overlapping animations
 let notFoundRetries = 0;        // Prevents infinite 404 recursion
+
+// Shuffle mode history (used when the "Shuffle modus" setting is enabled)
+let shuffleBackStack = [];      // Previously seen random comics (for going back)
+let shuffleForwardStack = [];   // Comics stepped back from (for going forward)
 
 // Parsing variables
 let notFound;
@@ -1018,6 +1024,14 @@ function showShareDialog(content) {
  * @param {Date} dateValue - Date to check
  * @returns {boolean} True for comic dates, false for Sundays
  */
+function getCurrentDate() {
+  if (typeof window !== 'undefined' && window.__TEST_NOW__) {
+    return new Date(window.__TEST_NOW__);
+  }
+
+  return new Date();
+}
+
 function isComicPublishDate(dateValue) {
   return dateValue.getDay() !== 0;
 }
@@ -1044,7 +1058,7 @@ function moveToComicPublishDate(dateValue, direction) {
  * @param {Date} baseDate - Date to normalize, defaults to today
  * @returns {Date} Today's comic date, with Sundays moved back to Saturday
  */
-function getStartupComicDate(baseDate = new Date()) {
+function getStartupComicDate(baseDate = getCurrentDate()) {
   return moveToComicPublishDate(baseDate, -1);
 }
 
@@ -1053,7 +1067,7 @@ function getStartupComicDate(baseDate = new Date()) {
  * @param {Date} baseDate - Date to normalize, defaults to today
  * @returns {Date} Latest candidate date at the next Friday publication window
  */
-function getLatestComicCandidateDate(baseDate = new Date()) {
+function getLatestComicCandidateDate(baseDate = getCurrentDate()) {
   const candidateDate = new Date(baseDate);
   candidateDate.setHours(0, 0, 0, 0);
   const daysUntilFriday = (5 - candidateDate.getDay() + 7) % 7;
@@ -1185,7 +1199,7 @@ function onLoad()
   // Check URL parameters for app shortcuts
   const urlParams = new URLSearchParams(window.location.search);
   
-  currentselectedDate = document.getElementById("DatePicker").valueAsDate = new Date();
+  currentselectedDate = document.getElementById("DatePicker").valueAsDate = getCurrentDate();
  
   const favs = loadFavs();
   const showFavsEl = document.getElementById("showfavs");
@@ -1197,7 +1211,7 @@ function onLoad()
     currentselectedDate = new Date(favs[0]);
   }
  
- maxDate = new Date();
+ maxDate = getCurrentDate();
 
   currentselectedDate = getStartupComicDate(currentselectedDate);
 
@@ -1234,7 +1248,6 @@ function onLoad()
 
     discoverLatestAvailableComic().then(latestDate => {
       if (document.getElementById("showfavs").checked) return;
-      void latestDate;
       CompareDates();
     });
 	} else {
@@ -1252,11 +1265,279 @@ function onLoad()
   // Handle app shortcut for random comic
   if (urlParams.get('random') === 'true') {
     const start = new Date(comicstartDate);
-    const end = new Date();
+    const end = getCurrentDate();
     currentselectedDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
     CompareDates();
     DisplayComic('morph', 'random');
   }
+}
+
+// ========================================
+// SHUFFLE MODE
+// ========================================
+
+/**
+ * Returns true when the "Shuffle modus" setting is enabled
+ * @returns {boolean}
+ */
+function isShuffleEnabled() {
+  const checkbox = document.getElementById("shuffle");
+  return !!(checkbox && checkbox.checked);
+}
+
+/**
+ * Picks a random valid comic date within the available range
+ * @returns {Date} A normalized comic publish date
+ */
+function pickRandomComicDate() {
+  const start = new Date(comicstartDate);
+  const end = latestAvailableDate ? new Date(latestAvailableDate) : getCurrentDate();
+  const randomDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+  return moveToComicPublishDate(randomDate, -1);
+}
+
+/**
+ * Resets the shuffle navigation history
+ */
+function resetShuffleHistory() {
+  shuffleBackStack.length = 0;
+  shuffleForwardStack.length = 0;
+}
+
+// ========================================
+// DARK MODE
+// ========================================
+
+/** Theme color meta values for the browser UI */
+const THEME_COLORS = Object.freeze({ LIGHT: '#000000', DARK: '#000000' });
+
+/** Sun/moon icons (inner SVG markup) for the dark mode toggle */
+const DARK_MODE_ICONS = Object.freeze({
+  MOON: '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>',
+  SUN: '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>'
+});
+
+/**
+ * Determines whether dark mode should be active
+ * Uses the saved preference, falling back to the OS setting
+ * @returns {boolean}
+ */
+function getPreferredDarkMode() {
+  const stored = localStorage.getItem(CONFIG.STORAGE_KEYS.DARK_MODE);
+  if (stored === "true") return true;
+  if (stored === "false") return false;
+  return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+
+/**
+ * Updates the browser theme-color meta tags
+ * @param {boolean} isDark
+ */
+function updateThemeColor(isDark) {
+  const color = isDark ? THEME_COLORS.DARK : THEME_COLORS.LIGHT;
+  const themeMeta = document.querySelector('meta[name="theme-color"]');
+  if (themeMeta) themeMeta.setAttribute('content', color);
+}
+
+/**
+ * Updates the dark mode toggle button's visual + ARIA state
+ * @param {boolean} isDark
+ */
+function setDarkModeControlState(isDark) {
+  const button = document.getElementById("darkmode");
+  if (!button) return;
+  button.setAttribute('aria-pressed', isDark ? 'true' : 'false');
+  const label = isDark ? 'Lichte modus' : 'Donkere modus';
+  button.setAttribute('aria-label', label);
+  button.setAttribute('title', label);
+  const svg = button.querySelector('svg');
+  if (svg) svg.innerHTML = isDark ? DARK_MODE_ICONS.SUN : DARK_MODE_ICONS.MOON;
+}
+
+/**
+ * Applies the dark/light theme to the document
+ * @param {boolean} isDark
+ */
+function applyDarkMode(isDark) {
+  document.documentElement.dataset.theme = isDark ? 'dark' : 'light';
+  updateThemeColor(isDark);
+  setDarkModeControlState(isDark);
+}
+
+/**
+ * Toggles dark mode on user request and persists the choice
+ */
+function ToggleDarkMode() {
+  const isDark = document.documentElement.dataset.theme !== 'dark';
+  localStorage.setItem(CONFIG.STORAGE_KEYS.DARK_MODE, isDark ? "true" : "false");
+  applyDarkMode(isDark);
+}
+
+/**
+ * Initializes dark mode on load and follows the OS setting
+ * until the user makes an explicit choice
+ */
+function initializeDarkMode() {
+  applyDarkMode(getPreferredDarkMode());
+  if (window.matchMedia) {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const handler = (e) => {
+      if (localStorage.getItem(CONFIG.STORAGE_KEYS.DARK_MODE) === null) {
+        applyDarkMode(e.matches);
+      }
+    };
+    if (mq.addEventListener) mq.addEventListener('change', handler);
+    else if (mq.addListener) mq.addListener(handler);
+  }
+}
+
+// ========================================
+// NOTIFICATION TOAST
+// ========================================
+
+let _notificationTimer = null;
+
+/**
+ * Shows a brief toast notification
+ * @param {string} message - Text to display
+ * @param {boolean} [isError=false] - Whether to style as an error
+ */
+function showNotification(message, isError = false) {
+  let toast = document.getElementById("notificationToast");
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'notificationToast';
+    toast.className = 'notification-toast';
+    toast.setAttribute('role', 'status');
+    toast.setAttribute('aria-live', 'polite');
+    document.body.appendChild(toast);
+  }
+  toast.textContent = message;
+  toast.classList.toggle('error', !!isError);
+  // Force reflow so the transition runs even on rapid successive calls
+  void toast.offsetWidth;
+  toast.classList.add('show');
+  if (_notificationTimer) clearTimeout(_notificationTimer);
+  _notificationTimer = setTimeout(() => {
+    toast.classList.remove('show');
+  }, 3000);
+}
+
+// ========================================
+// FAVORITES IMPORT / EXPORT
+// ========================================
+
+/**
+ * Enables/disables the export button based on whether favorites exist
+ */
+function updateExportButtonState() {
+  const exportBtn = document.getElementById("exportFavs");
+  if (exportBtn) exportBtn.disabled = loadFavs().length === 0;
+}
+
+/**
+ * Exports favorites to a downloadable JSON file
+ */
+function exportFavorites() {
+  const favs = loadFavs();
+  if (!favs.length) {
+    showNotification('Geen favorieten om te exporteren.', true);
+    return;
+  }
+  const payload = {
+    favorites: favs,
+    exportDate: new Date().toISOString(),
+    version: 1
+  };
+  try {
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'dirkjan-favorieten.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showNotification(favs.length + ' favorieten geëxporteerd.');
+  } catch (error) {
+    console.error('Export failed:', error);
+    showNotification('Exporteren mislukt.', true);
+  }
+}
+
+/**
+ * Imports favorites from a user-selected JSON file
+ * @param {Event} event - The file input change event
+ */
+function importFavorites(event) {
+  const input = event && event.target;
+  const file = input && input.files && input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    let imported;
+    const parsed = UTILS.safeJSONParse(e.target.result, null);
+    if (parsed && Array.isArray(parsed.favorites)) {
+      imported = parsed.favorites;
+    } else if (Array.isArray(parsed)) {
+      imported = parsed;
+    } else {
+      showNotification('Ongeldig favorietenbestand.', true);
+      input.value = '';
+      return;
+    }
+    // Keep only valid date strings (YYYY-MM-DD) and de-duplicate against existing
+    const existing = loadFavs();
+    const valid = imported.filter(d => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d));
+    const merged = existing.slice();
+    let added = 0;
+    valid.forEach(d => {
+      if (!merged.includes(d)) {
+        merged.push(d);
+        added++;
+      }
+    });
+    if (added === 0) {
+      showNotification('Alle favorieten bestaan al.');
+      input.value = '';
+      return;
+    }
+    merged.sort();
+    saveFavs(merged);
+    updateExportButtonState();
+    const showFavsCheckbox = document.getElementById("showfavs");
+    if (showFavsCheckbox) showFavsCheckbox.disabled = merged.length === 0;
+    CompareDates();
+    showNotification(added + ' favorieten geïmporteerd.');
+    input.value = '';
+  };
+  reader.onerror = function() {
+    showNotification('Bestand lezen mislukt.', true);
+    input.value = '';
+  };
+  reader.readAsText(file);
+}
+
+// ========================================
+// SERVICE WORKER VERSION DISPLAY
+// ========================================
+
+/**
+ * Fetches and displays the active service worker cache version in Settings
+ */
+function displayServiceWorkerVersion() {
+  const display = document.getElementById("swVersionDisplay");
+  if (!display) return;
+  fetch('./serviceworker.js', { cache: 'no-store' })
+    .then(res => res.text())
+    .then(text => {
+      const match = text.match(/CACHE_VERSION\s*=\s*['"]([^'"]+)['"]/);
+      display.textContent = match ? 'Versie: ' + match[1] : 'Versie: onbekend';
+    })
+    .catch(() => {
+      display.textContent = 'Versie: onbekend';
+    });
 }
 
 /**
@@ -1271,6 +1552,10 @@ function PreviousClick()
     if (idx > 0) {
       currentselectedDate = new Date(favs[idx - 1]);
     }
+  } else if (isShuffleEnabled() && shuffleBackStack.length) {
+    // Shuffle mode: step back through previously seen random comics
+    shuffleForwardStack.push(formattedDate);
+    currentselectedDate = new Date(shuffleBackStack.pop());
   } else {
     currentselectedDate.setDate(currentselectedDate.getDate() - 1);
     currentselectedDate = moveToComicPublishDate(currentselectedDate, -1);
@@ -1290,6 +1575,15 @@ function NextClick()
     const idx = favs.indexOf(formattedDate);
     if (idx > -1 && idx < favs.length - 1) {
       currentselectedDate = new Date(favs[idx + 1]);
+    }
+  } else if (isShuffleEnabled()) {
+    // Shuffle mode: step forward through history, or draw a new random comic
+    if (shuffleForwardStack.length) {
+      shuffleBackStack.push(formattedDate);
+      currentselectedDate = new Date(shuffleForwardStack.pop());
+    } else {
+      shuffleBackStack.push(formattedDate);
+      currentselectedDate = pickRandomComicDate();
     }
   } else {
     currentselectedDate.setDate(currentselectedDate.getDate() + 1);
@@ -1353,10 +1647,12 @@ function RandomClick()
       currentselectedDate = new Date(favs[Math.floor(Math.random() * favs.length)]);
     }
   } else {
-    const start = new Date(comicstartDate);
-    const end = new Date();
-    currentselectedDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
-    currentselectedDate = moveToComicPublishDate(currentselectedDate, -1);
+    if (isShuffleEnabled() && formattedDate) {
+      // Remember the current comic so the user can step back through the shuffle
+      shuffleBackStack.push(formattedDate);
+      shuffleForwardStack.length = 0;
+    }
+    currentselectedDate = pickRandomComicDate();
   }
   CompareDates();
   DisplayComic('morph', 'random');
@@ -1466,7 +1762,7 @@ function DisplayComic(direction = null, notFoundBehavior = 'nearest')
 
     if (notFoundBehavior === 'random') {
       const start = new Date(comicstartDate);
-      const end = new Date();
+      const end = getCurrentDate();
       currentselectedDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
       CompareDates();
       DisplayComic('morph', 'random');
@@ -1711,12 +2007,14 @@ function DisplayComic(direction = null, notFoundBehavior = 'nearest')
       heartSvg.style.fill = 'none';
       heartSvg.style.stroke = 'currentColor';
     }
+    if (heartButton) heartButton.setAttribute('aria-pressed', 'false');
   } else {
     // Is a favorite - filled heart
     if (heartSvg) {
       heartSvg.style.fill = 'currentColor';
       heartSvg.style.stroke = 'currentColor';
     }
+    if (heartButton) heartButton.setAttribute('aria-pressed', 'true');
   }
   
   // Preload adjacent comics after a short delay
@@ -2757,6 +3055,23 @@ document.getElementById("swipe").checked = localStorage.getItem(CONFIG.STORAGE_K
 document.getElementById("showfavs").checked = localStorage.getItem(CONFIG.STORAGE_KEYS.SHOW_FAVS) === "true";
 setStartupMode(getStartupMode());
 
+// Shuffle mode toggle
+{
+  const shuffleCheckbox = document.getElementById("shuffle");
+  if (shuffleCheckbox) {
+    shuffleCheckbox.checked = localStorage.getItem(CONFIG.STORAGE_KEYS.SHUFFLE) === "true";
+    shuffleCheckbox.onclick = function() {
+      localStorage.setItem(CONFIG.STORAGE_KEYS.SHUFFLE, this.checked ? "true" : "false");
+      resetShuffleHistory();
+    };
+  }
+}
+
+// Initialize dark mode, favorites export state, and version display
+initializeDarkMode();
+updateExportButtonState();
+displayServiceWorkerVersion();
+
 {
   const settingsPanel = document.getElementById("settingsDIV");
   if (localStorage.getItem(CONFIG.STORAGE_KEYS.SETTINGS_VISIBLE) === "true" && settingsPanel) {
@@ -2787,6 +3102,7 @@ function Addfav()
       heartSvg.style.fill = 'currentColor';
       heartSvg.style.stroke = 'currentColor';
     }
+    if (heartButton) heartButton.setAttribute('aria-pressed', 'true');
     document.getElementById("showfavs").disabled = false;
   } else {
     favs = favs.filter(f => f !== formattedDate);
@@ -2795,12 +3111,14 @@ function Addfav()
       heartSvg.style.fill = 'none';
       heartSvg.style.stroke = 'currentColor';
     }
+    if (heartButton) heartButton.setAttribute('aria-pressed', 'false');
     if (favs.length === 0) {
       document.getElementById("showfavs").checked = false;
       document.getElementById("showfavs").disabled = true;
     }
   }
   saveFavs(favs);
+  updateExportButtonState();
   CompareDates();
 }
 
