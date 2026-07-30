@@ -14,11 +14,13 @@ const CONFIG = Object.freeze({
   KEYBOARD_HINT_DELAY: 2000,           // Show keyboard hint after 2s
   DEBUG_LOGGING: false,
   
-  // CORS Proxies (in priority order)
+  // CORS Proxies (in priority order).
+  // To use the dedicated proxy-worker in this repo, deploy it from proxy-worker/ and
+  // insert your worker URL (e.g. https://corsproxy.<your-account>.workers.dev/?) as index 0.
+  // The entries below are public fallbacks that work without an API key for personal use.
   CORS_PROXIES: [
-    'https://corsproxy.garfieldapp.workers.dev/?',
-    'https://api.codetabs.com/v1/proxy?quest=',
-    'https://api.allorigins.win/raw?url='
+    'https://api.allorigins.win/raw?url=',
+    'https://corsproxy.io/?url='
   ],
   
   // Fetch timeouts
