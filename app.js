@@ -16,6 +16,7 @@ const CONFIG = Object.freeze({
   
   // CORS Proxies (in priority order)
   CORS_PROXIES: [
+    'https://dirkjanapp.pages.dev/?',
     'https://corsproxy.garfieldapp.workers.dev/?',
     'https://api.codetabs.com/v1/proxy?quest=',
     'https://api.allorigins.win/raw?url='
