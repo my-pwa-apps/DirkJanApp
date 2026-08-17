@@ -88,3 +88,21 @@ test('main workflow controls are reachable and stable on mobile width', async ({
 
   expect(overlappingControls).toEqual([]);
 });
+
+test('favorite heart stays black in selected and unselected mobile states', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.emulateMedia({ colorScheme: 'dark' });
+  await openApp(page);
+
+  const heart = page.locator('#favheart svg');
+  await expect(heart).toHaveCSS('stroke', 'rgb(0, 0, 0)');
+  await expect(heart).toHaveCSS('fill', 'none');
+
+  await page.locator('#favheart').click();
+  await expect(heart).toHaveCSS('stroke', 'rgb(0, 0, 0)');
+  await expect(heart).toHaveCSS('fill', 'rgb(0, 0, 0)');
+
+  await page.locator('#favheart').click();
+  await expect(heart).toHaveCSS('stroke', 'rgb(0, 0, 0)');
+  await expect(heart).toHaveCSS('fill', 'none');
+});

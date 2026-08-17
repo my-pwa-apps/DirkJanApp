@@ -2032,14 +2032,14 @@ function DisplayComic(direction = null, notFoundBehavior = 'nearest')
     // Not a favorite - unfilled heart
     if (heartSvg) {
       heartSvg.style.fill = 'none';
-      heartSvg.style.stroke = 'currentColor';
+      heartSvg.style.stroke = '#000000';
     }
     if (heartButton) heartButton.setAttribute('aria-pressed', 'false');
   } else {
     // Is a favorite - filled heart
     if (heartSvg) {
-      heartSvg.style.fill = 'currentColor';
-      heartSvg.style.stroke = 'currentColor';
+      heartSvg.style.fill = '#000000';
+      heartSvg.style.stroke = '#000000';
     }
     if (heartButton) heartButton.setAttribute('aria-pressed', 'true');
   }
@@ -3126,8 +3126,8 @@ function Addfav()
     favs.push(formattedDate);
     // Fill the heart
     if (heartSvg) {
-      heartSvg.style.fill = 'currentColor';
-      heartSvg.style.stroke = 'currentColor';
+      heartSvg.style.fill = '#000000';
+      heartSvg.style.stroke = '#000000';
     }
     if (heartButton) heartButton.setAttribute('aria-pressed', 'true');
     document.getElementById("showfavs").disabled = false;
@@ -3136,7 +3136,7 @@ function Addfav()
     // Unfill the heart
     if (heartSvg) {
       heartSvg.style.fill = 'none';
-      heartSvg.style.stroke = 'currentColor';
+      heartSvg.style.stroke = '#000000';
     }
     if (heartButton) heartButton.setAttribute('aria-pressed', 'false');
     if (favs.length === 0) {
