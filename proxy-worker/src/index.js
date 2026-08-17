@@ -22,6 +22,9 @@ const HOP_BY_HOP_HEADERS = new Set([
 const HTML_CACHE_TTL = 600;
 const IMAGE_CACHE_TTL = 86400;
 const DEFAULT_CACHE_TTL = 3600;
+const UPSTREAM_TIMEOUT_MS = 15000;
+const MAX_REDIRECTS = 3;
+const MAX_CACHEABLE_RESPONSE_BYTES = 25 * 1024 * 1024;
 
 export default {
   async fetch(request, env, ctx) {
@@ -95,36 +98,91 @@ export default {
       }
     }
 
-    const upstreamRequest = new Request(upstreamUrl.toString(), {
-      method: request.method,
-      headers: buildUpstreamHeaders(request)
-    });
-
     let upstreamResponse;
     try {
-      upstreamResponse = await fetch(upstreamRequest, {
-        redirect: 'follow',
-        cf: {
-          cacheEverything: request.method === 'GET',
-          cacheTtl: getCacheTtl(upstreamUrl)
-        }
-      });
-    } catch {
+      upstreamResponse = await fetchAllowedUpstream(upstreamUrl, request, allowedHosts);
+    } catch (error) {
+      console.error(JSON.stringify({
+        message: 'upstream fetch failed',
+        error: error instanceof Error ? error.message : String(error),
+        targetHost: upstreamUrl.hostname
+      }));
       return withCors(
         request,
-        jsonResponse({ error: 'Upstream fetch failed' }, 502)
+        jsonResponse(
+          { error: error?.name === 'TimeoutError' ? 'Upstream timed out' : 'Upstream fetch failed' },
+          error?.name === 'TimeoutError' ? 504 : 502
+        )
+      );
+    }
+
+    const contentLength = parseContentLength(upstreamResponse.headers.get('content-length'));
+    if (contentLength !== null && contentLength > MAX_CACHEABLE_RESPONSE_BYTES) {
+      await upstreamResponse.body?.cancel();
+      return withCors(
+        request,
+        jsonResponse({ error: 'Upstream response too large' }, 413)
       );
     }
 
     const response = sanitizeUpstreamResponse(upstreamResponse);
 
-    if (request.method === 'GET' && upstreamResponse.ok && !bypassCache) {
+    if (request.method === 'GET' && upstreamResponse.ok && contentLength !== null && !bypassCache) {
       ctx.waitUntil(cache.put(cacheKey, response.clone()));
     }
 
     return withCors(request, response, false);
   }
 };
+
+async function fetchAllowedUpstream(initialUrl, request, allowedHosts) {
+  let currentUrl = new URL(initialUrl);
+  const signal = AbortSignal.timeout(UPSTREAM_TIMEOUT_MS);
+
+  for (let redirectCount = 0; redirectCount <= MAX_REDIRECTS; redirectCount++) {
+    const upstreamRequest = new Request(currentUrl.toString(), {
+      method: request.method,
+      headers: buildUpstreamHeaders(request)
+    });
+    const response = await fetch(upstreamRequest, {
+      redirect: 'manual',
+      signal,
+      cf: {
+        cacheEverything: request.method === 'GET',
+        cacheTtlByStatus: {
+          '200-299': getCacheTtl(currentUrl),
+          '300-399': 0,
+          '400-599': -1
+        }
+      }
+    });
+
+    if (response.status < 300 || response.status >= 400) return response;
+
+    const location = response.headers.get('location');
+    if (!location || redirectCount === MAX_REDIRECTS) {
+      await response.body?.cancel();
+      throw new Error('Upstream redirect limit exceeded');
+    }
+
+    const redirectUrl = new URL(location, currentUrl);
+    if (!ALLOWED_PROTOCOLS.has(redirectUrl.protocol) || !isAllowedHost(redirectUrl.hostname, allowedHosts)) {
+      await response.body?.cancel();
+      throw new Error('Upstream redirect blocked');
+    }
+
+    await response.body?.cancel();
+    currentUrl = redirectUrl;
+  }
+
+  throw new Error('Upstream redirect limit exceeded');
+}
+
+function parseContentLength(value) {
+  if (value === null) return null;
+  const parsedValue = Number.parseInt(value, 10);
+  return Number.isFinite(parsedValue) && parsedValue >= 0 ? parsedValue : null;
+}
 
 function extractTargetUrl(requestUrl) {
   const explicitUrl = requestUrl.searchParams.get('url');

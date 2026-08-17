@@ -13,7 +13,7 @@ test('CORS proxy fallback keeps the private worker first and uses current public
   assert.match(proxyBlock, /api\.allorigins\.win/);
   assert.doesNotMatch(proxyBlock, /corsproxy\.io/);
   assert.match(appSource, /const PRIMARY_PROXY_INDEX = 0/);
-  assert.match(appSource, /tryProxy\(url, primaryProxyIndex, startTime\)/);
+  assert.match(appSource, /tryProxy\(url, primaryProxyIndex, startTime, signal\)/);
   assert.doesNotMatch(appSource, /Promise\.race\(/);
 });
 
@@ -22,10 +22,24 @@ test('proxy performance arrays stay aligned with configured proxies', () => {
   assert.match(appSource, /function getPublicProxyOrder\(excludeIndex = PRIMARY_PROXY_INDEX\)/);
 });
 
+test('comic fetch cancellation reaches proxy requests and body reads', () => {
+  assert.match(appSource, /fetchWithFallback\(url, signal = null\)/);
+  assert.match(appSource, /AbortSignal\.any\(\[signal, AbortSignal\.timeout\(CONFIG\.FETCH_TIMEOUT\)\]\)/);
+  assert.match(appSource, /fetchWithFallback\(url, fetchSignal\)/);
+  assert.match(appSource, /if \(error\.name === 'AbortError'\) throw error/);
+});
+
 test('comic extraction supports DirkJan article and WordPress image markup', () => {
   assert.match(appSource, /<article class="cartoon"/);
   assert.match(appSource, /wp-content\\\/uploads/);
   assert.match(appSource, /error404/);
+  assert.match(appSource, /function normalizeComicImageUrl\(candidateUrl\)/);
+  assert.match(appSource, /\['dirkjan\.nl', 'www\.dirkjan\.nl'\]\.includes/);
+});
+
+test('startup discovery failures retain a usable comic view', () => {
+  assert.match(appSource, /discoverLatestAvailableComic\(\)\.then\(latestDate => \{[\s\S]*?\}\)\.catch\(\(\) => \{\s*CompareDates\(\);\s*DisplayComic\(null, 'nearest'\)/);
+  assert.match(appSource, /comicImg\.alt = `DirkJan strip van \$\{dateParts\.day\}-\$\{dateParts\.month\}-\$\{dateParts\.year\} laden`/);
 });
 
 test('preloading does not probe beyond a known latest or current date', () => {

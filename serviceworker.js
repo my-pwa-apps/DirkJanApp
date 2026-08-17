@@ -1,6 +1,6 @@
 // Service Worker for DirkJan PWA
 // Cache versioning - increment when you need to force cache refresh
-const CACHE_VERSION = 'v128';
+const CACHE_VERSION = 'v132';
 const CACHE_NAME = `dirkjan-cache-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `dirkjan-runtime-${CACHE_VERSION}`;
 const IMAGE_CACHE = `dirkjan-images-${CACHE_VERSION}`;
@@ -20,6 +20,7 @@ const PRECACHE_ASSETS = [
 // Maximum cache sizes
 const MAX_IMAGE_CACHE_SIZE = 50;
 const MAX_RUNTIME_CACHE_SIZE = 30;
+const NETWORK_TIMEOUT_MS = 15000;
 
 // Install event - pre-cache essential assets
 self.addEventListener('install', event => {
@@ -62,8 +63,14 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Strategy: Cache First for app shell (HTML, CSS, JS, SVG)
-  if (['document', 'style', 'script'].includes(destination) || url.pathname.endsWith('.svg')) {
+  // Strategy: Network First for navigations so deployments are not hidden by stale HTML.
+  if (request.mode === 'navigate' || destination === 'document') {
+    event.respondWith(networkFirstStrategy(request, CACHE_NAME, './offline.html'));
+    return;
+  }
+
+  // Strategy: Cache First for versioned app shell assets (CSS, JS, SVG).
+  if (['style', 'script'].includes(destination) || url.pathname.endsWith('.svg')) {
     event.respondWith(cacheFirstStrategy(request, CACHE_NAME));
     return;
   }
@@ -75,7 +82,7 @@ self.addEventListener('fetch', event => {
   }
 
   // Strategy: Network First for API calls and external resources
-  event.respondWith(networkFirstStrategy(request, RUNTIME_CACHE));
+  event.respondWith(networkFirstStrategy(request, RUNTIME_CACHE, null, MAX_RUNTIME_CACHE_SIZE));
 });
 
 // Cache First Strategy - for app shell
@@ -91,25 +98,19 @@ async function cacheFirstStrategy(request, cacheName) {
       ? new Request(request.url, { redirect: 'follow' })
       : request;
     
-    const networkResponse = await fetch(fetchRequest);
+    const networkResponse = await fetchWithTimeout(fetchRequest);
     
     // Only cache successful, non-redirected responses
     if (networkResponse && networkResponse.status === 200 && !networkResponse.redirected) {
       const cache = await caches.open(cacheName);
-      cache.put(request, networkResponse.clone());
+      await cache.put(request, networkResponse.clone());
     }
     return networkResponse;
   } catch (error) {
-    // If fetch fails and it's an HTML request, return offline page.
-    // For optional assets (e.g. analytics or third-party script) fail open instead of throwing.
-    if (request.headers.get('accept')?.includes('text/html')) {
-      return caches.match('./offline.html');
-    }
-
-    return new Response('', {
-      status: 200,
-      statusText: 'OK',
-      headers: { 'Content-Type': 'text/plain;charset=UTF-8' }
+    return new Response('Asset unavailable', {
+      status: 503,
+      statusText: 'Service Unavailable',
+      headers: { 'Content-Type': 'text/plain; charset=UTF-8' }
     });
   }
 }
@@ -122,7 +123,7 @@ async function cacheFirstWithLimit(request, cacheName, maxSize) {
   }
 
   try {
-    const networkResponse = await fetch(request);
+    const networkResponse = await fetchWithTimeout(request);
     if (networkResponse?.status === 200) {
       const cache = await caches.open(cacheName);
       
@@ -133,7 +134,7 @@ async function cacheFirstWithLimit(request, cacheName, maxSize) {
       }
       
       // Cache the new response
-      cache.put(request, networkResponse.clone());
+      await cache.put(request, networkResponse.clone());
     }
     return networkResponse;
   } catch (error) {
@@ -146,12 +147,15 @@ async function cacheFirstWithLimit(request, cacheName, maxSize) {
 }
 
 // Network First Strategy - for API calls
-async function networkFirstStrategy(request, cacheName) {
+async function networkFirstStrategy(request, cacheName, fallbackUrl = null, maxSize = null) {
   try {
-    const networkResponse = await fetch(request);
+    const networkResponse = await fetchWithTimeout(request);
     if (networkResponse && networkResponse.status === 200) {
       const cache = await caches.open(cacheName);
-      cache.put(request, networkResponse.clone());
+      await cache.put(request, networkResponse.clone());
+      if (maxSize !== null) {
+        await enforceCacheLimit(cache, maxSize);
+      }
     }
     return networkResponse;
   } catch (error) {
@@ -159,7 +163,31 @@ async function networkFirstStrategy(request, cacheName) {
     if (cachedResponse) {
       return cachedResponse;
     }
+
+    if (fallbackUrl) {
+      const fallbackResponse = await caches.match(fallbackUrl);
+      if (fallbackResponse) return fallbackResponse;
+    }
+
     throw error;
+  }
+}
+
+async function enforceCacheLimit(cache, maxSize) {
+  const keys = await cache.keys();
+  while (keys.length > maxSize) {
+    await cache.delete(keys.shift());
+  }
+}
+
+async function fetchWithTimeout(request) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), NETWORK_TIMEOUT_MS);
+
+  try {
+    return await fetch(request, { signal: controller.signal });
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 

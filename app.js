@@ -121,15 +121,17 @@ function updateApp() {
   }
   
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.getRegistration().then(registration => {
-      if (registration && registration.waiting) {
-        // Listen for controller change before reloading to ensure new SW is active
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
-          window.location.reload();
-        }, { once: true });
-        registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-      }
-    });
+    navigator.serviceWorker.getRegistration()
+      .then(registration => {
+        if (registration && registration.waiting) {
+          // Listen for controller change before reloading to ensure new SW is active
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            window.location.reload();
+          }, { once: true });
+          registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+        }
+      })
+      .catch(() => showNotification('Updaten is niet gelukt. Probeer het later opnieuw.', true));
   }
 }
 
@@ -165,16 +167,17 @@ let proxyResponseTimes = new Array(CONFIG.CORS_PROXIES.length).fill(0); // Track
  * @returns {Promise<Response>} The fetch response
  * @throws {Error} If all fetch attempts fail
  */
-async function fetchWithFallback(url) {
+async function fetchWithFallback(url, signal = null) {
   const startTime = performance.now();
   const primaryProxyIndex = PRIMARY_PROXY_INDEX;
 
   // Always try the Cloudflare Worker first, then score public fallbacks.
   try {
-    return await tryProxy(url, primaryProxyIndex, startTime);
+    return await tryProxy(url, primaryProxyIndex, startTime, signal);
   } catch (error) {
     if (error.name === 'NotFoundError') throw error; // Don't retry 404s
-    return await tryRemainingProxies(url, primaryProxyIndex, startTime);
+    if (error.name === 'AbortError') throw error;
+    return await tryRemainingProxies(url, primaryProxyIndex, startTime, signal);
   }
 }
 
@@ -230,14 +233,17 @@ function updateProxyStats(proxyIndex, success, responseTime) {
  * @param {number} startTime - Start time for tracking
  * @returns {Promise<Response>}
  */
-async function tryProxy(url, proxyIndex, startTime) {
+async function tryProxy(url, proxyIndex, startTime, signal = null) {
   const proxyUrl = CONFIG.CORS_PROXIES[proxyIndex];
   const proxyName = proxyUrl.split('/')[2]; // Extract domain for logging
   
   try {
     const fullUrl = `${proxyUrl}${encodeURIComponent(url)}`;
+    const fetchSignal = signal
+      ? AbortSignal.any([signal, AbortSignal.timeout(CONFIG.FETCH_TIMEOUT)])
+      : AbortSignal.timeout(CONFIG.FETCH_TIMEOUT);
     const response = await fetch(fullUrl, { 
-      signal: AbortSignal.timeout(CONFIG.FETCH_TIMEOUT),
+      signal: fetchSignal,
       mode: 'cors',
       credentials: 'omit',
       cache: 'no-cache' // Prevent stale cached errors
@@ -281,14 +287,15 @@ async function tryProxy(url, proxyIndex, startTime) {
  * @param {number} startTime - Start time for tracking
  * @returns {Promise<Response>}
  */
-async function tryRemainingProxies(url, excludeIndex, startTime) {
+async function tryRemainingProxies(url, excludeIndex, startTime, signal = null) {
   const errors = [];
 
   for (const i of getPublicProxyOrder(excludeIndex)) {
     try {
-      return await tryProxy(url, i, startTime);
+      return await tryProxy(url, i, startTime, signal);
     } catch (error) {
       if (error.name === 'NotFoundError') throw error; // Content doesn't exist, stop trying
+      if (error.name === 'AbortError') throw error;
       errors.push(`Proxy ${i}: ${error.message}`);
     }
   }
@@ -1231,6 +1238,9 @@ function onLoad()
       currentselectedDate = latestDate;
       CompareDates();
       DisplayComic(null, 'nearest');
+    }).catch(() => {
+      CompareDates();
+      DisplayComic(null, 'nearest');
     });
     return; // Exit early, DisplayComic will be called in the promise
 	}
@@ -1249,7 +1259,7 @@ function onLoad()
     discoverLatestAvailableComic().then(latestDate => {
       if (document.getElementById("showfavs").checked) return;
       CompareDates();
-    });
+    }).catch(() => {});
 	} else {
     if (!document.getElementById("showfavs").checked) {
       currentselectedDate = getStartupComicDate();
@@ -1259,7 +1269,7 @@ function onLoad()
 
     discoverLatestAvailableComic().then(() => {
       CompareDates();
-    });
+    }).catch(() => {});
   }
   
   // Handle app shortcut for random comic
@@ -1703,20 +1713,20 @@ function extractComicImageUrl(html) {
     const articleContent = articleMatch[1];
     const imgMatch = articleContent.match(/<img[^>]+src=["']([^"']+)["']/);
     if (imgMatch && imgMatch[1]) {
-      return imgMatch[1];
+      return normalizeComicImageUrl(imgMatch[1]);
     }
   }
   
   // Method 2: Direct regex for img src in cartoon article
   const directMatch = html.match(/<article class="cartoon"[^>]*>[\s\S]*?<img[^>]+src=["']([^"']+)["']/);
   if (directMatch && directMatch[1]) {
-    return directMatch[1];
+    return normalizeComicImageUrl(directMatch[1]);
   }
   
   // Method 3: Look for WordPress media library pattern (common URL structure)
   const wpMatch = html.match(/https?:\/\/dirkjan\.nl\/wp-content\/uploads\/[^"'\s]+\.(?:jpg|jpeg|png|gif)/i);
   if (wpMatch) {
-    return wpMatch[0];
+    return normalizeComicImageUrl(wpMatch[0]);
   }
   
   // Method 4: Fallback to original substring method (legacy support)
@@ -1726,11 +1736,27 @@ function extractComicImageUrl(html) {
     const substring = html.substring(startPos, startPos + 200);
     const endPos = substring.indexOf('"');
     if (endPos > 0) {
-      return html.substring(startPos, startPos + endPos);
+      return normalizeComicImageUrl(html.substring(startPos, startPos + endPos));
     }
   }
   
   return null;
+}
+
+/**
+ * Resolves a comic image URL and restricts it to the trusted DirkJan origins.
+ * @param {string} candidateUrl - Extracted absolute or relative image URL
+ * @returns {string|null} A trusted absolute URL, or null
+ */
+function normalizeComicImageUrl(candidateUrl) {
+  try {
+    const parsedUrl = new URL(candidateUrl, 'https://dirkjan.nl');
+    if (parsedUrl.protocol !== 'https:') return null;
+    if (!['dirkjan.nl', 'www.dirkjan.nl'].includes(parsedUrl.hostname.toLowerCase())) return null;
+    return parsedUrl.toString();
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -1812,6 +1838,7 @@ function DisplayComic(direction = null, notFoundBehavior = 'nearest')
   const comicImg = document.getElementById("comic");
   const wrapper = document.getElementById('comic-wrapper');
   const rotatedComic = document.getElementById('rotated-comic');
+  comicImg.alt = `DirkJan strip van ${dateParts.day}-${dateParts.month}-${dateParts.year} laden`;
   
   // Show loading state only if no animation (first load or error recovery)
   if (!direction) {
@@ -1826,7 +1853,7 @@ function DisplayComic(direction = null, notFoundBehavior = 'nearest')
   currentFetchController = new AbortController();
   const fetchSignal = currentFetchController.signal;
   
-  fetchWithFallback(url)
+  fetchWithFallback(url, fetchSignal)
     .then(function(response)
 	{
       if (fetchSignal.aborted) throw new DOMException('Aborted', 'AbortError');

@@ -26,17 +26,28 @@ test('activation removes stale caches while preserving the current cache set', (
   assert.match(source, /self\.clients\.claim\(\)/);
 });
 
-test('third-party analytics requests are bypassed and fetch failures fail open', () => {
+test('third-party analytics requests are bypassed and asset failures keep an error status', () => {
   assert.match(source, /static\.cloudflareinsights\.com|cloudflareinsights\.com/);
-  assert.match(source, /return new Response\('', \{\s*status: 200/);
+  assert.doesNotMatch(source, /return new Response\('', \{\s*status: 200/);
+  assert.match(source, /new Response\('Asset unavailable', \{\s*status: 503/);
 });
 
 test('offline and cache limits are covered by service worker strategies', () => {
   assert.match(source, /const MAX_IMAGE_CACHE_SIZE = 50/);
   assert.match(source, /const MAX_RUNTIME_CACHE_SIZE = 30/);
   assert.match(source, /while \(keys\.length >= maxSize\)/);
-  assert.match(source, /return caches\.match\('\.\/offline\.html'\)/);
+  assert.match(source, /networkFirstStrategy\(request, CACHE_NAME, '\.\/offline\.html'\)/);
+  assert.match(source, /const fallbackResponse = await caches\.match\(fallbackUrl\)/);
   assert.match(source, /Image not available offline/);
+});
+
+test('navigations use bounded network-first loading with an offline fallback', () => {
+  assert.match(source, /request\.mode === 'navigate' \|\| destination === 'document'/);
+  assert.match(source, /networkFirstStrategy\(request, CACHE_NAME, '\.\/offline\.html'\)/);
+  assert.match(source, /const NETWORK_TIMEOUT_MS = 15000/);
+  assert.match(source, /function fetchWithTimeout\(request\)/);
+  assert.match(source, /networkFirstStrategy\(request, RUNTIME_CACHE, null, MAX_RUNTIME_CACHE_SIZE\)/);
+  assert.match(source, /function enforceCacheLimit\(cache, maxSize\)/);
 });
 
 test('update flow supports skip waiting messages', () => {
