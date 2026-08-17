@@ -3,7 +3,7 @@ main = "src/index.js"
 compatibility_date = "2026-08-17"
 
 [vars]
-ALLOWED_HOSTS = "dirkjan.nl,www.dirkjan.nl"
+ALLOWED_HOSTS = "dirkjan.nl,www.dirkjan.nl,gocomics.com,*.gocomics.com,assets.amuniversal.com,picayune.uclick.com,www.arcamax.com,resources.arcamax.com,garfield.fandom.com,static.wikia.nocookie.net"
 
 [observability]
 enabled = true

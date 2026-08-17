@@ -25,3 +25,18 @@ test('worker configuration enables current compatibility and sampled observabili
   assert.match(wranglerConfig, /\[observability\.logs\][\s\S]*head_sampling_rate = 1/);
   assert.match(wranglerConfig, /\[observability\.traces\][\s\S]*head_sampling_rate = 0\.01/);
 });
+
+test('worker configuration preserves DirkJan and shared proxy source hosts', () => {
+  const allowedHosts = wranglerConfig.match(/ALLOWED_HOSTS = "([^"]+)"/)?.[1].split(',') || [];
+  for (const hostname of [
+    'dirkjan.nl',
+    'www.dirkjan.nl',
+    'gocomics.com',
+    '*.gocomics.com',
+    'assets.amuniversal.com',
+    'www.arcamax.com',
+    'garfield.fandom.com'
+  ]) {
+    assert.ok(allowedHosts.includes(hostname), `${hostname} should remain allowed`);
+  }
+});
