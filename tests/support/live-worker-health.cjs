@@ -6,6 +6,14 @@ const checks = [
       const body = await response.text();
       return response.ok && /cartoon|wp-content|dirkjan/i.test(body);
     }
+  },
+  {
+    name: 'DirkJan comic metadata fetch',
+    url: 'https://corsproxy.garfieldapp.workers.dev/-/comic-metadata?date=20260502',
+    validate: async response => {
+      const body = await response.json();
+      return response.ok && body.date === '20260502' && /^https:\/\/(?:www\.)?dirkjan\.nl\//.test(body.imageUrl);
+    }
   }
 ];
 

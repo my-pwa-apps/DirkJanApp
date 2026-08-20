@@ -35,8 +35,10 @@ test('portrait swipes navigate both directions and disabled swipe stays put', as
 
   await swipe(page, 330, 420, 60, 420);
   await expect(page.locator('#DatePicker')).toHaveValue('2026-05-04');
+  await expect(page.locator('#comic-status')).toBeHidden();
   await swipe(page, 60, 420, 330, 420);
   await expect(page.locator('#DatePicker')).toHaveValue('2026-05-02');
+  await expect(page.locator('#comic-status')).toBeHidden();
 
   await page.locator('#swipe').evaluate(element => { element.checked = false; });
   await swipe(page, 330, 420, 60, 420);

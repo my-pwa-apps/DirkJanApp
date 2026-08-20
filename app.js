@@ -1825,7 +1825,7 @@ function DisplayComic(direction = null, notFoundBehavior = 'nearest')
   const wrapper = document.getElementById('comic-wrapper');
   const rotatedComic = document.getElementById('rotated-comic');
   comicImg.alt = `DirkJan strip van ${dateParts.day}-${dateParts.month}-${dateParts.year} laden`;
-  setComicStatus('loading', 'Strip laden...');
+  setComicStatus(direction ? 'idle' : 'loading', direction ? '' : 'Strip laden...');
   
   // Show loading state only if no animation (first load or error recovery)
   if (!direction) {
