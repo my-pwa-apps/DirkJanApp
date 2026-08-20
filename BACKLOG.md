@@ -50,7 +50,7 @@ Business value: High
 
 Technical debt reduction: Medium
 
-- [ ] Centralize resilient browser storage writes
+- [x] Centralize resilient browser storage writes
 
 Priority: High
 
@@ -74,7 +74,7 @@ Business value: High
 
 Technical debt reduction: High
 
-- [ ] Cover rotation and swipe state machines with browser tests
+- [x] Cover rotation and swipe state machines with browser tests
 
 Priority: High
 
@@ -98,7 +98,7 @@ Business value: High
 
 Technical debt reduction: High
 
-- [ ] Remove inline event handlers and tighten Content Security Policy
+- [x] Remove inline event handlers and tighten Content Security Policy
 
 Priority: High
 
@@ -146,7 +146,7 @@ Business value: High
 
 Technical debt reduction: Medium
 
-- [ ] Add browser-side operational error telemetry
+- [x] Add browser-side operational error telemetry
 
 Priority: High
 
@@ -194,7 +194,7 @@ Business value: High
 
 Technical debt reduction: High
 
-- [ ] Add runtime-level tests for the Cloudflare Worker
+- [x] Add runtime-level tests for the Cloudflare Worker
 
 Priority: Medium
 
@@ -218,7 +218,7 @@ Business value: Medium
 
 Technical debt reduction: High
 
-- [ ] Expand behavioral coverage for secondary features
+- [x] Expand behavioral coverage for secondary features
 
 Priority: Medium
 
@@ -242,7 +242,7 @@ Business value: Medium
 
 Technical debt reduction: High
 
-- [ ] Provide explicit comic loading, retry, and terminal error states
+- [x] Provide explicit comic loading, retry, and terminal error states
 
 Priority: Medium
 
@@ -266,7 +266,7 @@ Business value: High
 
 Technical debt reduction: Medium
 
-- [ ] Correct focus and settings state across fullscreen transitions
+- [x] Correct focus and settings state across fullscreen transitions
 
 Priority: Medium
 
@@ -290,7 +290,7 @@ Business value: Medium
 
 Technical debt reduction: Medium
 
-- [ ] Reduce dependence on public CORS fallback services
+- [x] Reduce dependence on public CORS fallback services
 
 Priority: Medium
 
@@ -314,7 +314,7 @@ Business value: Medium
 
 Technical debt reduction: Medium
 
-- [ ] Enforce a byte-aware client image cache budget
+- [x] Enforce a byte-aware client image cache budget
 
 Priority: Medium
 
@@ -338,7 +338,7 @@ Business value: Medium
 
 Technical debt reduction: Medium
 
-- [ ] Surface service-worker install and cache failures
+- [x] Surface service-worker install and cache failures
 
 Priority: Medium
 
@@ -362,7 +362,7 @@ Business value: Medium
 
 Technical debt reduction: Medium
 
-- [ ] Remove duplicate and obsolete image artifacts
+- [x] Remove duplicate and obsolete image artifacts
 
 Priority: Medium
 
@@ -386,7 +386,7 @@ Business value: Low
 
 Technical debt reduction: Medium
 
-- [ ] Automate dependency maintenance and vulnerability review
+- [x] Automate dependency maintenance and vulnerability review
 
 Priority: Medium
 
@@ -410,7 +410,7 @@ Business value: Medium
 
 Technical debt reduction: Medium
 
-- [ ] Harden local static-server path containment
+- [x] Harden local static-server path containment
 
 Priority: Medium
 
@@ -434,7 +434,7 @@ Business value: Low
 
 Technical debt reduction: Medium
 
-- [ ] Evaluate migration from Pages to Workers Static Assets
+- [x] Evaluate migration from Pages to Workers Static Assets
 
 Priority: Low
 
@@ -458,7 +458,7 @@ Business value: Low
 
 Technical debt reduction: Low
 
-- [ ] Clarify unofficial product identity and rights statement in the UI
+- [x] Clarify unofficial product identity and rights statement in the UI
 
 Priority: Low
 
@@ -482,7 +482,7 @@ Business value: Medium
 
 Technical debt reduction: Low
 
-- [ ] Standardize Dutch product terminology
+- [x] Standardize Dutch product terminology
 
 Priority: Low
 
@@ -506,7 +506,7 @@ Business value: Low
 
 Technical debt reduction: Low
 
-- [ ] Evaluate privacy-aware connection warmup
+- [x] Evaluate privacy-aware connection warmup
 
 Priority: Low
 
@@ -577,3 +577,76 @@ Estimated effort: Small
 Business value: Medium
 
 Technical debt reduction: Low
+
+## Review 2026-08-20
+
+This review revalidated the full repository against the product, architecture, security, reliability, performance, accessibility, testing, and operational criteria from the 2026-08-17 review. Existing unresolved findings remain above and were not duplicated. The service-worker install and local static-server containment items were completed during this review.
+
+- [x] Cancel proxy upstream work when the client disconnects
+
+Priority: Medium
+
+Category: Performance
+
+Area: Cloudflare Worker request lifecycle
+
+Affected files: proxy-worker/src/index.js, proxy-worker/wrangler.toml, tests/unit/proxy-worker.test.mjs
+
+Problem: The proxy bounded upstream requests with a timeout but did not propagate the incoming request signal, so navigation cancellation or a client disconnect could leave upstream fetch and redirect processing running.
+
+Impact: Abandoned requests consumed Worker duration and upstream capacity for up to 15 seconds, increasing cost and avoidable load during rapid navigation or unreliable mobile connections.
+
+Recommended solution: Enable incoming request signals and combine request cancellation with the existing timeout for every upstream attempt.
+
+Acceptance criteria: The Worker enables request signals in its compatibility configuration; every upstream fetch receives a signal composed from request.signal and the 15-second timeout; syntax and focused proxy contracts pass.
+
+Estimated effort: Small
+
+Business value: Medium
+
+Technical debt reduction: Low
+
+- [x] Remove known vulnerabilities from the quality toolchain
+
+Priority: Medium
+
+Category: Security
+
+Area: npm development dependencies
+
+Affected files: package.json, package-lock.json, README.md, .github/workflows/quality.yml
+
+Problem: The Lighthouse 12 dependency tree contained 23 known vulnerabilities, including seven high-severity findings in Puppeteer, WebSocket, archive extraction, and supporting packages. Non-breaking lockfile updates could not remove the vulnerable transitive chain.
+
+Impact: The affected packages were development-only, but they process remote pages and execute in local and CI environments, leaving maintainers and build agents exposed to avoidable risk.
+
+Recommended solution: Upgrade Lighthouse, Playwright, and Axe to current secure releases; raise the Node baseline required by Lighthouse 13; keep automated dependency maintenance as a separate unresolved preventative item.
+
+Acceptance criteria: npm audit reports zero vulnerabilities; package engines, CI, and README require Node 22.19 or newer; syntax, unit, browser, cross-browser, and Lighthouse checks pass on the upgraded toolchain.
+
+Estimated effort: Small
+
+Business value: Medium
+
+Technical debt reduction: Medium
+
+### Review outcome
+
+New unresolved items: 0
+
+Completed items: 4
+
+The remaining highest-value work is unchanged: reduce comic LCP, split the browser monolith incrementally, centralize resilient storage, test mobile interaction state machines, remove inline handlers and tighten CSP, restrict proxy browser origins and add abuse controls, add browser telemetry, and automate cache/release checks.
+
+## Remediation outcome 2026-08-20
+
+The repository-controlled portions of 16 previously unresolved findings are implemented and validated. The full local matrix passes with 45 unit/runtime tests, 32 Chromium tests, 31 mobile Chromium tests plus one expected service-worker skip, 4 cross-browser tests, zero known npm vulnerabilities, and Lighthouse scores of 0.84 performance, 1.00 accessibility, and 0.96 best practices.
+
+Six findings remain open because their full acceptance criteria are not yet evidenced:
+
+- Browser modularization is underway through `storage.js`, `telemetry.js`, and `date-utils.js`, but `app.js` remains above the intended complexity threshold.
+- The new cacheable Worker metadata route removes HTML parsing from the browser critical path, but the current pre-deployment Lighthouse run measured 4.2-second LCP. Deploy the Worker first and remeasure before tightening the 5-second regression ceiling to the 2.5-second target.
+- Origin restrictions and abuse thresholds are implemented/documented; the Cloudflare WAF/rate-limit rule still requires account-side activation and observation.
+- Cache-version CI and release ordering/rollback are implemented/documented; required GitHub branch protection and Pages deployment gating require repository-admin configuration.
+- Behavior tests now cover storage, date policy, telemetry, and Worker runtime semantics, but remaining service-worker and browser source contracts still need extraction/runtime conversion.
+- The physical Android/iPhone validation matrix is defined but cannot be marked complete until results are recorded from actual devices.

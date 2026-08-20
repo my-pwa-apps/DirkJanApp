@@ -54,6 +54,23 @@ test('visible controls expose understandable accessible names', async ({ page })
   expect(unnamedControls).toEqual([]);
 });
 
+test('settings manages focus and hidden interaction state', async ({ page }) => {
+  await openApp(page);
+  const trigger = page.getByRole('button', { name: 'Instellingen' });
+  const panel = page.locator('#settingsDIV');
+
+  await trigger.click();
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  await expect(panel).toHaveAttribute('aria-hidden', 'false');
+  await expect(page.locator('#settingsClose')).toBeFocused();
+
+  await page.keyboard.press('Escape');
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+  await expect(panel).toHaveAttribute('aria-hidden', 'true');
+  await expect(panel).toHaveAttribute('inert', '');
+  await expect(trigger).toBeFocused();
+});
+
 test('main workflow controls are reachable and stable on mobile width', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await openApp(page);

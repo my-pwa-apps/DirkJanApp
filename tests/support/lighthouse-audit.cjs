@@ -13,6 +13,7 @@ const thresholds = {
   accessibility: 0.9,
   'best-practices': 0.85
 };
+const maxLcpMs = 5000;
 
 function run(command, args, options = {}) {
   return new Promise((resolve, reject) => {
@@ -74,7 +75,12 @@ async function main() {
       }
     }
 
-    console.log(`Lighthouse passed: ${JSON.stringify(scores)}`);
+    const lcpMs = report.audits['largest-contentful-paint'].numericValue;
+    if (lcpMs > maxLcpMs) {
+      throw new Error(`LCP ${Math.round(lcpMs)}ms exceeds the interim ${maxLcpMs}ms regression budget`);
+    }
+
+    console.log(`Lighthouse passed: ${JSON.stringify(scores)}, LCP ${Math.round(lcpMs)}ms`);
   } finally {
     if (browser) await browser.close();
     server.kill('SIGTERM');

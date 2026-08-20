@@ -27,6 +27,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32x32.webp">
     <link rel="icon" type="image/png" sizes="16x16" href="./favicon-16x16.webp">
     <link rel="manifest" href="./manifest.webmanifest">
+    <link rel="preconnect" href="https://corsproxy.garfieldapp.workers.dev" crossorigin>
     
     <!-- Structured Data -->
     <script type="application/ld+json">
@@ -64,7 +65,7 @@
     }
     </script>
 </head>
-<body onload="onLoad()">
+<body>
     <h1 class="visually-hidden">Daily DirkJan Comics - Dagelijkse Nederlandse Strip van Mark Retera</h1>
     <a class="skip-link" href="#comic">Ga naar strip</a>
     
@@ -77,18 +78,18 @@
     <main id="main" role="main">
         <div class="toolbar-container" aria-label="Strip navigatie">
                 <div class="toolbar" role="toolbar" aria-label="Navigatie knoppen">
-                    <button class="toolbar-button" id="First" onclick="FirstClick()" title="Eerste comic" aria-label="Eerste">
+                    <button class="toolbar-button" id="First" title="Eerste strip" aria-label="Eerste">
                         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg">
                             <polygon points="19 20 9 12 19 4 19 20"/>
                             <line x1="5" y1="19" x2="5" y2="5"/>
                         </svg>
                     </button>
-                    <button class="toolbar-button" id="Previous" onclick="PreviousClick()" title="Vorige comic" aria-label="Vorige">
+                    <button class="toolbar-button" id="Previous" title="Vorige strip" aria-label="Vorige">
                         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg">
                             <polyline points="15 18 9 12 15 6"/>
                         </svg>
                     </button>
-                    <button class="toolbar-button" id="Random" onclick="RandomClick()" title="Willekeurige comic" aria-label="Willekeurige comic">
+                    <button class="toolbar-button" id="Random" title="Willekeurige strip" aria-label="Willekeurige strip">
                         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg">
                             <rect x="4" y="4" width="16" height="16" rx="2" ry="2"/>
                             <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
@@ -104,14 +105,14 @@
                             <line x1="8" y1="2" x2="8" y2="6"/>
                             <line x1="3" y1="10" x2="21" y2="10"/>
                         </svg>
-                        <input id="DatePicker" class="toolbar-datepicker" oninput="DateChange()" onclick="this.showPicker && this.showPicker()" type="date" min="2015-05-04" title="Selecteer datum" aria-label="Datum">
+                        <input id="DatePicker" class="toolbar-datepicker" type="date" min="2015-05-04" title="Selecteer datum" aria-label="Datum">
                     </div>
-                    <button class="toolbar-button" id="Next" onclick="NextClick()" title="Volgende comic" aria-label="Volgende">
+                    <button class="toolbar-button" id="Next" title="Volgende strip" aria-label="Volgende">
                         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg">
                             <polyline points="9 18 15 12 9 6"/>
                         </svg>
                     </button>
-                    <button class="toolbar-button" id="Current" onclick="CurrentClick()" title="Laatste" aria-label="Laatste">
+                    <button class="toolbar-button" id="Current" title="Nieuwste" aria-label="Nieuwste">
                         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg">
                             <polygon points="5 4 15 12 5 20 5 4"/>
                             <line x1="19" y1="5" x2="19" y2="19"/>
@@ -122,26 +123,33 @@
 
         <div id="comic-wrapper" class="comic-wrapper">
             <img id="comic" class="normal" alt="DirkJan strip laden...">
-            <div id="comic-status" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
+            <div id="comic-announcer" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
+            <div id="comic-status" class="comic-status" role="status" aria-live="polite" aria-atomic="true" hidden>
+                <span id="comic-status-message"></span>
+                <div class="comic-status-actions">
+                    <button type="button" id="retryComic" class="settings-action-btn">Opnieuw proberen</button>
+                    <button type="button" id="latestComic" class="settings-action-btn">Naar nieuwste</button>
+                </div>
+            </div>
         </div>
 
         <div class="settings-icons-container" role="group" aria-label="Acties">
-            <button id="darkmode" onclick="ToggleDarkMode()" class="icon-button" aria-label="Donkere modus" title="Donkere modus" aria-pressed="false">
+            <button id="darkmode" class="icon-button" aria-label="Donkere modus" title="Donkere modus" aria-pressed="false">
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
                 </svg>
             </button>
-            <button id="settings" onclick="HideSettings()" class="icon-button" aria-label="Instellingen" title="Instellingen">
+            <button id="settings" class="icon-button" aria-label="Instellingen" title="Instellingen" aria-expanded="false" aria-controls="settingsDIV">
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="#000000">
                     <path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/>
                 </svg>
             </button>
-            <button id="favheart" onclick="Addfav()" class="icon-button" aria-label="Favoriet toevoegen" title="Favoriet toevoegen" aria-pressed="false">
+            <button id="favheart" class="icon-button" aria-label="Favoriet toevoegen" title="Favoriet toevoegen" aria-pressed="false">
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
                 </svg>
             </button>
-            <button id="share" onclick="Share()" class="icon-button" aria-label="Delen" title="Delen">
+            <button id="share" class="icon-button" aria-label="Delen" title="Delen">
                 <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="18" cy="5" r="3"/>
                     <circle cx="6" cy="12" r="3"/>
@@ -152,10 +160,10 @@
             </button>
         </div>
 
-        <div id="settingsDIV" class="settings-panel" aria-label="Instellingen" role="dialog" aria-modal="false">
+        <div id="settingsDIV" class="settings-panel" aria-label="Instellingen" aria-hidden="true" inert>
             <div class="settings-header" id="settingsHeader">
                 <h3>Instellingen</h3>
-                <button class="settings-close" onclick="HideSettings()" aria-label="Sluiten">&times;</button>
+                <button id="settingsClose" class="settings-close" aria-label="Sluiten">&times;</button>
             </div>
             <div class="settings-content">
                 <div class="setting-item">
@@ -183,16 +191,16 @@
                         </label>
                         <label class="setting-radio-option" for="startlast">
                             <input type="radio" id="startlast" name="startupmode" value="last">
-                            <span>Laatst gelezen comic</span>
+                            <span>Laatst gelezen strip</span>
                         </label>
                     </div>
                 </div>
                 <div class="setting-item setting-item-stack">
                     <span class="setting-group-label">Favorieten</span>
                     <div class="settings-button-row">
-                        <button type="button" id="exportFavs" class="settings-action-btn" onclick="exportFavorites()">Exporteren</button>
-                        <button type="button" id="importFavs" class="settings-action-btn" onclick="document.getElementById('importFavsInput').click()">Importeren</button>
-                        <input type="file" id="importFavsInput" accept="application/json,.json" onchange="importFavorites(event)" hidden>
+                        <button type="button" id="exportFavs" class="settings-action-btn">Exporteren</button>
+                        <button type="button" id="importFavs" class="settings-action-btn">Importeren</button>
+                        <input type="file" id="importFavsInput" accept="application/json,.json" hidden>
                     </div>
                 </div>
                 <div class="settings-version" id="swVersionDisplay">Versie: laden…</div>
@@ -201,9 +209,13 @@
     </main>
 
     <footer class="app-footer">
+        <span>Onafhankelijke, onofficiële DirkJan-lezer.</span>
         <span>Comics © <a href="https://dirkjan.nl" target="_blank" rel="noopener">Mark Retera / dirkjan.nl</a></span>
     </footer>
 
+    <script src="./storage.js"></script>
+    <script src="./telemetry.js"></script>
+    <script src="./date-utils.js"></script>
     <script src="./app.js"></script>
     <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "e1b02b3fe1fe45f2addaf5622cf2fcb3"}'></script>
 </body>

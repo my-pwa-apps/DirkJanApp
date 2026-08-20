@@ -1,0 +1,14 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      quality-tools:
+        patterns:
+          - "@axe-core/*"
+          - "@playwright/*"
+          - "lighthouse"
+    open-pull-requests-limit: 5

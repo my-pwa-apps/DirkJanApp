@@ -25,26 +25,43 @@ const DEFAULT_CACHE_TTL = 3600;
 const UPSTREAM_TIMEOUT_MS = 15000;
 const MAX_REDIRECTS = 3;
 const MAX_CACHEABLE_RESPONSE_BYTES = 25 * 1024 * 1024;
+const MAX_TELEMETRY_BYTES = 1024;
+const TELEMETRY_EVENTS = new Set([
+  'comic_parse_failed',
+  'proxy_exhausted',
+  'service_worker_failed',
+  'storage_failed'
+]);
 
 export default {
   async fetch(request, env, ctx) {
     const allowedHosts = getAllowedHosts(env);
+    const allowedOrigins = getAllowedOrigins(env);
 
     if (request.method === 'OPTIONS') {
       return new Response(null, {
         status: 204,
-        headers: buildCorsHeaders(request)
+        headers: buildCorsHeaders(request, allowedOrigins)
       });
+    }
+
+    const requestUrl = new URL(request.url);
+    if (requestUrl.pathname === '/-/telemetry') {
+      return handleTelemetry(request, allowedOrigins);
+    }
+    if (requestUrl.pathname === '/-/comic-metadata') {
+      return handleComicMetadata(request, allowedHosts, allowedOrigins, ctx);
     }
 
     if (request.method !== 'GET' && request.method !== 'HEAD') {
       return withCors(
         request,
-        jsonResponse({ error: 'Method not allowed' }, 405)
+        jsonResponse({ error: 'Method not allowed' }, 405),
+        false,
+        allowedOrigins
       );
     }
 
-    const requestUrl = new URL(request.url);
     const targetUrl = extractTargetUrl(requestUrl);
 
     if (!targetUrl) {
@@ -58,7 +75,9 @@ export default {
               'content-type': 'text/plain; charset=UTF-8'
             }
           }
-        )
+        ),
+        false,
+        allowedOrigins
       );
     }
 
@@ -68,21 +87,27 @@ export default {
     } catch {
       return withCors(
         request,
-        jsonResponse({ error: 'Invalid target URL' }, 400)
+        jsonResponse({ error: 'Invalid target URL' }, 400),
+        false,
+        allowedOrigins
       );
     }
 
     if (!ALLOWED_PROTOCOLS.has(upstreamUrl.protocol)) {
       return withCors(
         request,
-        jsonResponse({ error: 'Unsupported protocol' }, 400)
+        jsonResponse({ error: 'Unsupported protocol' }, 400),
+        false,
+        allowedOrigins
       );
     }
 
     if (!isAllowedHost(upstreamUrl.hostname, allowedHosts)) {
       return withCors(
         request,
-        jsonResponse({ error: 'Host not allowed' }, 403)
+        jsonResponse({ error: 'Host not allowed' }, 403),
+        false,
+        allowedOrigins
       );
     }
 
@@ -94,7 +119,7 @@ export default {
     if (request.method === 'GET' && !bypassCache) {
       const cached = await cache.match(cacheKey);
       if (cached) {
-        return withCors(request, cached, true);
+        return withCors(request, cached, true, allowedOrigins);
       }
     }
 
@@ -112,7 +137,9 @@ export default {
         jsonResponse(
           { error: error?.name === 'TimeoutError' ? 'Upstream timed out' : 'Upstream fetch failed' },
           error?.name === 'TimeoutError' ? 504 : 502
-        )
+        ),
+        false,
+        allowedOrigins
       );
     }
 
@@ -121,7 +148,9 @@ export default {
       await upstreamResponse.body?.cancel();
       return withCors(
         request,
-        jsonResponse({ error: 'Upstream response too large' }, 413)
+        jsonResponse({ error: 'Upstream response too large' }, 413),
+        false,
+        allowedOrigins
       );
     }
 
@@ -131,13 +160,113 @@ export default {
       ctx.waitUntil(cache.put(cacheKey, response.clone()));
     }
 
-    return withCors(request, response, false);
+    return withCors(request, response, false, allowedOrigins);
   }
 };
 
+async function handleComicMetadata(request, allowedHosts, allowedOrigins, ctx) {
+  if (request.method !== 'GET' && request.method !== 'HEAD') {
+    return withCors(request, jsonResponse({ error: 'Method not allowed' }, 405), false, allowedOrigins);
+  }
+
+  const date = new URL(request.url).searchParams.get('date') || '';
+  if (!/^\d{8}$/.test(date)) {
+    return withCors(request, jsonResponse({ error: 'Invalid date' }, 400), false, allowedOrigins);
+  }
+
+  const cache = caches.default;
+  const cacheKey = new Request(request.url, { method: request.method });
+  const bypassCache = /no-cache|no-store/.test(request.headers.get('cache-control') || '');
+  if (!bypassCache) {
+    const cached = await cache.match(cacheKey);
+    if (cached) return withCors(request, cached, true, allowedOrigins);
+  }
+
+  let upstreamResponse;
+  try {
+    upstreamResponse = await fetchAllowedUpstream(new URL(`https://dirkjan.nl/cartoon/${date}`), request, allowedHosts);
+  } catch (error) {
+    return withCors(request, jsonResponse({ error: error?.name === 'TimeoutError' ? 'Upstream timed out' : 'Upstream fetch failed' }, error?.name === 'TimeoutError' ? 504 : 502), false, allowedOrigins);
+  }
+
+  if (upstreamResponse.status === 404) {
+    return withCors(request, jsonResponse({ error: 'Comic not found' }, 404), false, allowedOrigins);
+  }
+  if (!upstreamResponse.ok) {
+    return withCors(request, jsonResponse({ error: 'Upstream fetch failed' }, 502), false, allowedOrigins);
+  }
+
+  const html = await upstreamResponse.text();
+  if (html.includes('error404')) {
+    return withCors(request, jsonResponse({ error: 'Comic not found' }, 404), false, allowedOrigins);
+  }
+  const imageUrl = extractTrustedComicImageUrl(html);
+  if (!imageUrl) {
+    return withCors(request, jsonResponse({ error: 'Comic image not found' }, 502), false, allowedOrigins);
+  }
+
+  const metadata = jsonResponse({ date, imageUrl }, 200);
+  metadata.headers.set('cache-control', `public, max-age=${HTML_CACHE_TTL}`);
+  if (request.method === 'GET' && !bypassCache) ctx.waitUntil(cache.put(cacheKey, metadata.clone()));
+  return withCors(request, metadata, false, allowedOrigins);
+}
+
+function extractTrustedComicImageUrl(html) {
+  const candidates = [
+    html.match(/<article[^>]*class=["'][^"']*cartoon[^"']*["'][^>]*>[\s\S]*?<img[^>]+src=["']([^"']+)["']/i)?.[1],
+    html.match(/<img[^>]+src=["']([^"']*\/wp-content\/uploads\/[^"']+)["']/i)?.[1]
+  ];
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    try {
+      const url = new URL(candidate, 'https://dirkjan.nl');
+      if (url.protocol === 'https:' && ['dirkjan.nl', 'www.dirkjan.nl'].includes(url.hostname.toLowerCase())) {
+        return url.toString();
+      }
+    } catch {
+      // Try the next extraction pattern.
+    }
+  }
+  return null;
+}
+
+async function handleTelemetry(request, allowedOrigins) {
+  const origin = request.headers.get('origin');
+  if (request.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405);
+  if (!origin || !allowedOrigins.has(origin)) return jsonResponse({ error: 'Origin not allowed' }, 403);
+
+  const declaredSize = parseContentLength(request.headers.get('content-length'));
+  if (declaredSize !== null && declaredSize > MAX_TELEMETRY_BYTES) {
+    return withCors(request, jsonResponse({ error: 'Payload too large' }, 413), false, allowedOrigins);
+  }
+
+  const body = await request.text();
+  if (new TextEncoder().encode(body).byteLength > MAX_TELEMETRY_BYTES) {
+    return withCors(request, jsonResponse({ error: 'Payload too large' }, 413), false, allowedOrigins);
+  }
+
+  let payload;
+  try {
+    payload = JSON.parse(body);
+  } catch {
+    return withCors(request, jsonResponse({ error: 'Invalid JSON' }, 400), false, allowedOrigins);
+  }
+
+  const valid = TELEMETRY_EVENTS.has(payload?.event) &&
+    typeof payload?.code === 'string' && /^[a-z0-9_-]{1,32}$/.test(payload.code) &&
+    payload?.count === 1 && Object.keys(payload).length === 3;
+  if (!valid) return withCors(request, jsonResponse({ error: 'Invalid event' }, 400), false, allowedOrigins);
+
+  console.log(JSON.stringify({ message: 'browser operational event', ...payload }));
+  return withCors(request, new Response(null, { status: 204 }), false, allowedOrigins);
+}
+
 async function fetchAllowedUpstream(initialUrl, request, allowedHosts) {
   let currentUrl = new URL(initialUrl);
-  const signal = AbortSignal.timeout(UPSTREAM_TIMEOUT_MS);
+  const signal = AbortSignal.any([
+    request.signal,
+    AbortSignal.timeout(UPSTREAM_TIMEOUT_MS)
+  ]);
 
   for (let redirectCount = 0; redirectCount <= MAX_REDIRECTS; redirectCount++) {
     const upstreamRequest = new Request(currentUrl.toString(), {
@@ -216,6 +345,19 @@ function getAllowedHosts(env) {
     .filter(Boolean);
 }
 
+function getAllowedOrigins(env) {
+  const rawOrigins = typeof env?.ALLOWED_ORIGINS === 'string'
+    ? env.ALLOWED_ORIGINS
+    : '';
+
+  return new Set(
+    rawOrigins
+      .split(',')
+      .map(origin => origin.trim())
+      .filter(Boolean)
+  );
+}
+
 function isAllowedHost(hostname, allowedHosts) {
   const normalizedHost = hostname.toLowerCase();
 
@@ -277,9 +419,9 @@ function getCacheTtl(targetUrl) {
   return DEFAULT_CACHE_TTL;
 }
 
-function withCors(request, response, cacheHit = false) {
+function withCors(request, response, cacheHit = false, allowedOrigins = new Set()) {
   const headers = new Headers(response.headers);
-  const corsHeaders = buildCorsHeaders(request);
+  const corsHeaders = buildCorsHeaders(request, allowedOrigins);
 
   for (const [key, value] of corsHeaders.entries()) {
     headers.set(key, value);
@@ -294,18 +436,18 @@ function withCors(request, response, cacheHit = false) {
   });
 }
 
-function buildCorsHeaders(request) {
+function buildCorsHeaders(request, allowedOrigins) {
   const origin = request.headers.get('origin');
   const headers = new Headers();
 
-  headers.set('access-control-allow-methods', 'GET, HEAD, OPTIONS');
+  headers.set('access-control-allow-methods', 'GET, HEAD, POST, OPTIONS');
   headers.set('access-control-allow-headers', 'Content-Type, Accept, Accept-Language');
   headers.set('access-control-max-age', '86400');
   headers.set('timing-allow-origin', '*');
 
-  if (origin) {
+  if (origin && allowedOrigins.has(origin)) {
     headers.set('access-control-allow-origin', origin);
-  } else {
+  } else if (!origin) {
     headers.set('access-control-allow-origin', '*');
   }
 

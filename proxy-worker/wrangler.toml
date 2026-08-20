@@ -1,9 +1,11 @@
 name = "corsproxy"
 main = "src/index.js"
-compatibility_date = "2026-08-17"
+compatibility_date = "2026-08-20"
+compatibility_flags = ["enable_request_signal"]
 
 [vars]
 ALLOWED_HOSTS = "dirkjan.nl,www.dirkjan.nl,gocomics.com,*.gocomics.com,assets.amuniversal.com,picayune.uclick.com,www.arcamax.com,resources.arcamax.com,garfield.fandom.com,static.wikia.nocookie.net"
+ALLOWED_ORIGINS = "https://dirkjanapp.pages.dev,http://127.0.0.1:8000,http://127.0.0.1:8010,http://localhost:8000,http://localhost:8010"
 
 [observability]
 enabled = true

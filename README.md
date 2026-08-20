@@ -18,7 +18,7 @@ There is no application build step. Cloudflare Pages serves the repository as st
 
 ## Requirements
 
-- Node.js 20 or newer
+- Node.js 22.19 or newer
 - npm
 - Playwright browser binaries for end-to-end tests
 
@@ -56,6 +56,8 @@ Before deployment:
 2. Complete `tests/usability-checklist.md` on a mobile browser.
 3. Confirm the service-worker cache version changed.
 4. Confirm the live Worker health check passes.
+
+Worker-before-Pages ordering, rollback steps, service objectives, and Cloudflare abuse-control thresholds are documented in [docs/operations.md](docs/operations.md).
 
 ## Data and Privacy
 

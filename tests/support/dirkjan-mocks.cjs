@@ -27,6 +27,7 @@ async function mockExternalServices(page, options = {}) {
   const context = page.context();
   const proxyFailuresRemaining = { count: options.proxyFailures || 0 };
   const proxyRequests = [];
+  const publicProxyRequests = [];
   const unavailableDates = new Set(options.unavailableDates || []);
   const httpNotFoundDates = new Set(options.httpNotFoundDates || []);
 
@@ -60,12 +61,33 @@ async function mockExternalServices(page, options = {}) {
 
   await context.route('https://corsproxy.garfieldapp.workers.dev/**', route => {
     const requestUrl = new URL(route.request().url());
-    const targetUrl = decodeURIComponent(requestUrl.search.slice(1));
+    const metadataDate = requestUrl.pathname === '/-/comic-metadata'
+      ? requestUrl.searchParams.get('date')
+      : null;
+    const targetUrl = metadataDate
+      ? `https://dirkjan.nl/cartoon/${metadataDate}`
+      : decodeURIComponent(requestUrl.search.slice(1));
 
-    if (proxyFailuresRemaining.count > 0) {
-      proxyFailuresRemaining.count -= 1;
+    if (options.proxyAlwaysFails || proxyFailuresRemaining.count > 0) {
+      if (!options.proxyAlwaysFails) proxyFailuresRemaining.count -= 1;
       proxyRequests.push(targetUrl);
       route.fulfill({ status: 502, contentType: 'text/plain; charset=utf-8', body: 'proxy failure', headers: corsHeaders });
+      return;
+    }
+
+    if (requestUrl.pathname === '/-/comic-metadata') {
+      const date = metadataDate;
+      const notFound = unavailableDates.has(date) || httpNotFoundDates.has(date);
+      proxyRequests.push(`https://dirkjan.nl/cartoon/${date}`);
+      route.fulfill({
+        status: notFound ? 404 : 200,
+        contentType: 'application/json; charset=utf-8',
+        body: JSON.stringify(notFound ? { error: 'Comic not found' } : {
+          date,
+          imageUrl: `https://dirkjan.nl/wp-content/uploads/${date}-dirkjan-test.png`
+        }),
+        headers: corsHeaders
+      });
       return;
     }
 
@@ -73,14 +95,16 @@ async function mockExternalServices(page, options = {}) {
   });
 
   await context.route('https://api.codetabs.com/**', route => {
+    publicProxyRequests.push(route.request().url());
     fulfillComicPage(route);
   });
 
   await context.route('https://api.allorigins.win/**', route => {
+    publicProxyRequests.push(route.request().url());
     fulfillComicPage(route);
   });
 
-  return { proxyRequests };
+  return { proxyRequests, publicProxyRequests };
 }
 
 async function openApp(page, options = {}) {
@@ -89,12 +113,27 @@ async function openApp(page, options = {}) {
   await page.addInitScript((initData) => {
     const { initialStorage, testNow: fixedNow } = initData;
     window.__TEST_NOW__ = fixedNow;
+    const registration = {
+      update: () => Promise.resolve(),
+      addEventListener: (type, callback) => {
+        if (type !== 'updatefound' || !initData.serviceWorkerUpdate) return;
+        registration.installing = {
+          state: 'installing',
+          addEventListener: (workerType, workerCallback) => {
+            if (workerType !== 'statechange') return;
+            queueMicrotask(() => {
+              registration.installing.state = 'installed';
+              workerCallback();
+            });
+          }
+        };
+        queueMicrotask(callback);
+      }
+    };
     Object.defineProperty(navigator, 'serviceWorker', {
       value: {
-        register: () => Promise.resolve({
-          update: () => Promise.resolve(),
-          addEventListener: () => {}
-        }),
+        register: () => Promise.resolve(registration),
+        controller: initData.serviceWorkerUpdate ? {} : null,
         addEventListener: () => {},
         getRegistration: () => Promise.resolve(null)
       },
@@ -108,7 +147,7 @@ async function openApp(page, options = {}) {
     } catch {
       // Some browser engines restrict storage before the document origin exists.
     }
-  }, { initialStorage: options.initialStorage || null, testNow });
+  }, { initialStorage: options.initialStorage || null, testNow, serviceWorkerUpdate: !!options.serviceWorkerUpdate });
 
   const requestLog = await mockExternalServices(page, options);
   const errors = [];
@@ -132,7 +171,9 @@ async function openApp(page, options = {}) {
 
   await page.goto('/', { waitUntil: 'domcontentloaded' });
   await expect(page.locator('#comic')).toHaveJSProperty('complete', true);
-  await expect(page.locator('#comic')).not.toHaveAttribute('src', /^$/);
+  if (options.expectComic !== false) {
+    await expect(page.locator('#comic')).not.toHaveAttribute('src', /^$/);
+  }
 
   return { ...requestLog, errors };
 }

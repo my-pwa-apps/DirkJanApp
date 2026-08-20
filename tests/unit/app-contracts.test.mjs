@@ -6,18 +6,16 @@ const appSource = await readFile(new URL('../../app.js', import.meta.url), 'utf8
 const cssSource = await readFile(new URL('../../main.css', import.meta.url), 'utf8');
 const manifest = JSON.parse(await readFile(new URL('../../manifest.webmanifest', import.meta.url), 'utf8'));
 
-test('CORS proxy fallback keeps the private worker first and uses current public fallbacks', () => {
+test('comic requests use only the controlled first-party proxy', () => {
   const proxyBlock = appSource.match(/CORS_PROXIES:\s*\[([\s\S]*?)\]/)?.[1] || '';
   assert.match(proxyBlock, /corsproxy\.garfieldapp\.workers\.dev/);
-  assert.match(proxyBlock, /api\.codetabs\.com/);
-  assert.match(proxyBlock, /api\.allorigins\.win/);
-  assert.doesNotMatch(proxyBlock, /corsproxy\.io/);
+  assert.doesNotMatch(proxyBlock, /api\.codetabs\.com|api\.allorigins\.win|corsproxy\.io/);
   assert.match(appSource, /const PRIMARY_PROXY_INDEX = 0/);
   assert.match(appSource, /tryProxy\(url, primaryProxyIndex, startTime, signal\)/);
   assert.doesNotMatch(appSource, /Promise\.race\(/);
 });
 
-test('proxy performance arrays stay aligned with configured proxies', () => {
+test('proxy state stays aligned with the configured first-party endpoint', () => {
   assert.match(appSource, /new Array\(CONFIG\.CORS_PROXIES\.length\)\.fill\(0\)/);
   assert.match(appSource, /function getPublicProxyOrder\(excludeIndex = PRIMARY_PROXY_INDEX\)/);
 });
@@ -25,7 +23,8 @@ test('proxy performance arrays stay aligned with configured proxies', () => {
 test('comic fetch cancellation reaches proxy requests and body reads', () => {
   assert.match(appSource, /fetchWithFallback\(url, signal = null\)/);
   assert.match(appSource, /AbortSignal\.any\(\[signal, AbortSignal\.timeout\(CONFIG\.FETCH_TIMEOUT\)\]\)/);
-  assert.match(appSource, /fetchWithFallback\(url, fetchSignal\)/);
+  assert.match(appSource, /fetchComicData\(formattedComicDate, url, fetchSignal\)/);
+  assert.match(appSource, /fetchWithFallback\(pageUrl, signal\)/);
   assert.match(appSource, /if \(error\.name === 'AbortError'\) throw error/);
 });
 
@@ -50,13 +49,7 @@ test('preloading does not probe beyond a known latest or current date', () => {
 });
 
 test('latest comic lookup starts from today instead of the future date picker maximum', () => {
-  assert.match(appSource, /function getCurrentDate\(\)/);
-  assert.match(appSource, /function isComicPublishDate\(dateValue\)/);
-  assert.match(appSource, /function moveToComicPublishDate\(dateValue, direction\)/);
-  assert.match(appSource, /function getStartupComicDate\(baseDate = getCurrentDate\(\)\)/);
-  assert.match(appSource, /function getLatestComicCandidateDate\(baseDate = getCurrentDate\(\)\)/);
-  assert.match(appSource, /const daysUntilFriday = \(5 - candidateDate\.getDay\(\) \+ 7\) % 7/);
-  assert.match(appSource, /function clampToLatestComicCandidate\(dateValue\)/);
+  assert.match(appSource, /\} = DATE_UTILS/);
   assert.match(appSource, /function discoverLatestAvailableComic\(\)/);
   assert.match(appSource, /return findLatestAvailableComic\(latestCandidate, searchMinDate\)/);
   assert.match(appSource, /START_LATEST: 'startlatest'/);

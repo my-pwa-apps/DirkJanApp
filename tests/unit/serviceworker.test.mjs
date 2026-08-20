@@ -13,11 +13,12 @@ test('service worker version and caches use the same deploy version', () => {
 });
 
 test('install precache covers the DirkJan app shell', () => {
-  for (const asset of ['index.html', 'offline.html', 'main.css', 'app.js', 'manifest.webmanifest', 'dirk-jan-tekst.svg']) {
+  for (const asset of ['index.html', 'offline.html', 'main.css', 'storage.js', 'telemetry.js', 'date-utils.js', 'app.js', 'manifest.webmanifest', 'dirk-jan-tekst.svg']) {
     assert.ok(source.includes(`'./${asset}'`), `${asset} should be precached`);
   }
   assert.match(source, /cache\.addAll\(PRECACHE_ASSETS\)/);
   assert.match(source, /self\.skipWaiting\(\)/);
+  assert.doesNotMatch(source, /cache\.addAll\(PRECACHE_ASSETS\)[\s\S]*?\.catch\(/);
 });
 
 test('activation removes stale caches while preserving the current cache set', () => {
@@ -34,8 +35,12 @@ test('third-party analytics requests are bypassed and asset failures keep an err
 
 test('offline and cache limits are covered by service worker strategies', () => {
   assert.match(source, /const MAX_IMAGE_CACHE_SIZE = 50/);
+  assert.match(source, /const MAX_IMAGE_CACHE_BYTES = 20 \* 1024 \* 1024/);
+  assert.match(source, /const MAX_CACHEABLE_IMAGE_BYTES = 5 \* 1024 \* 1024/);
   assert.match(source, /const MAX_RUNTIME_CACHE_SIZE = 30/);
-  assert.match(source, /while \(keys\.length >= maxSize\)/);
+  assert.match(source, /responseSize === null \|\| responseSize > MAX_CACHEABLE_IMAGE_BYTES/);
+  assert.match(source, /enforceImageCacheLimits\(cache, maxSize, MAX_IMAGE_CACHE_BYTES\)/);
+  assert.match(source, /entries\.length > maxEntries \|\| totalBytes > maxBytes/);
   assert.match(source, /networkFirstStrategy\(request, CACHE_NAME, '\.\/offline\.html'\)/);
   assert.match(source, /const fallbackResponse = await caches\.match\(fallbackUrl\)/);
   assert.match(source, /Image not available offline/);

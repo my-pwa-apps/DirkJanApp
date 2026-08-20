@@ -20,70 +20,16 @@
           "purpose": "any"
       },
       {
-          "src": "./android-chrome-192x192.png",
-          "sizes": "192x192",
-          "type": "image/png",
-          "purpose": "any"
-      },
-      {
-        "src": "./android-chrome-192x192.webp",
-        "sizes": "192x192",
-        "type": "image/webp",
-        "purpose": "maskable"
-    },
-    {
-        "src": "./android-chrome-192x192.png",
-        "sizes": "192x192",
-        "type": "image/png",
-        "purpose": "maskable"
-    },
-      {
           "src": "./android-chrome-256x256.webp",
           "sizes": "256x256",
           "type": "image/webp",
           "purpose": "any"
       },
       {
-          "src": "./android-chrome-256x256.png",
-          "sizes": "256x256",
-          "type": "image/png",
-          "purpose": "any"
-      },
-      {
-        "src": "./android-chrome-256x256.webp",
-        "sizes": "256x256",
-        "type": "image/webp",
-        "purpose": "maskable"
-    },
-    {
-        "src": "./android-chrome-256x256.png",
-        "sizes": "256x256",
-        "type": "image/png",
-        "purpose": "maskable"
-    },
-      {
         "src": "./android-chrome-512x512.webp",
         "sizes": "512x512",
         "type": "image/webp",
         "purpose": "any"
-    },
-    {
-        "src": "./android-chrome-512x512.png",
-        "sizes": "512x512",
-        "type": "image/png",
-        "purpose": "any"
-    },
-    {
-      "src": "./android-chrome-512x512.webp",
-      "sizes": "512x512",
-      "type": "image/webp",
-      "purpose": "maskable"
-    },
-    {
-      "src": "./android-chrome-512x512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
     }
   ],
     "screenshots": [
@@ -107,8 +53,8 @@
       "icons": [{ "src": "./android-chrome-192x192.webp", "sizes": "192x192", "type": "image/webp" }]
     },
     {
-      "name": "Random",
-      "short_name": "Random",
+      "name": "Willekeurig",
+      "short_name": "Willekeurig",
       "description": "Open willekeurige strip",
       "url": "./?random=true",
       "icons": [{ "src": "./android-chrome-192x192.webp", "sizes": "192x192", "type": "image/webp" }]

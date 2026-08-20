@@ -16,10 +16,9 @@ const CONFIG = Object.freeze({
   
   // CORS Proxies (in priority order)
   CORS_PROXIES: [
-    'https://corsproxy.garfieldapp.workers.dev/?',
-    'https://api.codetabs.com/v1/proxy?quest=',
-    'https://api.allorigins.win/raw?url='
+    'https://corsproxy.garfieldapp.workers.dev/?'
   ],
+  COMIC_METADATA_ENDPOINT: 'https://corsproxy.garfieldapp.workers.dev/-/comic-metadata',
   
   // Fetch timeouts
   FETCH_TIMEOUT: 10000,                // 10 second timeout for HTML
@@ -90,6 +89,7 @@ if ('serviceWorker' in navigator) {
         });
       })
       .catch(() => {
+        TELEMETRY.report('service_worker_failed', 'register');
         // ServiceWorker registration failed - app will work without offline support
       });
   });
@@ -104,10 +104,12 @@ function showUpdateNotification() {
   notification.innerHTML = `
     <div class="update-notification-inner">
       <div class="update-notification-title">🎉 Nieuwe versie beschikbaar!</div>
-      <button onclick="updateApp()" class="update-notification-btn update-notification-btn-primary">Updaten</button>
-      <button onclick="dismissUpdate()" class="update-notification-btn update-notification-btn-secondary">Later</button>
+      <button class="update-notification-btn update-notification-btn-primary">Updaten</button>
+      <button class="update-notification-btn update-notification-btn-secondary">Later</button>
     </div>
   `;
+  notification.querySelector('.update-notification-btn-primary').addEventListener('click', updateApp);
+  notification.querySelector('.update-notification-btn-secondary').addEventListener('click', dismissUpdate);
   document.body.appendChild(notification);
 }
 
@@ -307,6 +309,7 @@ async function tryRemainingProxies(url, excludeIndex, startTime, signal = null) 
   }
   
   if (CONFIG.DEBUG_LOGGING) console.error('All proxies failed:', errors.join('; '));
+  TELEMETRY.report('proxy_exhausted', 'network');
   throw new Error(`All proxies failed: ${errors.join(', ')}`);
 }
 
@@ -334,6 +337,21 @@ let notFound;
 
 // Favorites cache
 let _cachedFavs = null;
+
+function setComicStatus(state, message = '') {
+  const panel = document.getElementById('comic-status');
+  const messageElement = document.getElementById('comic-status-message');
+  const retryButton = document.getElementById('retryComic');
+  const latestButton = document.getElementById('latestComic');
+  if (!panel || !messageElement) return;
+
+  const visible = state !== 'idle';
+  panel.hidden = !visible;
+  panel.className = `comic-status${visible ? ` is-${state}` : ''}`;
+  messageElement.textContent = message;
+  if (retryButton) retryButton.disabled = state === 'loading';
+  if (latestButton) latestButton.disabled = state === 'loading';
+}
 
 /**
  * Utility Functions
@@ -384,7 +402,7 @@ const UTILS = {
  */
 function storeToolbarPosition(top, left, toolbarEl, overrides = {}) {
   const toolbar = toolbarEl || document.querySelector('.toolbar:not(.fullscreen-toolbar)');
-  const savedRaw = localStorage.getItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS);
+  const savedRaw = STORAGE.get(CONFIG.STORAGE_KEYS.TOOLBAR_POS);
   const saved = UTILS.safeJSONParse(savedRaw, {});
 
   const positionData = { ...saved, top, left };
@@ -428,7 +446,7 @@ function storeToolbarPosition(top, left, toolbarEl, overrides = {}) {
   }
 
   try {
-    localStorage.setItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS, JSON.stringify(positionData));
+    STORAGE.set(CONFIG.STORAGE_KEYS.TOOLBAR_POS, JSON.stringify(positionData));
   } catch (_) {}
 }
 
@@ -445,7 +463,7 @@ function storeToolbarPosition(top, left, toolbarEl, overrides = {}) {
 function loadFavs() {
   if (Array.isArray(_cachedFavs)) return _cachedFavs;
   try {
-    const raw = localStorage.getItem(CONFIG.STORAGE_KEYS.FAVS);
+    const raw = STORAGE.get(CONFIG.STORAGE_KEYS.FAVS);
     if (!raw) return (_cachedFavs = []);
     const parsed = JSON.parse(raw);
     return (_cachedFavs = Array.isArray(parsed) ? parsed : []);
@@ -462,7 +480,9 @@ function saveFavs(arr) {
   if (!Array.isArray(arr)) return;
   const deduped = Array.from(new Set(arr)).sort();
   _cachedFavs = deduped;
-  try { localStorage.setItem(CONFIG.STORAGE_KEYS.FAVS, JSON.stringify(deduped)); } catch (e) { /* ignore */ }
+  if (!STORAGE.set(CONFIG.STORAGE_KEYS.FAVS, JSON.stringify(deduped))) {
+    showNotification('Favorieten konden niet worden opgeslagen.', true);
+  }
 }
 
 /**
@@ -531,7 +551,7 @@ function clampMainToolbarInView() {
   if (!toolbar) return;
   
   // Check if toolbar is in optimal position mode
-  const isOptimalMode = localStorage.getItem(CONFIG.STORAGE_KEYS.TOOLBAR_OPTIMAL) === 'true';
+  const isOptimalMode = STORAGE.get(CONFIG.STORAGE_KEYS.TOOLBAR_OPTIMAL) === 'true';
   
   if (isOptimalMode) {
     // Toolbar is in optimal mode - recalculate centered position on resize
@@ -547,7 +567,7 @@ function clampMainToolbarInView() {
   }
   
   // Check if user has saved a custom position
-  const savedPosRaw = localStorage.getItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS);
+  const savedPosRaw = STORAGE.get(CONFIG.STORAGE_KEYS.TOOLBAR_POS);
   const hasSavedPosition = savedPosRaw && savedPosRaw !== 'null';
   
   if (!hasSavedPosition) {
@@ -721,7 +741,7 @@ function makeDraggable(element, dragHandle, storageKey, onDragStart = null, onDr
         
         // Mark toolbar as being in optimal position
         try {
-          localStorage.setItem(CONFIG.STORAGE_KEYS.TOOLBAR_OPTIMAL, 'true');
+          STORAGE.set(CONFIG.STORAGE_KEYS.TOOLBAR_OPTIMAL, 'true');
         } catch (_) {}
         
         // Clear transition after animation completes
@@ -732,7 +752,7 @@ function makeDraggable(element, dragHandle, storageKey, onDragStart = null, onDr
     } else if (storageKey === CONFIG.STORAGE_KEYS.TOOLBAR_POS) {
       // User dragged toolbar away from optimal position - clear the flag
       try {
-        localStorage.removeItem(CONFIG.STORAGE_KEYS.TOOLBAR_OPTIMAL);
+        STORAGE.remove(CONFIG.STORAGE_KEYS.TOOLBAR_OPTIMAL);
       } catch (_) {}
     }
     
@@ -768,7 +788,7 @@ function makeDraggable(element, dragHandle, storageKey, onDragStart = null, onDr
       });
     } else {
       try {
-        localStorage.setItem(storageKey, JSON.stringify({ top: numericTop, left: numericLeft }));
+        STORAGE.set(storageKey, JSON.stringify({ top: numericTop, left: numericLeft }));
       } catch (_) {}
     }
     
@@ -805,7 +825,7 @@ async function Share() {
     return;
   }
 
-  const shareText = `Check out this DirkJan comic from ${formattedDate}!`;
+  const shareText = `Bekijk deze DirkJan-strip van ${formattedDate}!`;
   const shareUrl = new URL('./', window.location.href).href;
   const isAndroid = /Android/i.test(navigator.userAgent);
 
@@ -827,11 +847,11 @@ async function Share() {
     if (error.name === 'AbortError') return;
     if (isAndroid) {
       try {
-        const androidShareText = `📸 DirkJan Comic from ${formattedDate}\n\n🖼️ Image: ${pictureUrl}\n\n📱 Get the app: ${shareUrl}`;
+        const androidShareText = `DirkJan-strip van ${formattedDate}\n\nAfbeelding: ${pictureUrl}\n\nApp: ${shareUrl}`;
         
         try {
           await navigator.share({
-            title: 'DirkJan Comic Image',
+            title: 'DirkJan-stripafbeelding',
             text: androidShareText
           });
           return;
@@ -843,8 +863,8 @@ async function Share() {
         
         try {
           await navigator.share({
-            title: 'DirkJan Comic',
-            text: `Comic image: ${pictureUrl}`,
+            title: 'DirkJan-strip',
+            text: `Stripafbeelding: ${pictureUrl}`,
             url: shareUrl
           });
           return;
@@ -855,8 +875,8 @@ async function Share() {
         }
         
         await navigator.share({
-          title: 'DirkJan Comic',
-          text: `${shareText}\n\n📸 Comic image: ${pictureUrl}\n\n🌐 App: ${shareUrl}`
+          title: 'DirkJan-strip',
+          text: `${shareText}\n\nStripafbeelding: ${pictureUrl}\n\nApp: ${shareUrl}`
         });
       } catch (androidError) {
         // Only show fallback if it wasn't a user cancellation
@@ -867,8 +887,8 @@ async function Share() {
     } else {
       try {
         await navigator.share({
-          title: 'DirkJan Comic',
-          text: `${shareText}\n\nView comic image: ${pictureUrl}`,
+          title: 'DirkJan-strip',
+          text: `${shareText}\n\nBekijk de stripafbeelding: ${pictureUrl}`,
           url: shareUrl
         });
       } catch (textError) {
@@ -967,10 +987,10 @@ async function shareWithImage(shareText, shareUrl) {
   const isAndroid = /Android/i.test(navigator.userAgent);
   const shareVariants = isAndroid ? [
     { files: [finalFile] },
-    { title: 'DirkJan Comic', files: [finalFile] },
-    { title: 'DirkJan Comic', text: shareText, files: [finalFile] }
+    { title: 'DirkJan-strip', files: [finalFile] },
+    { title: 'DirkJan-strip', text: shareText, files: [finalFile] }
   ] : [
-    { title: 'DirkJan Comic', text: shareText, files: [finalFile] }
+    { title: 'DirkJan-strip', text: shareText, files: [finalFile] }
   ];
 
   for (const payload of shareVariants) {
@@ -1031,86 +1051,25 @@ function showShareDialog(content) {
  * @param {Date} dateValue - Date to check
  * @returns {boolean} True for comic dates, false for Sundays
  */
-function getCurrentDate() {
-  if (typeof window !== 'undefined' && window.__TEST_NOW__) {
-    return new Date(window.__TEST_NOW__);
-  }
-
-  return new Date();
-}
-
-function isComicPublishDate(dateValue) {
-  return dateValue.getDay() !== 0;
-}
-
-/**
- * Moves a date to the nearest comic publish date
- * @param {Date} dateValue - Date to normalize
- * @param {number} direction - Direction to move, -1 for previous, 1 for next
- * @returns {Date} A weekday comic date
- */
-function moveToComicPublishDate(dateValue, direction) {
-  const publishDate = new Date(dateValue);
-  publishDate.setHours(0, 0, 0, 0);
-
-  while (!isComicPublishDate(publishDate)) {
-    publishDate.setDate(publishDate.getDate() + direction);
-  }
-
-  return publishDate;
-}
-
-/**
- * Gets the startup comic date for users who do not resume their last comic
- * @param {Date} baseDate - Date to normalize, defaults to today
- * @returns {Date} Today's comic date, with Sundays moved back to Saturday
- */
-function getStartupComicDate(baseDate = getCurrentDate()) {
-  return moveToComicPublishDate(baseDate, -1);
-}
-
-/**
- * Gets the latest comic date candidate, including prepublished weekdays
- * @param {Date} baseDate - Date to normalize, defaults to today
- * @returns {Date} Latest candidate date at the next Friday publication window
- */
-function getLatestComicCandidateDate(baseDate = getCurrentDate()) {
-  const candidateDate = new Date(baseDate);
-  candidateDate.setHours(0, 0, 0, 0);
-  const daysUntilFriday = (5 - candidateDate.getDay() + 7) % 7;
-  candidateDate.setDate(candidateDate.getDate() + daysUntilFriday);
-
-  return candidateDate;
-}
-
-/**
- * Keeps stored or manually selected dates from requesting future comics
- * @param {Date|string} dateValue - Date to validate
- * @returns {Date} A safe comic date at or before the latest candidate date
- */
-function clampToLatestComicCandidate(dateValue) {
-  const latestCandidate = getLatestComicCandidateDate();
-  const candidateDate = new Date(dateValue);
-
-  if (Number.isNaN(candidateDate.getTime())) {
-    return latestCandidate;
-  }
-
-  const normalizedDate = moveToComicPublishDate(candidateDate, -1);
-
-  return normalizedDate > latestCandidate ? latestCandidate : normalizedDate;
-}
+const {
+  getCurrentDate,
+  isComicPublishDate,
+  moveToComicPublishDate,
+  getStartupComicDate,
+  getLatestComicCandidateDate,
+  clampToLatestComicCandidate
+} = DATE_UTILS;
 
 /**
  * Gets the configured startup mode, migrating older settings when present
  * @returns {'today'|'latest'|'last'} Startup mode
  */
 function getStartupMode() {
-  const storedMode = localStorage.getItem(CONFIG.STORAGE_KEYS.START_MODE);
+  const storedMode = STORAGE.get(CONFIG.STORAGE_KEYS.START_MODE);
   if (['today', 'latest', 'last'].includes(storedMode)) return storedMode;
 
-  if (localStorage.getItem(CONFIG.STORAGE_KEYS.START_LATEST) === 'true') return 'latest';
-  if (localStorage.getItem(CONFIG.STORAGE_KEYS.LAST_DATE) === 'true') return 'last';
+  if (STORAGE.get(CONFIG.STORAGE_KEYS.START_LATEST) === 'true') return 'latest';
+  if (STORAGE.get(CONFIG.STORAGE_KEYS.LAST_DATE) === 'true') return 'last';
 
   return 'today';
 }
@@ -1248,7 +1207,7 @@ function onLoad()
   if(startupMode === 'last')   
 	{
 		const showFavsChecked = document.getElementById("showfavs").checked;
-		const storedLastComic = localStorage.getItem(CONFIG.STORAGE_KEYS.LAST_COMIC);
+    const storedLastComic = STORAGE.get(CONFIG.STORAGE_KEYS.LAST_COMIC);
 		if(!showFavsChecked && storedLastComic !== null)
 		{
 			currentselectedDate = clampToLatestComicCandidate(storedLastComic);
@@ -1333,7 +1292,7 @@ const DARK_MODE_ICONS = Object.freeze({
  * @returns {boolean}
  */
 function getPreferredDarkMode() {
-  const stored = localStorage.getItem(CONFIG.STORAGE_KEYS.DARK_MODE);
+  const stored = STORAGE.get(CONFIG.STORAGE_KEYS.DARK_MODE);
   if (stored === "true") return true;
   if (stored === "false") return false;
   return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -1379,7 +1338,7 @@ function applyDarkMode(isDark) {
  */
 function ToggleDarkMode() {
   const isDark = document.documentElement.dataset.theme !== 'dark';
-  localStorage.setItem(CONFIG.STORAGE_KEYS.DARK_MODE, isDark ? "true" : "false");
+  STORAGE.set(CONFIG.STORAGE_KEYS.DARK_MODE, isDark ? "true" : "false");
   applyDarkMode(isDark);
 }
 
@@ -1392,7 +1351,7 @@ function initializeDarkMode() {
   if (window.matchMedia) {
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     const handler = (e) => {
-      if (localStorage.getItem(CONFIG.STORAGE_KEYS.DARK_MODE) === null) {
+      if (STORAGE.get(CONFIG.STORAGE_KEYS.DARK_MODE) === null) {
         applyDarkMode(e.matches);
       }
     };
@@ -1519,7 +1478,7 @@ function importFavorites(event) {
     const showFavsCheckbox = document.getElementById("showfavs");
     if (showFavsCheckbox) showFavsCheckbox.disabled = merged.length === 0;
     CompareDates();
-    showNotification(added + ' favorieten geïmporteerd.');
+    showNotification(added + (added === 1 ? ' favoriet geïmporteerd.' : ' favorieten geïmporteerd.'));
     input.value = '';
   };
   reader.onerror = function() {
@@ -1759,6 +1718,31 @@ function normalizeComicImageUrl(candidateUrl) {
   }
 }
 
+async function fetchComicData(date, pageUrl, signal) {
+  try {
+    const metadataUrl = new URL(CONFIG.COMIC_METADATA_ENDPOINT);
+    metadataUrl.searchParams.set('date', date);
+    const timeoutSignal = AbortSignal.timeout(CONFIG.FETCH_TIMEOUT);
+    const response = await fetch(metadataUrl, {
+      signal: signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal
+    });
+    if (response.status === 404) return { notFound: true, imageUrl: null };
+    if (!response.ok) throw new Error(`Metadata request failed: ${response.status}`);
+    const metadata = await response.json();
+    const imageUrl = metadata.date === date ? normalizeComicImageUrl(metadata.imageUrl) : null;
+    if (!imageUrl) throw new Error('Invalid comic metadata');
+    return { notFound: false, imageUrl };
+  } catch (error) {
+    if (error.name === 'AbortError') throw error;
+    const response = await fetchWithFallback(pageUrl, signal);
+    const html = await response.text();
+    return {
+      notFound: html.includes('error404'),
+      imageUrl: extractComicImageUrl(html)
+    };
+  }
+}
+
 /**
  * Fetches and displays the current comic
  * Handles loading states, errors, animations, and updates UI
@@ -1783,6 +1767,7 @@ function DisplayComic(direction = null, notFoundBehavior = 'nearest')
     if (notFoundRetries > 10) {
       notFoundRetries = 0;
       if (comicImg) comicImg.alt = "Geen strip gevonden voor deze datum.";
+      setComicStatus('unavailable', 'Geen strip gevonden. Probeer opnieuw of ga naar de nieuwste strip.');
       return;
     }
 
@@ -1812,6 +1797,7 @@ function DisplayComic(direction = null, notFoundBehavior = 'nearest')
     if (currentselectedDate < startDate) {
       notFoundRetries = 0;
       if (comicImg) comicImg.alt = "Geen strip gevonden voor deze datum.";
+      setComicStatus('unavailable', 'Geen eerdere strip gevonden. Ga naar de nieuwste strip.');
       return;
     }
 
@@ -1839,6 +1825,7 @@ function DisplayComic(direction = null, notFoundBehavior = 'nearest')
   const wrapper = document.getElementById('comic-wrapper');
   const rotatedComic = document.getElementById('rotated-comic');
   comicImg.alt = `DirkJan strip van ${dateParts.day}-${dateParts.month}-${dateParts.year} laden`;
+  setComicStatus('loading', 'Strip laden...');
   
   // Show loading state only if no animation (first load or error recovery)
   if (!direction) {
@@ -1853,29 +1840,24 @@ function DisplayComic(direction = null, notFoundBehavior = 'nearest')
   currentFetchController = new AbortController();
   const fetchSignal = currentFetchController.signal;
   
-  fetchWithFallback(url, fetchSignal)
-    .then(function(response)
+  fetchComicData(formattedComicDate, url, fetchSignal)
+    .then(function(comicData)
 	{
       if (fetchSignal.aborted) throw new DOMException('Aborted', 'AbortError');
-      return response.text();
-    })
-    .then(function(text)
-	{
-      if (fetchSignal.aborted) throw new DOMException('Aborted', 'AbortError');
-      const siteBody = text;
-      notFound = siteBody.includes("error404");
+      notFound = comicData.notFound;
       
       if (!notFound)
       {
         notFoundRetries = 0; // Reset 404 retry counter on success
         // Extract image URL using multiple methods for reliability
-        pictureUrl = extractComicImageUrl(siteBody);
+        pictureUrl = comicData.imageUrl;
         
         if (!pictureUrl) {
+          TELEMETRY.report('comic_parse_failed', 'image_missing');
           throw new Error('Could not extract comic image URL from page');
         }
         // Store as YYYY-MM-DD for stable, locale-independent parsing
-        localStorage.setItem(CONFIG.STORAGE_KEYS.LAST_COMIC, formattedDate);
+        STORAGE.set(CONFIG.STORAGE_KEYS.LAST_COMIC, formattedDate);
         
         // Animate transition based on direction
         const animateTransition = () => {
@@ -1993,10 +1975,11 @@ function DisplayComic(direction = null, notFoundBehavior = 'nearest')
           }
           
           // Announce comic change to screen readers
-          const statusEl = document.getElementById('comic-status');
+          const statusEl = document.getElementById('comic-announcer');
           if (statusEl) {
             statusEl.textContent = `Strip van ${dateParts.day}-${dateParts.month}-${dateParts.year} geladen`;
           }
+          setComicStatus('idle');
           
           // Also update the rotated comic if it exists (with animation)
           if (rotatedComic) {
@@ -2020,6 +2003,13 @@ function DisplayComic(direction = null, notFoundBehavior = 'nearest')
       comicImg.classList.remove('loading');
       comicImg.src = ""; // Clear the image
       comicImg.alt = "Kan strip niet laden. Probeer het later opnieuw.";
+      const offline = navigator.onLine === false;
+      setComicStatus(
+        offline ? 'offline' : 'failed',
+        offline
+          ? 'Je bent offline. Maak opnieuw verbinding en probeer het nog eens.'
+          : 'De strip kon niet worden geladen. Probeer het opnieuw.'
+      );
     });
     
   const favs = loadFavs();
@@ -2056,6 +2046,7 @@ function DisplayComic(direction = null, notFoundBehavior = 'nearest')
       comicImg.classList.remove('loading');
       comicImg.src = "";
       comicImg.alt = "Kan strip niet weergeven. Probeer het opnieuw.";
+      setComicStatus('failed', 'De strip kon niet worden weergegeven. Probeer het opnieuw.');
     }
   }
 }
@@ -2325,7 +2316,7 @@ function Rotate() {
       const toolbar = document.querySelector('.toolbar:not(.fullscreen-toolbar)');
       const comic = document.getElementById('comic');
       if (toolbar && comic) {
-        const savedPosRaw = localStorage.getItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS);
+        const savedPosRaw = STORAGE.get(CONFIG.STORAGE_KEYS.TOOLBAR_POS);
         const savedPos = UTILS.safeJSONParse(savedPosRaw, null);
         
         if (savedPos && typeof savedPos.top === 'number' && typeof savedPos.left === 'number') {
@@ -2437,6 +2428,7 @@ function Rotate() {
   
   // Check if element has 'normal' class (it might have multiple classes like "normal loaded")
   if (element.className.includes("normal")) {
+    closeSettings(false);
     // First hide all elements to prevent flickering
     const elementsToHideInitial = document.querySelectorAll('body > *');
     elementsToHideInitial.forEach(el => {
@@ -2465,13 +2457,13 @@ function Rotate() {
     fullscreenToolbar.id = 'fullscreen-toolbar';
     fullscreenToolbar.className = 'toolbar fullscreen-toolbar';
     fullscreenToolbar.innerHTML = `
-      <button id="rotated-First" class="toolbar-button" onclick="FirstClick(); return false;" title="Eerste comic">
+      <button id="rotated-First" class="toolbar-button" title="Eerste strip" aria-label="Eerste">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
       </button>
-      <button id="rotated-Previous" class="toolbar-button" onclick="PreviousClick(); return false;" title="Vorige comic">
+      <button id="rotated-Previous" class="toolbar-button" title="Vorige strip" aria-label="Vorige">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
-      <button id="rotated-Random" class="toolbar-button" onclick="RandomClick(); return false;" title="Willekeurige comic">
+      <button id="rotated-Random" class="toolbar-button" title="Willekeurige strip" aria-label="Willekeurige strip">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg">
           <rect x="4" y="4" width="16" height="16" rx="2" ry="2"/>
           <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
@@ -2482,12 +2474,12 @@ function Rotate() {
       </button>
       <button class="toolbar-button toolbar-datepicker-btn" title="Selecteer datum">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        <input id="rotated-DatePicker" class="toolbar-datepicker" oninput="DateChange()" onclick="this.showPicker && this.showPicker()" type="date" min="2015-05-04" title="Selecteer datum">
+        <input id="rotated-DatePicker" class="toolbar-datepicker" type="date" min="2015-05-04" title="Selecteer datum" aria-label="Datum">
       </button>
-      <button id="rotated-Next" class="toolbar-button" onclick="NextClick(); return false;" title="Volgende comic">
+      <button id="rotated-Next" class="toolbar-button" title="Volgende strip" aria-label="Volgende">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
-      <button id="rotated-Current" class="toolbar-button" onclick="CurrentClick(); return false;" title="Laatste">
+      <button id="rotated-Current" class="toolbar-button" title="Nieuwste" aria-label="Nieuwste">
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
       </button>
     `;
@@ -2495,6 +2487,15 @@ function Rotate() {
     document.body.appendChild(overlay);
     document.body.appendChild(clonedComic);
     document.body.appendChild(fullscreenToolbar);
+
+    fullscreenToolbar.querySelector('#rotated-First').addEventListener('click', FirstClick);
+    fullscreenToolbar.querySelector('#rotated-Previous').addEventListener('click', PreviousClick);
+    fullscreenToolbar.querySelector('#rotated-Random').addEventListener('click', RandomClick);
+    fullscreenToolbar.querySelector('#rotated-Next').addEventListener('click', NextClick);
+    fullscreenToolbar.querySelector('#rotated-Current').addEventListener('click', CurrentClick);
+    const rotatedDatePicker = fullscreenToolbar.querySelector('#rotated-DatePicker');
+    rotatedDatePicker.addEventListener('input', DateChange);
+    rotatedDatePicker.addEventListener('click', () => rotatedDatePicker.showPicker?.());
 
     fullscreenToolbar.classList.add('landscape-toolbar');
 
@@ -2825,9 +2826,9 @@ function initializeToolbar() {
   // Make toolbar draggable
   makeMainToolbarDraggable(mainToolbar);
 
-  const savedPosRaw = localStorage.getItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS) || localStorage.getItem('mainToolbarPosition');
+  const savedPosRaw = STORAGE.get(CONFIG.STORAGE_KEYS.TOOLBAR_POS) || STORAGE.get('mainToolbarPosition');
   const savedPos = UTILS.safeJSONParse(savedPosRaw, null);
-  const isOptimalMode = localStorage.getItem(CONFIG.STORAGE_KEYS.TOOLBAR_OPTIMAL) === 'true';
+  const isOptimalMode = STORAGE.get(CONFIG.STORAGE_KEYS.TOOLBAR_OPTIMAL) === 'true';
   
   if (savedPos && typeof savedPos.top === 'number' && typeof savedPos.left === 'number') {
     if (isOptimalMode) {
@@ -3037,7 +3038,7 @@ function initializeMobileButtonStates() {
 
 // Settings click handlers
 document.getElementById("swipe").onclick = function() {
-  localStorage.setItem(CONFIG.STORAGE_KEYS.SWIPE, this.checked ? "true" : "false");
+  STORAGE.set(CONFIG.STORAGE_KEYS.SWIPE, this.checked ? "true" : "false");
 };
 
 function setStartupMode(mode) {
@@ -3045,9 +3046,9 @@ function setStartupMode(mode) {
   document.getElementById("starttoday").checked = startupMode === 'today';
   document.getElementById("startlatest").checked = startupMode === 'latest';
   document.getElementById("startlast").checked = startupMode === 'last';
-  localStorage.setItem(CONFIG.STORAGE_KEYS.START_MODE, startupMode);
-  localStorage.setItem(CONFIG.STORAGE_KEYS.START_LATEST, startupMode === 'latest' ? "true" : "false");
-  localStorage.setItem(CONFIG.STORAGE_KEYS.LAST_DATE, startupMode === 'last' ? "true" : "false");
+  STORAGE.set(CONFIG.STORAGE_KEYS.START_MODE, startupMode);
+  STORAGE.set(CONFIG.STORAGE_KEYS.START_LATEST, startupMode === 'latest' ? "true" : "false");
+  STORAGE.set(CONFIG.STORAGE_KEYS.LAST_DATE, startupMode === 'last' ? "true" : "false");
 }
 
 document.getElementById('starttoday').addEventListener('change', function() {
@@ -3065,12 +3066,12 @@ document.getElementById('startlast').addEventListener('change', function() {
 document.getElementById('showfavs').onclick = function() {
   const favs = loadFavs();
   if (this.checked) {
-    localStorage.setItem(CONFIG.STORAGE_KEYS.SHOW_FAVS, "true");
+    STORAGE.set(CONFIG.STORAGE_KEYS.SHOW_FAVS, "true");
     if (favs.indexOf(formattedDate) === -1 && favs.length) {
       currentselectedDate = new Date(favs[0]);
     }
   } else {
-    localStorage.setItem(CONFIG.STORAGE_KEYS.SHOW_FAVS, "false");
+    STORAGE.set(CONFIG.STORAGE_KEYS.SHOW_FAVS, "false");
   }
   CompareDates();
   DisplayComic();
@@ -3078,17 +3079,17 @@ document.getElementById('showfavs').onclick = function() {
 
 // Load settings from localStorage
 // Swipe defaults to true for new users (null means never set)
-document.getElementById("swipe").checked = localStorage.getItem(CONFIG.STORAGE_KEYS.SWIPE) !== "false";
-document.getElementById("showfavs").checked = localStorage.getItem(CONFIG.STORAGE_KEYS.SHOW_FAVS) === "true";
+document.getElementById("swipe").checked = STORAGE.get(CONFIG.STORAGE_KEYS.SWIPE) !== "false";
+document.getElementById("showfavs").checked = STORAGE.get(CONFIG.STORAGE_KEYS.SHOW_FAVS) === "true";
 setStartupMode(getStartupMode());
 
 // Shuffle mode toggle
 {
   const shuffleCheckbox = document.getElementById("shuffle");
   if (shuffleCheckbox) {
-    shuffleCheckbox.checked = localStorage.getItem(CONFIG.STORAGE_KEYS.SHUFFLE) === "true";
+    shuffleCheckbox.checked = STORAGE.get(CONFIG.STORAGE_KEYS.SHUFFLE) === "true";
     shuffleCheckbox.onclick = function() {
-      localStorage.setItem(CONFIG.STORAGE_KEYS.SHUFFLE, this.checked ? "true" : "false");
+      STORAGE.set(CONFIG.STORAGE_KEYS.SHUFFLE, this.checked ? "true" : "false");
       resetShuffleHistory();
     };
   }
@@ -3101,10 +3102,10 @@ displayServiceWorkerVersion();
 
 {
   const settingsPanel = document.getElementById("settingsDIV");
-  if (localStorage.getItem(CONFIG.STORAGE_KEYS.SETTINGS_VISIBLE) === "true" && settingsPanel) {
-    settingsPanel.classList.add('visible');
+  if (STORAGE.get(CONFIG.STORAGE_KEYS.SETTINGS_VISIBLE) === "true" && settingsPanel) {
+    openSettings();
   } else if (settingsPanel) {
-    settingsPanel.classList.remove('visible');
+    closeSettings(false);
   }
 }
 
@@ -3152,29 +3153,40 @@ function Addfav()
 /**
  * Toggles the settings panel visibility
  */   
-function HideSettings()
-{
+function closeSettings(restoreFocus = true) {
   const panel = document.getElementById("settingsDIV");
-  
   if (!panel) return;
-  
-  // Toggle visibility using class
-  if (panel.classList.contains('visible')) {
-    panel.classList.remove('visible');
-    localStorage.setItem(CONFIG.STORAGE_KEYS.SETTINGS_VISIBLE, "false");
-  } else {
-    // Before showing, ensure saved position is applied
-    const savedPosRaw = localStorage.getItem(CONFIG.STORAGE_KEYS.SETTINGS_POS);
-    const savedPos = UTILS.safeJSONParse(savedPosRaw, null);
-    if (savedPos && typeof savedPos.top === 'number' && typeof savedPos.left === 'number') {
-      panel.style.top = savedPos.top + 'px';
-      panel.style.left = savedPos.left + 'px';
-      panel.style.transform = 'none';
-    }
-    
-    panel.classList.add('visible');
-    localStorage.setItem(CONFIG.STORAGE_KEYS.SETTINGS_VISIBLE, "true");
+  panel.classList.remove('visible');
+  panel.setAttribute('aria-hidden', 'true');
+  panel.inert = true;
+  document.getElementById('settings')?.setAttribute('aria-expanded', 'false');
+  STORAGE.set(CONFIG.STORAGE_KEYS.SETTINGS_VISIBLE, "false");
+  if (restoreFocus) document.getElementById('settings')?.focus();
+}
+
+function openSettings() {
+  const panel = document.getElementById("settingsDIV");
+  if (!panel) return;
+  const savedPosRaw = STORAGE.get(CONFIG.STORAGE_KEYS.SETTINGS_POS);
+  const savedPos = UTILS.safeJSONParse(savedPosRaw, null);
+  if (savedPos && typeof savedPos.top === 'number' && typeof savedPos.left === 'number') {
+    panel.style.top = savedPos.top + 'px';
+    panel.style.left = savedPos.left + 'px';
+    panel.style.transform = 'none';
   }
+  panel.classList.add('visible');
+  panel.inert = false;
+  panel.setAttribute('aria-hidden', 'false');
+  document.getElementById('settings')?.setAttribute('aria-expanded', 'true');
+  STORAGE.set(CONFIG.STORAGE_KEYS.SETTINGS_VISIBLE, "true");
+  document.getElementById('settingsClose')?.focus();
+}
+
+function HideSettings() {
+  const panel = document.getElementById("settingsDIV");
+  if (!panel) return;
+  if (panel.classList.contains('visible')) closeSettings();
+  else openSettings();
 }
 
 /**
@@ -3188,7 +3200,7 @@ function initializeDraggableSettings() {
   if (!panel || !header) return;
   
   // Load and apply saved position FIRST, before any events
-  const savedPosRaw = localStorage.getItem(CONFIG.STORAGE_KEYS.SETTINGS_POS);
+  const savedPosRaw = STORAGE.get(CONFIG.STORAGE_KEYS.SETTINGS_POS);
   const savedPos = UTILS.safeJSONParse(savedPosRaw, null);
   if (savedPos && typeof savedPos.top === 'number' && typeof savedPos.left === 'number') {
     // Disable animation temporarily
@@ -3413,7 +3425,7 @@ function positionToolbarCentered(toolbar, savePosition = false) {
     });
     // Mark as being in optimal position
     try {
-      localStorage.setItem(CONFIG.STORAGE_KEYS.TOOLBAR_OPTIMAL, 'true');
+      STORAGE.set(CONFIG.STORAGE_KEYS.TOOLBAR_OPTIMAL, 'true');
     } catch (_) {}
   }
 }
@@ -3426,7 +3438,7 @@ function makeMainToolbarDraggable(toolbar) {
   if (!toolbar) return;
 
   // Restore saved absolute position on load (document coordinates)
-  const savedPosRaw = localStorage.getItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS) || localStorage.getItem('mainToolbarPosition');
+  const savedPosRaw = STORAGE.get(CONFIG.STORAGE_KEYS.TOOLBAR_POS) || STORAGE.get('mainToolbarPosition');
   const savedPos = UTILS.safeJSONParse(savedPosRaw, null);
   if (savedPos && typeof savedPos.top === 'number' && typeof savedPos.left === 'number') {
     toolbar.style.top = savedPos.top + 'px';
@@ -3434,10 +3446,10 @@ function makeMainToolbarDraggable(toolbar) {
     toolbar.style.transform = 'none';
     
     // Migrate old storage key
-    if (!localStorage.getItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS)) {
+    if (!STORAGE.get(CONFIG.STORAGE_KEYS.TOOLBAR_POS)) {
       try { 
-        localStorage.setItem(CONFIG.STORAGE_KEYS.TOOLBAR_POS, JSON.stringify(savedPos)); 
-        localStorage.removeItem('mainToolbarPosition'); 
+        STORAGE.set(CONFIG.STORAGE_KEYS.TOOLBAR_POS, JSON.stringify(savedPos));
+        STORAGE.remove('mainToolbarPosition');
       } catch(_) {}
     }
   }
@@ -3617,7 +3629,7 @@ function showKeyboardShortcutsHint() {
     return; // Skip showing hint on mobile/touch devices
   }
   
-  const hasSeenHint = localStorage.getItem(CONFIG.STORAGE_KEYS.KEYBOARD_HINT);
+  const hasSeenHint = STORAGE.get(CONFIG.STORAGE_KEYS.KEYBOARD_HINT);
   
   if (!hasSeenHint) {
     setTimeout(() => {
@@ -3632,9 +3644,13 @@ function showKeyboardShortcutsHint() {
             Spatie/R : Willekeurig<br>
             F : Favoriet
           </div>
-          <button onclick="this.parentElement.parentElement.remove(); localStorage.setItem('${CONFIG.STORAGE_KEYS.KEYBOARD_HINT}', 'true');" class="keyboard-hint-btn">Begrepen!</button>
+          <button class="keyboard-hint-btn">Begrepen!</button>
         </div>
       `;
+      hint.querySelector('.keyboard-hint-btn').addEventListener('click', () => {
+        hint.remove();
+        STORAGE.set(CONFIG.STORAGE_KEYS.KEYBOARD_HINT, 'true');
+      });
       document.body.appendChild(hint);
       
       // Auto-hide after 8 seconds
@@ -3647,7 +3663,7 @@ function showKeyboardShortcutsHint() {
             if (hintEl.parentElement) {
               hintEl.parentElement.removeChild(hintEl);
             }
-            localStorage.setItem(CONFIG.STORAGE_KEYS.KEYBOARD_HINT, 'true');
+            STORAGE.set(CONFIG.STORAGE_KEYS.KEYBOARD_HINT, 'true');
           }, 500);
         }
       }, CONFIG.NOTIFICATION_AUTO_HIDE);
@@ -3661,3 +3677,44 @@ if (document.readyState === 'loading') {
 } else {
   showKeyboardShortcutsHint();
 }
+
+function bindApplicationEvents() {
+  const bindings = [
+    ['First', 'click', FirstClick],
+    ['Previous', 'click', PreviousClick],
+    ['Random', 'click', RandomClick],
+    ['Next', 'click', NextClick],
+    ['Current', 'click', CurrentClick],
+    ['darkmode', 'click', ToggleDarkMode],
+    ['settings', 'click', HideSettings],
+    ['settingsClose', 'click', HideSettings],
+    ['favheart', 'click', Addfav],
+    ['share', 'click', Share],
+    ['exportFavs', 'click', exportFavorites]
+  ];
+
+  for (const [id, eventName, handler] of bindings) {
+    document.getElementById(id)?.addEventListener(eventName, handler);
+  }
+
+  const datePicker = document.getElementById('DatePicker');
+  datePicker?.addEventListener('input', DateChange);
+  datePicker?.addEventListener('click', () => datePicker.showPicker?.());
+  document.getElementById('importFavs')?.addEventListener('click', () => {
+    document.getElementById('importFavsInput')?.click();
+  });
+  document.getElementById('importFavsInput')?.addEventListener('change', importFavorites);
+  document.getElementById('retryComic')?.addEventListener('click', () => DisplayComic());
+  document.getElementById('latestComic')?.addEventListener('click', CurrentClick);
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && document.getElementById('settingsDIV')?.classList.contains('visible')) {
+      closeSettings();
+    }
+  });
+}
+
+bindApplicationEvents();
+window.addEventListener('storageerror', event => {
+  TELEMETRY.report('storage_failed', event.detail?.operation || 'unknown');
+});
+onLoad();

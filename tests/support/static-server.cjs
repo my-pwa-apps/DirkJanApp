@@ -34,8 +34,9 @@ const server = http.createServer((request, response) => {
   const normalizedPath = path.normalize(decodedPath).replace(/^([/\\])+/, '');
   const requestedFile = normalizedPath === '' ? 'index.html' : normalizedPath;
   const filePath = path.resolve(root, requestedFile);
+  const relativePath = path.relative(root, filePath);
 
-  if (!filePath.startsWith(root)) {
+  if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
     response.writeHead(403);
     response.end('Forbidden');
     return;

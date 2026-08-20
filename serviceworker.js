@@ -1,6 +1,6 @@
 // Service Worker for DirkJan PWA
 // Cache versioning - increment when you need to force cache refresh
-const CACHE_VERSION = 'v134';
+const CACHE_VERSION = 'v166';
 const CACHE_NAME = `dirkjan-cache-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `dirkjan-runtime-${CACHE_VERSION}`;
 const IMAGE_CACHE = `dirkjan-images-${CACHE_VERSION}`;
@@ -10,6 +10,9 @@ const PRECACHE_ASSETS = [
   './index.html',
   './offline.html',
   './main.css',
+  './storage.js',
+  './telemetry.js',
+  './date-utils.js',
   './app.js',
   './manifest.webmanifest',
   './dirk-jan-tekst.svg',
@@ -19,6 +22,8 @@ const PRECACHE_ASSETS = [
 
 // Maximum cache sizes
 const MAX_IMAGE_CACHE_SIZE = 50;
+const MAX_IMAGE_CACHE_BYTES = 20 * 1024 * 1024;
+const MAX_CACHEABLE_IMAGE_BYTES = 5 * 1024 * 1024;
 const MAX_RUNTIME_CACHE_SIZE = 30;
 const NETWORK_TIMEOUT_MS = 15000;
 
@@ -28,9 +33,6 @@ self.addEventListener('install', event => {
     caches.open(CACHE_NAME)
       .then(cache => cache.addAll(PRECACHE_ASSETS))
       .then(() => self.skipWaiting())
-      .catch(() => {
-        // Pre-cache failed - app will work without offline support
-      })
   );
 });
 
@@ -125,16 +127,14 @@ async function cacheFirstWithLimit(request, cacheName, maxSize) {
   try {
     const networkResponse = await fetchWithTimeout(request);
     if (networkResponse?.status === 200) {
-      const cache = await caches.open(cacheName);
-      
-      // Manage cache size - remove oldest entries when limit reached
-      const keys = await cache.keys();
-      while (keys.length >= maxSize) {
-        await cache.delete(keys.shift()); // Remove oldest (FIFO)
+      const responseSize = getDeclaredResponseSize(networkResponse);
+      if (responseSize === null || responseSize > MAX_CACHEABLE_IMAGE_BYTES) {
+        return networkResponse;
       }
-      
-      // Cache the new response
+
+      const cache = await caches.open(cacheName);
       await cache.put(request, networkResponse.clone());
+      await enforceImageCacheLimits(cache, maxSize, MAX_IMAGE_CACHE_BYTES);
     }
     return networkResponse;
   } catch (error) {
@@ -143,6 +143,33 @@ async function cacheFirstWithLimit(request, cacheName, maxSize) {
       status: 503,
       statusText: 'Service Unavailable'
     });
+  }
+}
+
+function getDeclaredResponseSize(response) {
+  const value = response.headers.get('content-length');
+  if (value === null) return null;
+  const size = Number.parseInt(value, 10);
+  return Number.isFinite(size) && size >= 0 ? size : null;
+}
+
+async function enforceImageCacheLimits(cache, maxEntries, maxBytes) {
+  const keys = await cache.keys();
+  const entries = [];
+  let totalBytes = 0;
+
+  for (const key of keys) {
+    const response = await cache.match(key);
+    const size = response ? getDeclaredResponseSize(response) : null;
+    entries.push({ key, size: size || 0 });
+    totalBytes += size || 0;
+  }
+
+  while (entries.length > maxEntries || totalBytes > maxBytes) {
+    const oldest = entries.shift();
+    if (!oldest) break;
+    await cache.delete(oldest.key);
+    totalBytes -= oldest.size;
   }
 }
 
