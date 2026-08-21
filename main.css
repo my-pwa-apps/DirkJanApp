@@ -150,6 +150,10 @@ input {
     outline: none;
 }
 
+button:focus:not(:focus-visible) {
+    outline: none;
+}
+
 /* ========================================
    TOOLBAR DESIGN
    ======================================== */

@@ -82,6 +82,11 @@ test('screen-reader-only headings remain visually hidden', () => {
   assert.match(cssSource, /clip-path:\s*inset\(50%\)/);
 });
 
+test('mouse button focus hides native outlines while keyboard focus stays visible', () => {
+  assert.match(cssSource, /button:focus:not\(:focus-visible\)\s*\{\s*outline:\s*none/);
+  assert.match(cssSource, /\.toolbar-button:focus-visible[\s\S]*?box-shadow:\s*var\(--focus-ring\)/);
+});
+
 test('manifest keeps PWA orientation controlled by application code', () => {
   assert.equal(manifest.orientation, 'any');
   assert.equal(manifest.display, 'standalone');
