@@ -1,9 +1,12 @@
 const { expect } = require('@playwright/test');
 
-const transparentPng = Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAFgwJ/l8WU3wAAAABJRU5ErkJggg==',
-  'base64'
-);
+const transparentPng = Buffer.concat([
+  Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAFgwJ/l8WU3wAAAABJRU5ErkJggg==',
+    'base64'
+  ),
+  Buffer.alloc(512)
+]);
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -38,6 +41,11 @@ async function mockExternalServices(page, options = {}) {
       : route.request().url();
     const date = targetUrl.match(/(\d{8})/)?.[1];
     proxyRequests.push(targetUrl);
+
+    if (targetUrl.includes('/wp-content/uploads/')) {
+      route.fulfill({ status: 200, contentType: 'image/png', body: transparentPng, headers: corsHeaders });
+      return;
+    }
 
     route.fulfill({
       status: httpNotFoundDates.has(date) ? 404 : 200,

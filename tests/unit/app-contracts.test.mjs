@@ -36,6 +36,15 @@ test('comic extraction supports DirkJan article and WordPress image markup', () 
   assert.match(appSource, /\['dirkjan\.nl', 'www\.dirkjan\.nl'\]\.includes/);
 });
 
+test('comic images load through the controlled proxy as revocable blob URLs', () => {
+  assert.match(appSource, /async function createComicObjectUrl\(imageUrl, signal = null\)/);
+  assert.match(appSource, /fetchWithFallback\(imageUrl, signal\)/);
+  assert.match(appSource, /blob\.type\.startsWith\('image\/'\)/);
+  assert.match(appSource, /comicImg\.src = displayUrl/);
+  assert.match(appSource, /URL\.revokeObjectURL\(previousComicObjectUrl\)/);
+  assert.match(appSource, /return createComicObjectUrl\(imageUrl\)\.then/);
+});
+
 test('startup discovery failures retain a usable comic view', () => {
   assert.match(appSource, /discoverLatestAvailableComic\(\)\.then\(latestDate => \{[\s\S]*?\}\)\.catch\(\(\) => \{\s*CompareDates\(\);\s*DisplayComic\(null, 'nearest'\)/);
   assert.match(appSource, /comicImg\.alt = `DirkJan strip van \$\{dateParts\.day\}-\$\{dateParts\.month\}-\$\{dateParts\.year\} laden`/);

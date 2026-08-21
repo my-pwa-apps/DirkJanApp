@@ -327,6 +327,7 @@ let maxDate;                    // Maximum possible comic date (next Friday)
 let latestAvailableDate;        // Actual latest available comic date (found on load)
 let isAnimating = false;        // Prevents overlapping animations
 let notFoundRetries = 0;        // Prevents infinite 404 recursion
+let currentComicObjectUrl = null;
 
 // Shuffle mode history (used when the "Shuffle modus" setting is enabled)
 let shuffleBackStack = [];      // Previously seen random comics (for going back)
@@ -1718,6 +1719,23 @@ function normalizeComicImageUrl(candidateUrl) {
   }
 }
 
+/**
+ * Fetches a comic image through the controlled proxy and returns a local blob URL.
+ * @param {string} imageUrl - Trusted DirkJan image URL
+ * @param {AbortSignal|null} signal - Optional navigation cancellation signal
+ * @returns {Promise<string>} Browser-local URL containing the proxied image bytes
+ */
+async function createComicObjectUrl(imageUrl, signal = null) {
+  const response = await fetchWithFallback(imageUrl, signal);
+  const blob = await response.blob();
+
+  if (!blob.type.startsWith('image/') || blob.size < CONFIG.MIN_IMAGE_SIZE) {
+    throw new Error('Proxy returned an invalid comic image');
+  }
+
+  return URL.createObjectURL(blob);
+}
+
 async function fetchComicData(date, pageUrl, signal) {
   try {
     const metadataUrl = new URL(CONFIG.COMIC_METADATA_ENDPOINT);
@@ -1858,6 +1876,23 @@ function DisplayComic(direction = null, notFoundBehavior = 'nearest')
         }
         // Store as YYYY-MM-DD for stable, locale-independent parsing
         STORAGE.set(CONFIG.STORAGE_KEYS.LAST_COMIC, formattedDate);
+
+        return createComicObjectUrl(pictureUrl, fetchSignal);
+      }
+
+      return null;
+    })
+    .then(function(displayUrl)
+	{
+      if (fetchSignal.aborted) {
+        if (displayUrl) URL.revokeObjectURL(displayUrl);
+        throw new DOMException('Aborted', 'AbortError');
+      }
+
+      if (displayUrl)
+      {
+        const previousComicObjectUrl = currentComicObjectUrl;
+        currentComicObjectUrl = displayUrl;
         
         // Animate transition based on direction
         const animateTransition = () => {
@@ -1883,7 +1918,7 @@ function DisplayComic(direction = null, notFoundBehavior = 'nearest')
                   
                   // Set new image source on original (it will slide in)
                   comicImg.classList.add('no-transition');
-                  comicImg.src = pictureUrl;
+                  comicImg.src = displayUrl;
                   comicImg.classList.add(slideInClass);
                   
                   // Force reflow
@@ -1910,10 +1945,10 @@ function DisplayComic(direction = null, notFoundBehavior = 'nearest')
                 };
                 tempImg.onerror = function() {
                   // On error, just set the src directly without animation
-                  comicImg.src = pictureUrl;
+                  comicImg.src = displayUrl;
                   resolve();
                 };
-                tempImg.src = pictureUrl;
+                tempImg.src = displayUrl;
               } else {
                 // BLUR MORPH animation for random, date picker, first, last
                 // Create clone of current comic to morph out (sits on top)
@@ -1933,7 +1968,7 @@ function DisplayComic(direction = null, notFoundBehavior = 'nearest')
                 comicImg.offsetHeight;
                 
                 // Load new image underneath (hidden by clone until loaded)
-                comicImg.src = pictureUrl;
+                comicImg.src = displayUrl;
                 
                 // Wait for new image to load, THEN blur out clone
                 const startMorph = () => {
@@ -1958,7 +1993,7 @@ function DisplayComic(direction = null, notFoundBehavior = 'nearest')
               }
             } else {
               // First load - no animation needed
-              comicImg.src = pictureUrl;
+              comicImg.src = displayUrl;
               resolve();
             }
           });
@@ -1983,7 +2018,11 @@ function DisplayComic(direction = null, notFoundBehavior = 'nearest')
           
           // Also update the rotated comic if it exists (with animation)
           if (rotatedComic) {
-            animateRotatedComic(rotatedComic, pictureUrl, direction);
+            animateRotatedComic(rotatedComic, displayUrl, direction);
+          }
+
+          if (previousComicObjectUrl && previousComicObjectUrl !== displayUrl) {
+            URL.revokeObjectURL(previousComicObjectUrl);
           }
         });
       }
@@ -3605,10 +3644,15 @@ function preloadComic(date) {
       const imageUrl = extractComicImageUrl(text);
       if (!imageUrl) return;
       
-      // Preload the actual image
-      const img = new Image();
-      img.onload = () => preloadedComics.set(preloadFormattedDate, imageUrl);
-      img.src = imageUrl;
+      return createComicObjectUrl(imageUrl).then(objectUrl => {
+        const img = new Image();
+        img.onload = () => {
+          preloadedComics.set(preloadFormattedDate, imageUrl);
+          URL.revokeObjectURL(objectUrl);
+        };
+        img.onerror = () => URL.revokeObjectURL(objectUrl);
+        img.src = objectUrl;
+      });
     })
     .catch(() => {
       // Silently fail for background preloading
