@@ -4,7 +4,8 @@ import worker from '../../proxy-worker/src/index.js';
 
 const ENV = {
   ALLOWED_HOSTS: 'dirkjan.nl,www.dirkjan.nl',
-  ALLOWED_ORIGINS: 'https://dirkjanapp.pages.dev,http://127.0.0.1:8000'
+  ALLOWED_ORIGINS: 'https://dirkjanapp.pages.dev,https://garfieldapp.pages.dev,http://127.0.0.1:8000',
+  RATE_LIMIT_MAX: '10000'
 };
 
 function createCache() {
@@ -19,11 +20,11 @@ function createCache() {
   };
 }
 
-async function run(request, upstreamFetch = () => { throw new Error('Unexpected upstream request'); }) {
+async function run(request, upstreamFetch = () => { throw new Error('Unexpected upstream request'); }, env = ENV) {
   const waits = [];
   globalThis.caches = { default: createCache() };
   globalThis.fetch = upstreamFetch;
-  const response = await worker.fetch(request, ENV, { waitUntil: promise => waits.push(promise) });
+  const response = await worker.fetch(request, env, { waitUntil: promise => waits.push(promise) });
   await Promise.all(waits);
   return response;
 }
@@ -36,22 +37,37 @@ function proxyRequest(target, options = {}) {
   });
 }
 
+test('rate-limits repeated proxy requests from the same client IP', async () => {
+  const limitedEnv = { ...ENV, RATE_LIMIT_MAX: '2', RATE_LIMIT_WINDOW_MS: '60000' };
+  const headers = { origin: 'https://dirkjanapp.pages.dev', 'cf-connecting-ip': '203.0.113.9' };
+  const first = await run(proxyRequest('https://dirkjan.nl/cartoon/1', { headers }), async () => new Response('ok', { status: 200, headers: { 'content-length': '2' } }), limitedEnv);
+  const second = await run(proxyRequest('https://dirkjan.nl/cartoon/2', { headers }), async () => new Response('ok', { status: 200, headers: { 'content-length': '2' } }), limitedEnv);
+  const third = await run(proxyRequest('https://dirkjan.nl/cartoon/3', { headers }), async () => { throw new Error('should not fetch upstream'); }, limitedEnv);
+  assert.equal(first.status, 200);
+  assert.equal(second.status, 200);
+  assert.equal(third.status, 429);
+  assert.equal(third.headers.get('retry-after'), '60');
+});
+
 test('rejects unsupported methods and blocked target hosts without upstream work', async () => {
   assert.equal((await run(proxyRequest('https://dirkjan.nl/cartoon/1', { method: 'DELETE' }))).status, 405);
   assert.equal((await run(proxyRequest('https://example.com/private'))).status, 403);
 });
 
 test('answers preflight only for configured browser origins', async () => {
-  const allowed = await run(new Request('https://proxy.example/', {
-    method: 'OPTIONS',
-    headers: { origin: 'https://dirkjanapp.pages.dev' }
-  }));
+  for (const origin of ['https://dirkjanapp.pages.dev', 'https://garfieldapp.pages.dev']) {
+    const allowed = await run(new Request('https://proxy.example/', {
+      method: 'OPTIONS',
+      headers: { origin }
+    }));
+    assert.equal(allowed.status, 204);
+    assert.equal(allowed.headers.get('access-control-allow-origin'), origin);
+  }
+
   const blocked = await run(new Request('https://proxy.example/', {
     method: 'OPTIONS',
     headers: { origin: 'https://attacker.example' }
   }));
-  assert.equal(allowed.status, 204);
-  assert.equal(allowed.headers.get('access-control-allow-origin'), 'https://dirkjanapp.pages.dev');
   assert.equal(blocked.headers.get('access-control-allow-origin'), null);
 });
 

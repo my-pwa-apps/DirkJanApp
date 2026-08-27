@@ -68,9 +68,26 @@ const CONFIG = Object.freeze({
  * Initializes and registers the service worker for PWA functionality
  */
 if ('serviceWorker' in navigator) {
+  let reloadingForUpdate = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!reloadingForUpdate) return;
+    reloadingForUpdate = false;
+    window.location.reload();
+  });
+
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./serviceworker.js')
       .then(registration => {
+        const offerUpdate = worker => {
+          if (!worker || !navigator.serviceWorker.controller) return;
+          showUpdateNotification(() => {
+            reloadingForUpdate = true;
+            worker.postMessage({ type: 'SKIP_WAITING' });
+          });
+        };
+
+        offerUpdate(registration.waiting);
+
         // Check for updates periodically (every hour)
         setInterval(() => {
           registration.update();
@@ -81,8 +98,8 @@ if ('serviceWorker' in navigator) {
           const newWorker = registration.installing;
           if (newWorker) {
             newWorker.addEventListener('statechange', () => {
-              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                showUpdateNotification();
+              if (newWorker.state === 'installed') {
+                offerUpdate(newWorker);
               }
             });
           }
@@ -98,7 +115,9 @@ if ('serviceWorker' in navigator) {
 /**
  * Shows update notification to user when new version is available
  */
-function showUpdateNotification() {
+function showUpdateNotification(onAccept) {
+  if (document.getElementById('update-notification')) return;
+
   const notification = document.createElement('div');
   notification.id = 'update-notification';
   notification.innerHTML = `
@@ -108,7 +127,10 @@ function showUpdateNotification() {
       <button class="update-notification-btn update-notification-btn-secondary">Later</button>
     </div>
   `;
-  notification.querySelector('.update-notification-btn-primary').addEventListener('click', updateApp);
+  notification.querySelector('.update-notification-btn-primary').addEventListener('click', () => {
+    const accept = onAccept || updateApp;
+    accept();
+  });
   notification.querySelector('.update-notification-btn-secondary').addEventListener('click', dismissUpdate);
   document.body.appendChild(notification);
 }
@@ -126,10 +148,6 @@ function updateApp() {
     navigator.serviceWorker.getRegistration()
       .then(registration => {
         if (registration && registration.waiting) {
-          // Listen for controller change before reloading to ensure new SW is active
-          navigator.serviceWorker.addEventListener('controllerchange', () => {
-            window.location.reload();
-          }, { once: true });
           registration.waiting.postMessage({ type: 'SKIP_WAITING' });
         }
       })
@@ -328,6 +346,20 @@ let latestAvailableDate;        // Actual latest available comic date (found on 
 let isAnimating = false;        // Prevents overlapping animations
 let notFoundRetries = 0;        // Prevents infinite 404 recursion
 let currentComicObjectUrl = null;
+let comicBlobCache = null;
+let fullscreenControlsBound = false;
+
+function getComicBlobCache() {
+  if (!comicBlobCache) {
+    comicBlobCache = COMIC_LOADER.createComicBlobCache({ maxSize: CONFIG.MAX_PRELOAD_CACHE });
+  }
+  return comicBlobCache;
+}
+
+function isFullscreenActive() {
+  const shell = document.getElementById('fullscreen-shell');
+  return !!(shell && !shell.hidden);
+}
 
 // Shuffle mode history (used when the "Shuffle modus" setting is enabled)
 let shuffleBackStack = [];      // Previously seen random comics (for going back)
@@ -463,14 +495,8 @@ function storeToolbarPosition(top, left, toolbarEl, overrides = {}) {
  */
 function loadFavs() {
   if (Array.isArray(_cachedFavs)) return _cachedFavs;
-  try {
-    const raw = STORAGE.get(CONFIG.STORAGE_KEYS.FAVS);
-    if (!raw) return (_cachedFavs = []);
-    const parsed = JSON.parse(raw);
-    return (_cachedFavs = Array.isArray(parsed) ? parsed : []);
-  } catch (e) {
-    return (_cachedFavs = []);
-  }
+  const parsed = STORAGE.getJSON(CONFIG.STORAGE_KEYS.FAVS, []);
+  return (_cachedFavs = Array.isArray(parsed) ? parsed : []);
 }
 
 /**
@@ -625,7 +651,7 @@ function clampMainToolbarInView() {
 }
 
 /**
- * Generic draggable element maker - eliminates duplicate drag code
+ * Generic draggable element maker - snap/persist stay in the app, pointer math lives in toolbar.js
  * @param {HTMLElement} element - Element to make draggable
  * @param {HTMLElement} dragHandle - Element that triggers dragging (usually header)
  * @param {string} storageKey - localStorage key for saving position
@@ -633,182 +659,69 @@ function clampMainToolbarInView() {
  * @param {Function} onDragEnd - Optional callback when drag ends
  */
 function makeDraggable(element, dragHandle, storageKey, onDragStart = null, onDragEnd = null) {
-  if (!element || !dragHandle) return;
-  
-  let isDragging = false;
-  let offsetX, offsetY;
-  let elementStartX, elementStartY;
-  
-  function onDown(e) {
-    // For mouse events, only drag with the left button
-    if (e.type === 'mousedown' && e.button !== 0) return;
-    
-    // Prevent dragging when interacting with buttons or inputs
-    if (e.target.closest('button, input')) return;
-    
-    // Check if target is the handle or within it
-    if (!(e.target === dragHandle || dragHandle.contains(e.target))) return;
-    
-    isDragging = true;
-    element.style.cursor = 'grabbing';
-    element.style.transition = 'none';
-    
-    const event = e.touches ? e.touches[0] : e;
-    const rect = element.getBoundingClientRect();
-    
-    // Get current position
-    elementStartX = parseFloat(element.style.left) || rect.left + window.scrollX;
-    elementStartY = parseFloat(element.style.top) || rect.top + window.scrollY;
-    
-    // Calculate offset from touch/click point to element's top-left
-    offsetX = event.clientX + window.scrollX - elementStartX;
-    offsetY = event.clientY + window.scrollY - elementStartY;
-    
-    // Callback for custom start behavior
-    if (onDragStart) onDragStart(element);
-    
-    document.addEventListener('mousemove', onMove, { passive: false });
-    document.addEventListener('touchmove', onMove, { passive: false });
-    document.addEventListener('mouseup', onUp);
-    document.addEventListener('touchend', onUp);
-    
-    e.preventDefault();
-  }
-  
-  function onMove(e) {
-    if (!isDragging) return;
-    e.preventDefault();
-    
-    const event = e.touches ? e.touches[0] : e;
-    
-    // Calculate new position
-    let newLeft = event.clientX - offsetX + window.scrollX;
-    let newTop = event.clientY - offsetY + window.scrollY;
-    
-    // Get element dimensions for boundary checking
-    const width = element.offsetWidth;
-    const height = element.offsetHeight;
-    
-    // Constrain within document bounds
-    const docWidth = Math.max(document.documentElement.scrollWidth, window.innerWidth);
-    const docHeight = Math.max(document.documentElement.scrollHeight, window.innerHeight);
-    
-    // For toolbar: always keep horizontally centered
-    if (storageKey === CONFIG.STORAGE_KEYS.TOOLBAR_POS) {
-      newLeft = (window.innerWidth - width) / 2;
-    } else {
-      newLeft = Math.max(0, Math.min(newLeft, docWidth - width));
-    }
-    
-    newTop = Math.max(0, Math.min(newTop, docHeight - height));
-    
-    // Apply position
-    element.style.left = `${newLeft}px`;
-    element.style.top = `${newTop}px`;
-    element.style.transform = 'none';
-  }
-  
-  function onUp() {
-    if (!isDragging) return;
-    
-    isDragging = false;
-    element.style.cursor = dragHandle === element ? 'grab' : '';
-    
-    // Get current position
-    let numericTop = parseFloat(element.style.top) || 0;
-    let numericLeft = parseFloat(element.style.left) || 0;
-    
-    // For toolbar: ensure it's horizontally centered
-    if (storageKey === CONFIG.STORAGE_KEYS.TOOLBAR_POS) {
-      numericLeft = (window.innerWidth - element.offsetWidth) / 2;
-      element.style.left = numericLeft + 'px';
-    }
-    
-    // Check for snap zone if this is the toolbar
-    let isOptimalPosition = false;
-    if (storageKey === CONFIG.STORAGE_KEYS.TOOLBAR_POS && isInSnapZone(numericTop, numericLeft, element)) {
-      // Snap to optimal position with smooth transition
-      const optimalPos = calculateOptimalToolbarPosition(element);
-      if (optimalPos) {
-        element.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
-        element.style.top = optimalPos.top + 'px';
-        element.style.left = optimalPos.left + 'px';
-        element.style.transform = 'none';
-        
-        // Update position values for storage
-        numericTop = optimalPos.top;
-        numericLeft = optimalPos.left;
-        isOptimalPosition = true;
-        
-        // Mark toolbar as being in optimal position
-        try {
-          STORAGE.set(CONFIG.STORAGE_KEYS.TOOLBAR_OPTIMAL, 'true');
-        } catch (_) {}
-        
-        // Clear transition after animation completes
-        setTimeout(() => {
-          element.style.transition = '';
-        }, 300);
+  TOOLBAR.makeDraggable(element, dragHandle, {
+    keepHorizontallyCentered: storageKey === CONFIG.STORAGE_KEYS.TOOLBAR_POS,
+    onDragStart,
+    onDragEnd,
+    trySnap(numericTop, numericLeft, el) {
+      if (storageKey !== CONFIG.STORAGE_KEYS.TOOLBAR_POS) return null;
+      if (isInSnapZone(numericTop, numericLeft, el)) {
+        const optimalPos = calculateOptimalToolbarPosition(el);
+        if (optimalPos) {
+          el.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+          el.style.top = optimalPos.top + 'px';
+          el.style.left = optimalPos.left + 'px';
+          el.style.transform = 'none';
+          try {
+            STORAGE.set(CONFIG.STORAGE_KEYS.TOOLBAR_OPTIMAL, 'true');
+          } catch (_) {}
+          setTimeout(() => { el.style.transition = ''; }, 300);
+          return optimalPos;
+        }
       }
-    } else if (storageKey === CONFIG.STORAGE_KEYS.TOOLBAR_POS) {
-      // User dragged toolbar away from optimal position - clear the flag
       try {
         STORAGE.remove(CONFIG.STORAGE_KEYS.TOOLBAR_OPTIMAL);
       } catch (_) {}
-    }
-    
-    // Save position
-    if (storageKey === CONFIG.STORAGE_KEYS.TOOLBAR_POS) {
-      const comic = document.getElementById('comic');
-      const settingsPanel = document.getElementById('settingsDIV');
-      let belowComic = false;
-      let comicGap;
-      if (comic) {
-        const comicRect = comic.getBoundingClientRect();
-        belowComic = numericTop > comicRect.bottom;
-        if (belowComic) {
-          comicGap = Math.max(15, numericTop - comicRect.bottom);
+      return null;
+    },
+    persistPosition(numericTop, numericLeft, el) {
+      if (storageKey === CONFIG.STORAGE_KEYS.TOOLBAR_POS) {
+        const comic = document.getElementById('comic');
+        const settingsPanel = document.getElementById('settingsDIV');
+        let belowComic = false;
+        let comicGap;
+        if (comic) {
+          const comicRect = comic.getBoundingClientRect();
+          belowComic = numericTop > comicRect.bottom;
+          if (belowComic) {
+            comicGap = Math.max(15, numericTop - comicRect.bottom);
+          }
         }
+
+        let belowSettings = false;
+        let settingsGap;
+        if (settingsPanel && settingsPanel.classList.contains('visible')) {
+          const settingsRect = settingsPanel.getBoundingClientRect();
+          belowSettings = numericTop > settingsRect.bottom + 5;
+          if (belowSettings) {
+            settingsGap = Math.max(15, numericTop - settingsRect.bottom);
+          }
+        }
+
+        storeToolbarPosition(numericTop, numericLeft, el, {
+          belowComic,
+          offsetFromComic: comicGap ?? null,
+          belowSettings,
+          offsetFromSettings: settingsGap ?? null
+        });
+        return;
       }
 
-      let belowSettings = false;
-      let settingsGap;
-      if (settingsPanel && settingsPanel.classList.contains('visible')) {
-        const settingsRect = settingsPanel.getBoundingClientRect();
-        belowSettings = numericTop > settingsRect.bottom + 5;
-        if (belowSettings) {
-          settingsGap = Math.max(15, numericTop - settingsRect.bottom);
-        }
-      }
-
-      storeToolbarPosition(numericTop, numericLeft, element, {
-        belowComic,
-        offsetFromComic: comicGap ?? null,
-        belowSettings,
-        offsetFromSettings: settingsGap ?? null
-      });
-    } else {
       try {
         STORAGE.set(storageKey, JSON.stringify({ top: numericTop, left: numericLeft }));
       } catch (_) {}
     }
-    
-    // Callback for custom end behavior
-    if (onDragEnd) onDragEnd(element);
-    
-    // Re-enable transitions
-    setTimeout(() => { element.style.transition = ''; }, 50);
-    
-    // Remove listeners
-    document.removeEventListener('mousemove', onMove);
-    document.removeEventListener('touchmove', onMove);
-    document.removeEventListener('mouseup', onUp);
-    document.removeEventListener('touchend', onUp);
-  }
-  
-  // Attach initial listeners
-  dragHandle.addEventListener('mousedown', onDown);
-  dragHandle.addEventListener('touchstart', onDown, { passive: false });
+  });
 }
 
 // ========================================
@@ -1054,6 +967,7 @@ function showShareDialog(content) {
  */
 const {
   getCurrentDate,
+  parseLocalDate,
   isComicPublishDate,
   moveToComicPublishDate,
   getStartupComicDate,
@@ -1099,17 +1013,11 @@ async function findLatestAvailableComic(startDate, minDate) {
     const formattedMonth = ("0" + m).slice(-2);
     const formattedDay = ("0" + d).slice(-2);
     const dateStr = `${y}${formattedMonth}${formattedDay}`;
-    const url = `https://dirkjan.nl/cartoon/${dateStr}`;
     
     try {
-      const response = await fetchWithFallback(url);
-      const text = await response.text();
-      
-      // Check if it's not a 404
-      if (!text.includes("error404")) {
-        // Store this as the latest available date for button state comparison
+      const comicData = await fetchComicData(dateStr, `https://dirkjan.nl/cartoon/${dateStr}`);
+      if (!comicData.notFound && comicData.imageUrl) {
         latestAvailableDate = new Date(testDate);
-        // Update the date picker max to the latest available comic
         updateDatePickerMax(latestAvailableDate);
         return testDate;
       }
@@ -1166,7 +1074,12 @@ function onLoad()
   // Check URL parameters for app shortcuts
   const urlParams = new URLSearchParams(window.location.search);
   
-  currentselectedDate = document.getElementById("DatePicker").valueAsDate = getCurrentDate();
+  currentselectedDate = getStartupComicDate();
+  const datePicker = document.getElementById("DatePicker");
+  if (datePicker) {
+    const dateParts = UTILS.formatDate(currentselectedDate);
+    datePicker.value = `${dateParts.year}-${dateParts.month}-${dateParts.day}`;
+  }
  
   const favs = loadFavs();
   const showFavsEl = document.getElementById("showfavs");
@@ -1175,7 +1088,7 @@ function onLoad()
     showFavsEl.checked = false;
     showFavsEl.disabled = true;
   } else if (showFavsEl.checked) {
-    currentselectedDate = new Date(favs[0]);
+    currentselectedDate = parseLocalDate(favs[0]) || currentselectedDate;
   }
  
  maxDate = getCurrentDate();
@@ -1191,8 +1104,18 @@ function onLoad()
   document.getElementById("DatePicker").setAttribute("max", formattedmaxDate);
   
   const startupMode = getStartupMode();
+  const showFavsChecked = document.getElementById("showfavs").checked;
+  const openRandomShortcut = urlParams.get('random') === 'true' && !showFavsChecked;
 
-  if(startupMode === 'latest' && !document.getElementById("showfavs").checked)
+  if (openRandomShortcut) {
+    currentselectedDate = pickRandomComicDate();
+    CompareDates();
+    DisplayComic('morph', 'random');
+    discoverLatestAvailableComic().then(() => CompareDates()).catch(() => {});
+    return;
+  }
+
+  if(startupMode === 'latest' && !showFavsChecked)
 	{
     discoverLatestAvailableComic().then(latestDate => {
       currentselectedDate = latestDate;
@@ -1202,12 +1125,11 @@ function onLoad()
       CompareDates();
       DisplayComic(null, 'nearest');
     });
-    return; // Exit early, DisplayComic will be called in the promise
+    return;
 	}
 
   if(startupMode === 'last')   
 	{
-		const showFavsChecked = document.getElementById("showfavs").checked;
     const storedLastComic = STORAGE.get(CONFIG.STORAGE_KEYS.LAST_COMIC);
 		if(!showFavsChecked && storedLastComic !== null)
 		{
@@ -1216,12 +1138,12 @@ function onLoad()
     CompareDates();
     DisplayComic();
 
-    discoverLatestAvailableComic().then(latestDate => {
+    discoverLatestAvailableComic().then(() => {
       if (document.getElementById("showfavs").checked) return;
       CompareDates();
     }).catch(() => {});
 	} else {
-    if (!document.getElementById("showfavs").checked) {
+    if (!showFavsChecked) {
       currentselectedDate = getStartupComicDate();
     }
     CompareDates();
@@ -1230,15 +1152,6 @@ function onLoad()
     discoverLatestAvailableComic().then(() => {
       CompareDates();
     }).catch(() => {});
-  }
-  
-  // Handle app shortcut for random comic
-  if (urlParams.get('random') === 'true') {
-    const start = new Date(comicstartDate);
-    const end = getCurrentDate();
-    currentselectedDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
-    CompareDates();
-    DisplayComic('morph', 'random');
   }
 }
 
@@ -1498,16 +1411,22 @@ function importFavorites(event) {
  */
 function displayServiceWorkerVersion() {
   const display = document.getElementById("swVersionDisplay");
+  const controller = navigator.serviceWorker?.controller;
   if (!display) return;
-  fetch('./serviceworker.js', { cache: 'no-store' })
-    .then(res => res.text())
-    .then(text => {
-      const match = text.match(/CACHE_VERSION\s*=\s*['"]([^'"]+)['"]/);
-      display.textContent = match ? 'Versie: ' + match[1] : 'Versie: onbekend';
-    })
-    .catch(() => {
-      display.textContent = 'Versie: onbekend';
-    });
+  if (typeof controller?.postMessage !== 'function') {
+    display.textContent = 'Versie: laden…';
+    return;
+  }
+
+  const channel = new MessageChannel();
+  const timeoutId = setTimeout(() => {
+    display.textContent = 'Versie: onbekend';
+  }, 2000);
+  channel.port1.onmessage = event => {
+    clearTimeout(timeoutId);
+    display.textContent = event.data?.version ? `Versie: ${event.data.version}` : 'Versie: onbekend';
+  };
+  controller.postMessage({ type: 'GET_VERSION' }, [channel.port2]);
 }
 
 /**
@@ -1520,12 +1439,12 @@ function PreviousClick()
     const favs = loadFavs();
     const idx = favs.indexOf(formattedDate);
     if (idx > 0) {
-      currentselectedDate = new Date(favs[idx - 1]);
+      currentselectedDate = parseLocalDate(favs[idx - 1]) || currentselectedDate;
     }
   } else if (isShuffleEnabled() && shuffleBackStack.length) {
     // Shuffle mode: step back through previously seen random comics
     shuffleForwardStack.push(formattedDate);
-    currentselectedDate = new Date(shuffleBackStack.pop());
+    currentselectedDate = parseLocalDate(shuffleBackStack.pop()) || currentselectedDate;
   } else {
     currentselectedDate.setDate(currentselectedDate.getDate() - 1);
     currentselectedDate = moveToComicPublishDate(currentselectedDate, -1);
@@ -1544,13 +1463,13 @@ function NextClick()
     const favs = loadFavs();
     const idx = favs.indexOf(formattedDate);
     if (idx > -1 && idx < favs.length - 1) {
-      currentselectedDate = new Date(favs[idx + 1]);
+      currentselectedDate = parseLocalDate(favs[idx + 1]) || currentselectedDate;
     }
   } else if (isShuffleEnabled()) {
     // Shuffle mode: step forward through history, or draw a new random comic
     if (shuffleForwardStack.length) {
       shuffleBackStack.push(formattedDate);
-      currentselectedDate = new Date(shuffleForwardStack.pop());
+      currentselectedDate = parseLocalDate(shuffleForwardStack.pop()) || currentselectedDate;
     } else {
       shuffleBackStack.push(formattedDate);
       currentselectedDate = pickRandomComicDate();
@@ -1571,7 +1490,7 @@ function FirstClick()
 {
   if (document.getElementById("showfavs").checked) {
     const favs = loadFavs();
-    if (favs.length) currentselectedDate = new Date(favs[0]);
+    if (favs.length) currentselectedDate = parseLocalDate(favs[0]) || currentselectedDate;
   } else {
     currentselectedDate = new Date(comicstartDate);
   }
@@ -1588,7 +1507,7 @@ function CurrentClick()
   if (document.getElementById("showfavs").checked) {
     const favs = loadFavs();
     const favslength = favs.length - 1;
-    if (favslength >= 0) currentselectedDate = new Date(favs[favslength]);
+    if (favslength >= 0) currentselectedDate = parseLocalDate(favs[favslength]) || currentselectedDate;
   } else {
     if (!latestAvailableDate) {
       discoverLatestAvailableComic().then(latestDate => {
@@ -1614,7 +1533,7 @@ function RandomClick()
   if (document.getElementById("showfavs").checked) {
     const favs = loadFavs();
     if (favs.length) {
-      currentselectedDate = new Date(favs[Math.floor(Math.random() * favs.length)]);
+      currentselectedDate = parseLocalDate(favs[Math.floor(Math.random() * favs.length)]) || currentselectedDate;
     }
   } else {
     if (isShuffleEnabled() && formattedDate) {
@@ -1632,23 +1551,21 @@ function RandomClick()
  * Handles date picker changes
  * Syncs both main and rotated date pickers
  */
-function DateChange()
+function DateChange(event)
 {
   // Get the date from either the main or rotated date picker
   const mainDatePicker = document.getElementById('DatePicker');
   const rotatedDatePicker = document.getElementById('rotated-DatePicker');
-  
+  const sourcePicker = event?.target?.id === 'rotated-DatePicker' || (isFullscreenActive() && event?.target === rotatedDatePicker)
+    ? rotatedDatePicker
+    : mainDatePicker;
+
   let selectedDate;
-  if (rotatedDatePicker && rotatedDatePicker.value) {
-    selectedDate = rotatedDatePicker.value;
-    // Sync the main date picker
-    if (mainDatePicker) {
+  if (sourcePicker && sourcePicker.value) {
+    selectedDate = sourcePicker.value;
+    if (sourcePicker === rotatedDatePicker && mainDatePicker) {
       mainDatePicker.value = selectedDate;
-    }
-  } else if (mainDatePicker && mainDatePicker.value) {
-    selectedDate = mainDatePicker.value;
-    // Sync the rotated date picker if it exists
-    if (rotatedDatePicker) {
+    } else if (sourcePicker === mainDatePicker && rotatedDatePicker) {
       rotatedDatePicker.value = selectedDate;
     }
   }
@@ -1660,64 +1577,7 @@ function DateChange()
   }
 }
 
-/**
- * Extracts the comic image URL from the dirkjan.nl HTML page
- * Uses multiple extraction methods for reliability
- * @param {string} html - The HTML content from dirkjan.nl
- * @returns {string|null} The extracted image URL or null if not found
- */
-function extractComicImageUrl(html) {
-  // Method 1: Regex to find img tag within article.cartoon
-  const articleMatch = html.match(/<article class="cartoon"[^>]*>([\s\S]*?)<\/article>/);
-  if (articleMatch) {
-    const articleContent = articleMatch[1];
-    const imgMatch = articleContent.match(/<img[^>]+src=["']([^"']+)["']/);
-    if (imgMatch && imgMatch[1]) {
-      return normalizeComicImageUrl(imgMatch[1]);
-    }
-  }
-  
-  // Method 2: Direct regex for img src in cartoon article
-  const directMatch = html.match(/<article class="cartoon"[^>]*>[\s\S]*?<img[^>]+src=["']([^"']+)["']/);
-  if (directMatch && directMatch[1]) {
-    return normalizeComicImageUrl(directMatch[1]);
-  }
-  
-  // Method 3: Look for WordPress media library pattern (common URL structure)
-  const wpMatch = html.match(/https?:\/\/dirkjan\.nl\/wp-content\/uploads\/[^"'\s]+\.(?:jpg|jpeg|png|gif)/i);
-  if (wpMatch) {
-    return normalizeComicImageUrl(wpMatch[0]);
-  }
-  
-  // Method 4: Fallback to original substring method (legacy support)
-  const cartoonPos = html.indexOf('<article class="cartoon">');
-  if (cartoonPos !== -1) {
-    const startPos = cartoonPos + 41;
-    const substring = html.substring(startPos, startPos + 200);
-    const endPos = substring.indexOf('"');
-    if (endPos > 0) {
-      return normalizeComicImageUrl(html.substring(startPos, startPos + endPos));
-    }
-  }
-  
-  return null;
-}
-
-/**
- * Resolves a comic image URL and restricts it to the trusted DirkJan origins.
- * @param {string} candidateUrl - Extracted absolute or relative image URL
- * @returns {string|null} A trusted absolute URL, or null
- */
-function normalizeComicImageUrl(candidateUrl) {
-  try {
-    const parsedUrl = new URL(candidateUrl, 'https://dirkjan.nl');
-    if (parsedUrl.protocol !== 'https:') return null;
-    if (!['dirkjan.nl', 'www.dirkjan.nl'].includes(parsedUrl.hostname.toLowerCase())) return null;
-    return parsedUrl.toString();
-  } catch {
-    return null;
-  }
-}
+const { extractComicImageUrl, normalizeComicImageUrl } = COMIC_LOADER;
 
 /**
  * Fetches a comic image through the controlled proxy and returns a local blob URL.
@@ -1726,39 +1586,19 @@ function normalizeComicImageUrl(candidateUrl) {
  * @returns {Promise<string>} Browser-local URL containing the proxied image bytes
  */
 async function createComicObjectUrl(imageUrl, signal = null) {
-  const response = await fetchWithFallback(imageUrl, signal);
-  const blob = await response.blob();
-
-  if (!blob.type.startsWith('image/') || blob.size < CONFIG.MIN_IMAGE_SIZE) {
-    throw new Error('Proxy returned an invalid comic image');
-  }
-
-  return URL.createObjectURL(blob);
+  return COMIC_LOADER.createComicObjectUrl(imageUrl, {
+    fetchWithFallback,
+    minImageSize: CONFIG.MIN_IMAGE_SIZE,
+    signal
+  });
 }
 
 async function fetchComicData(date, pageUrl, signal) {
-  try {
-    const metadataUrl = new URL(CONFIG.COMIC_METADATA_ENDPOINT);
-    metadataUrl.searchParams.set('date', date);
-    const timeoutSignal = AbortSignal.timeout(CONFIG.FETCH_TIMEOUT);
-    const response = await fetch(metadataUrl, {
-      signal: signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal
-    });
-    if (response.status === 404) return { notFound: true, imageUrl: null };
-    if (!response.ok) throw new Error(`Metadata request failed: ${response.status}`);
-    const metadata = await response.json();
-    const imageUrl = metadata.date === date ? normalizeComicImageUrl(metadata.imageUrl) : null;
-    if (!imageUrl) throw new Error('Invalid comic metadata');
-    return { notFound: false, imageUrl };
-  } catch (error) {
-    if (error.name === 'AbortError') throw error;
-    const response = await fetchWithFallback(pageUrl, signal);
-    const html = await response.text();
-    return {
-      notFound: html.includes('error404'),
-      imageUrl: extractComicImageUrl(html)
-    };
-  }
+  return COMIC_LOADER.fetchComicData(date, pageUrl, signal, {
+    metadataEndpoint: CONFIG.COMIC_METADATA_ENDPOINT,
+    fetchTimeout: CONFIG.FETCH_TIMEOUT,
+    fetchWithFallback
+  });
 }
 
 /**
@@ -1841,7 +1681,7 @@ function DisplayComic(direction = null, notFoundBehavior = 'nearest')
   // Get comic elements
   const comicImg = document.getElementById("comic");
   const wrapper = document.getElementById('comic-wrapper');
-  const rotatedComic = document.getElementById('rotated-comic');
+  const rotatedComic = isFullscreenActive() ? document.getElementById('rotated-comic') : null;
   comicImg.alt = `DirkJan strip van ${dateParts.day}-${dateParts.month}-${dateParts.year} laden`;
   setComicStatus(direction ? 'idle' : 'loading', direction ? '' : 'Strip laden...');
   
@@ -1877,7 +1717,13 @@ function DisplayComic(direction = null, notFoundBehavior = 'nearest')
         // Store as YYYY-MM-DD for stable, locale-independent parsing
         STORAGE.set(CONFIG.STORAGE_KEYS.LAST_COMIC, formattedDate);
 
-        return createComicObjectUrl(pictureUrl, fetchSignal);
+        return COMIC_LOADER.resolveDisplayUrl(
+          formattedDate,
+          pictureUrl,
+          getComicBlobCache(),
+          fetchSignal,
+          { fetchWithFallback, minImageSize: CONFIG.MIN_IMAGE_SIZE }
+        );
       }
 
       return null;
@@ -1894,108 +1740,12 @@ function DisplayComic(direction = null, notFoundBehavior = 'nearest')
         const previousComicObjectUrl = currentComicObjectUrl;
         currentComicObjectUrl = displayUrl;
         
-        // Animate transition based on direction
         const animateTransition = () => {
-          return new Promise((resolve) => {
-            // Only animate if there's an existing image
-            if (comicImg.src && comicImg.src !== window.location.href && direction) {
-              isAnimating = true; // Set animation lock
-              
-              if (direction === 'next' || direction === 'prev') {
-                // FILMSTRIP SLIDE animation - both comics visible during transition
-                const slideOutClass = direction === 'prev' ? 'slide-out-right' : 'slide-out-left';
-                const slideInClass = direction === 'prev' ? 'slide-in-right' : 'slide-in-left';
-                
-                // Preload the new image first to prevent flash
-                const tempImg = new Image();
-                tempImg.onload = function() {
-                  // Create a clone of current comic to slide out
-                  const outgoingClone = comicImg.cloneNode(true);
-                  outgoingClone.removeAttribute('id');
-                  outgoingClone.classList.add('comic-outgoing');
-                  outgoingClone.classList.remove('slide-out-left', 'slide-out-right', 'slide-in-left', 'slide-in-right', 'no-transition', 'loading', 'loaded');
-                  wrapper.appendChild(outgoingClone);
-                  
-                  // Set new image source on original (it will slide in)
-                  comicImg.classList.add('no-transition');
-                  comicImg.src = displayUrl;
-                  comicImg.classList.add(slideInClass);
-                  
-                  // Force reflow
-                  comicImg.offsetHeight;
-                  outgoingClone.offsetHeight;
-                  
-                  // Re-enable transitions and animate both
-                  comicImg.classList.remove('no-transition');
-                  
-                  requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                      // Slide outgoing clone away
-                      outgoingClone.classList.add(slideOutClass);
-                      // Slide incoming comic to center
-                      comicImg.classList.remove(slideInClass);
-                      
-                      // Cleanup after animation
-                      setTimeout(() => {
-                        outgoingClone.remove();
-                        resolve();
-                      }, 450);
-                    });
-                  });
-                };
-                tempImg.onerror = function() {
-                  // On error, just set the src directly without animation
-                  comicImg.src = displayUrl;
-                  resolve();
-                };
-                tempImg.src = displayUrl;
-              } else {
-                // BLUR MORPH animation for random, date picker, first, last
-                // Create clone of current comic to morph out (sits on top)
-                const outgoingClone = comicImg.cloneNode(true);
-                outgoingClone.removeAttribute('id');
-                // Remove any leftover slide animation classes from the clone
-                outgoingClone.classList.remove('slide-in-left', 'slide-in-right', 'slide-out-left', 'slide-out-right', 'no-transition', 'loading', 'loaded');
-                outgoingClone.classList.add('comic-morph-outgoing');
-                wrapper.appendChild(outgoingClone);
-                
-                // Reset the main comic transform and disable transition to prevent sliding
-                comicImg.classList.add('no-transition');
-                comicImg.classList.remove('slide-in-left', 'slide-in-right', 'slide-out-left', 'slide-out-right');
-                comicImg.style.transform = 'translateX(0)';
-                
-                // Force reflow to apply the no-transition immediately
-                comicImg.offsetHeight;
-                
-                // Load new image underneath (hidden by clone until loaded)
-                comicImg.src = displayUrl;
-                
-                // Wait for new image to load, THEN blur out clone
-                const startMorph = () => {
-                  requestAnimationFrame(() => {
-                    outgoingClone.classList.add('morph-out');
-                  });
-                  
-                  // Cleanup after animation
-                  setTimeout(() => {
-                    outgoingClone.remove();
-                    comicImg.classList.remove('no-transition');
-                    comicImg.style.transform = '';
-                    resolve();
-                  }, 550);
-                };
-                
-                if (comicImg.complete) {
-                  startMorph();
-                } else {
-                  comicImg.addEventListener('load', startMorph, { once: true });
-                }
-              }
-            } else {
-              // First load - no animation needed
-              comicImg.src = displayUrl;
-              resolve();
-            }
+          if (comicImg.src && comicImg.src !== window.location.href && direction) {
+            isAnimating = true;
+          }
+          return COMIC_ANIMATION.animateTransition(comicImg, displayUrl, direction, {
+            container: wrapper
           });
         };
         
@@ -2073,10 +1823,13 @@ function DisplayComic(direction = null, notFoundBehavior = 'nearest')
     if (heartButton) heartButton.setAttribute('aria-pressed', 'true');
   }
   
-  // Preload adjacent comics after a short delay
-  setTimeout(() => {
+  if (comicImg.complete && comicImg.naturalWidth) {
     preloadAdjacentComics();
-  }, 500);
+  } else {
+    comicImg.addEventListener('load', () => {
+      preloadAdjacentComics();
+    }, { once: true });
+  }
   
   } catch (error) {
     console.error('Error in DisplayComic():', error);
@@ -2098,110 +1851,13 @@ function DisplayComic(direction = null, notFoundBehavior = 'nearest')
  */
 function animateRotatedComic(rotatedComic, newSrc, direction) {
   if (!rotatedComic || !newSrc) return;
-  
-  if (direction === 'next' || direction === 'prev') {
-    // FILMSTRIP SLIDE animation for rotated comic
-    const slideOutClass = direction === 'prev' ? 'slide-out-right' : 'slide-out-left';
-    const slideInClass = direction === 'prev' ? 'slide-in-right' : 'slide-in-left';
-    
-    // Preload the new image first to prevent flash
-    const tempImg = new Image();
-    tempImg.onload = function() {
-      // Create a clone of current rotated comic to slide out
-      const outgoingClone = rotatedComic.cloneNode(true);
-      outgoingClone.removeAttribute('id');
-      outgoingClone.classList.add('rotated-comic-outgoing');
-      outgoingClone.classList.remove('slide-out-left', 'slide-out-right', 'slide-in-left', 'slide-in-right', 'dissolve');
-      // Copy all inline styles to preserve positioning
-      outgoingClone.style.cssText = rotatedComic.style.cssText;
-      outgoingClone.style.transition = 'transform 0.4s ease-out';
-      document.body.appendChild(outgoingClone);
-      
-      // Set new image source on original (it will slide in)
-      rotatedComic.style.transition = 'none';
-      rotatedComic.src = newSrc;
-      rotatedComic.classList.add(slideInClass);
-      
-      // Force reflow
-      rotatedComic.offsetHeight;
-      outgoingClone.offsetHeight;
-      
-      // Re-enable transitions and animate both
-      rotatedComic.style.transition = '';
-      
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          // Slide outgoing clone away
-          outgoingClone.classList.add(slideOutClass);
-          // Slide incoming comic to center
-          rotatedComic.classList.remove(slideInClass);
-          
-          rotatedComic.onload = function() {
-            maximizeRotatedImage(rotatedComic);
-          };
-          
-          // Cleanup after animation
-          setTimeout(() => {
-            outgoingClone.remove();
-          }, 450);
-        });
-      });
-    };
-    tempImg.onerror = function() {
-      // On error, just set the src directly without animation
-      rotatedComic.src = newSrc;
-      maximizeRotatedImage(rotatedComic);
-    };
-    tempImg.src = newSrc;
-  } else if (direction === 'morph') {
-    // BLUR MORPH animation for rotated comic
-    // Create clone of current comic to morph out (sits on top)
-    const outgoingClone = rotatedComic.cloneNode(true);
-    outgoingClone.removeAttribute('id');
-    // Remove any leftover slide animation classes from the clone
-    outgoingClone.classList.remove('slide-in-left', 'slide-in-right', 'slide-out-left', 'slide-out-right', 'dissolve');
-    outgoingClone.classList.add('rotated-comic-morph-outgoing');
-    // Copy inline styles to preserve positioning, but override transform transition
-    outgoingClone.style.cssText = rotatedComic.style.cssText;
-    outgoingClone.style.transition = 'filter 0.5s ease-in-out, opacity 0.5s ease-in-out';
-    // Use computed transform to capture CSS class transforms (e.g. translate(-50%, -50%) from .fullscreen-landscape)
-    const computedTransform = getComputedStyle(rotatedComic).transform;
-    outgoingClone.style.transform = computedTransform || 'none';
-    document.body.appendChild(outgoingClone);
-    
-    // Reset the main rotated comic to prevent sliding
-    rotatedComic.classList.remove('slide-in-left', 'slide-in-right', 'slide-out-left', 'slide-out-right');
-    rotatedComic.style.transition = 'none';
-    
-    // Load new image underneath - fully visible
-    rotatedComic.src = newSrc;
-    
-    // When loaded, resize and blur out the clone
-    const startMorph = () => {
-      maximizeRotatedImage(rotatedComic);
-      
-      // Blur out the old image (clone)
-      requestAnimationFrame(() => {
-        outgoingClone.classList.add('morph-out');
-      });
-      
-      // Cleanup after animation
-      setTimeout(() => {
-        outgoingClone.remove();
-        rotatedComic.style.transition = '';
-      }, 550);
-    };
-    
-    if (rotatedComic.complete) {
-      startMorph();
-    } else {
-      rotatedComic.addEventListener('load', startMorph, { once: true });
-    }
-  } else {
-    // No animation - just update src
-    rotatedComic.src = newSrc;
-    maximizeRotatedImage(rotatedComic);
-  }
+  COMIC_ANIMATION.animateTransition(rotatedComic, newSrc, direction, {
+    container: document.getElementById('fullscreen-shell') || document.body,
+    outgoingClass: 'rotated-comic-outgoing',
+    morphClass: 'rotated-comic-morph-outgoing',
+    preserveInlineStyles: true,
+    afterIncomingLoad: maximizeRotatedImage
+  });
 }
 
 /**
@@ -2228,7 +1884,10 @@ function CompareDates() {
   const showFavsChecked = document.getElementById("showfavs").checked;
   
   // Normalize dates for comparison
-  const normalizeDate = (date) => new Date(date).setHours(0, 0, 0, 0);
+  const normalizeDate = (date) => {
+    const parsed = parseLocalDate(date);
+    return parsed ? parsed.getTime() : 0;
+  };
   const currentTime = normalizeDate(currentselectedDate);
   
   // Handle date picker state
@@ -2307,23 +1966,10 @@ function Rotate() {
       return;
     }
     
-    // Check if we're already in fullscreen mode
-    const existingOverlay = document.getElementById('comic-overlay');
-  if (existingOverlay) {
-    // We're in fullscreen mode, exit it immediately
-    document.body.removeChild(existingOverlay);
-    
-    // Remove rotated image if it exists
-    const rotatedComic = document.getElementById('rotated-comic');
-    if (rotatedComic) {
-      document.body.removeChild(rotatedComic);
-    }
-    
-    // Remove fullscreen toolbar if it exists
-    const fullscreenToolbar = document.getElementById('fullscreen-toolbar');
-    if (fullscreenToolbar) {
-      document.body.removeChild(fullscreenToolbar);
-    }
+    if (isFullscreenActive()) {
+      const shell = document.getElementById('fullscreen-shell');
+    if (shell) shell.hidden = true;
+    document.body.classList.remove('rotated-state');
     
     // Restore all elements with data-was-hidden attribute
     const hiddenElements = document.querySelectorAll('[data-was-hidden]');
@@ -2468,91 +2114,36 @@ function Rotate() {
   // Check if element has 'normal' class (it might have multiple classes like "normal loaded")
   if (element.className.includes("normal")) {
     closeSettings(false);
-    // First hide all elements to prevent flickering
-    const elementsToHideInitial = document.querySelectorAll('body > *');
+    const shell = document.getElementById('fullscreen-shell');
+    const overlay = document.getElementById('comic-overlay');
+    const clonedComic = document.getElementById('rotated-comic');
+    const fullscreenToolbar = document.getElementById('fullscreen-toolbar');
+    if (!shell || !overlay || !clonedComic || !fullscreenToolbar) {
+      isRotating = false;
+      return;
+    }
+
+    const elementsToHideInitial = document.querySelectorAll('body > *:not(#fullscreen-shell)');
     elementsToHideInitial.forEach(el => {
       el.dataset.originalDisplay = window.getComputedStyle(el).display;
       el.dataset.wasHidden = "true";
       el.style.setProperty('display', 'none', 'important');
     });
 
-    // Create an overlay without any layout constraints
-    const overlay = document.createElement('div');
-    overlay.id = 'comic-overlay';
-    overlay.style.position = 'fixed';
-    overlay.style.top = '0';
-    overlay.style.left = '0';
-    overlay.style.width = '100vw';
-    overlay.style.height = '100vh';
-    overlay.style.backgroundColor = 'rgba(0,0,0,0.3)';
-    overlay.style.zIndex = '10000';    // Clone the comic image
-    const clonedComic = element.cloneNode(true);
-    clonedComic.id = 'rotated-comic';
-    clonedComic.className = "fullscreen-landscape";
-    clonedComic.style.display = 'block'; // Ensure visible
-    
-    // Create the fullscreen toolbar
-    const fullscreenToolbar = document.createElement('div');
-    fullscreenToolbar.id = 'fullscreen-toolbar';
-    fullscreenToolbar.className = 'toolbar fullscreen-toolbar';
-    fullscreenToolbar.innerHTML = `
-      <button id="rotated-First" class="toolbar-button" title="Eerste strip" aria-label="Eerste">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5"/></svg>
-      </button>
-      <button id="rotated-Previous" class="toolbar-button" title="Vorige strip" aria-label="Vorige">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><polyline points="15 18 9 12 15 6"/></svg>
-      </button>
-      <button id="rotated-Random" class="toolbar-button" title="Willekeurige strip" aria-label="Willekeurige strip">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg">
-          <rect x="4" y="4" width="16" height="16" rx="2" ry="2"/>
-          <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/>
-          <circle cx="15.5" cy="8.5" r="1.5" fill="currentColor"/>
-          <circle cx="15.5" cy="15.5" r="1.5" fill="currentColor"/>
-          <circle cx="8.5" cy="15.5" r="1.5" fill="currentColor"/>
-        </svg>
-      </button>
-      <button class="toolbar-button toolbar-datepicker-btn" title="Selecteer datum">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        <input id="rotated-DatePicker" class="toolbar-datepicker" type="date" min="2015-05-04" title="Selecteer datum" aria-label="Datum">
-      </button>
-      <button id="rotated-Next" class="toolbar-button" title="Volgende strip" aria-label="Volgende">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><polyline points="9 18 15 12 9 6"/></svg>
-      </button>
-      <button id="rotated-Current" class="toolbar-button" title="Nieuwste" aria-label="Nieuwste">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="toolbar-svg"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
-      </button>
-    `;
-    // Add overlay, comic, and toolbar in order
-    document.body.appendChild(overlay);
-    document.body.appendChild(clonedComic);
-    document.body.appendChild(fullscreenToolbar);
-
-    fullscreenToolbar.querySelector('#rotated-First').addEventListener('click', FirstClick);
-    fullscreenToolbar.querySelector('#rotated-Previous').addEventListener('click', PreviousClick);
-    fullscreenToolbar.querySelector('#rotated-Random').addEventListener('click', RandomClick);
-    fullscreenToolbar.querySelector('#rotated-Next').addEventListener('click', NextClick);
-    fullscreenToolbar.querySelector('#rotated-Current').addEventListener('click', CurrentClick);
-    const rotatedDatePicker = fullscreenToolbar.querySelector('#rotated-DatePicker');
-    rotatedDatePicker.addEventListener('input', DateChange);
-    rotatedDatePicker.addEventListener('click', () => rotatedDatePicker.showPicker?.());
-
-    fullscreenToolbar.classList.add('landscape-toolbar');
-
-    // Call CompareDates to set initial button states
-    CompareDates();
-
-    // Show the comic and toolbar
+    clonedComic.src = element.src;
+    clonedComic.alt = element.alt;
+    clonedComic.className = 'fullscreen-landscape';
     clonedComic.style.display = 'block';
     fullscreenToolbar.style.display = 'flex';
+    shell.hidden = false;
+    document.body.classList.add('rotated-state');
 
-    // Position toolbar at the bottom always
+    bindFullscreenControls(overlay, fullscreenToolbar);
+    CompareDates();
     positionFullscreenToolbar();
-
-    // Add resize and orientation change listeners
     window.addEventListener('resize', handleRotatedViewResize);
     window.addEventListener('orientationchange', handleRotatedViewResize);
-    
-    // Apply sizing when image is loaded
+
     if (clonedComic.complete) {
       maximizeRotatedImage(clonedComic);
     } else {
@@ -2560,26 +2151,6 @@ function Rotate() {
         maximizeRotatedImage(clonedComic);
       };
     }
-    
-    // Prevent toolbar buttons from closing fullscreen
-    fullscreenToolbar.addEventListener('click', function(e) {
-      e.stopPropagation();
-    });
-    
-    // Add swipe support in rotated view
-    // We use the overlay for swipe events
-    overlay.addEventListener('touchstart', handleTouchStart, { passive: false });
-    overlay.addEventListener('touchmove', handleTouchMove, { passive: false });
-    overlay.addEventListener('touchend', function(e) {
-      handleTouchEnd(e);
-      // Don't exit fullscreen mode on simple touch if it was a swipe
-      e.stopPropagation();
-    }, { passive: true });
-    
-    // Add click handler to exit fullscreen
-    overlay.addEventListener('click', function() {
-      Rotate(); // Call Rotate again to exit fullscreen
-    });
   }
   
   } catch (error) {
@@ -2597,9 +2168,36 @@ function Rotate() {
  * Handles resize and orientation change in rotated view
  * Repositions comic and toolbar appropriately
  */
+function bindFullscreenControls(overlay, fullscreenToolbar) {
+  if (fullscreenControlsBound) return;
+  fullscreenControlsBound = true;
+
+  document.getElementById('rotated-First')?.addEventListener('click', FirstClick);
+  document.getElementById('rotated-Previous')?.addEventListener('click', PreviousClick);
+  document.getElementById('rotated-Random')?.addEventListener('click', RandomClick);
+  document.getElementById('rotated-Next')?.addEventListener('click', NextClick);
+  document.getElementById('rotated-Current')?.addEventListener('click', CurrentClick);
+  const rotatedDatePicker = document.getElementById('rotated-DatePicker');
+  rotatedDatePicker?.addEventListener('input', DateChange);
+  rotatedDatePicker?.addEventListener('click', () => rotatedDatePicker.showPicker?.());
+
+  fullscreenToolbar.addEventListener('click', function(e) {
+    e.stopPropagation();
+  });
+  overlay.addEventListener('touchstart', handleTouchStart, { passive: false });
+  overlay.addEventListener('touchmove', handleTouchMove, { passive: false });
+  overlay.addEventListener('touchend', function(e) {
+    handleTouchEnd(e);
+    e.stopPropagation();
+  }, { passive: true });
+  overlay.addEventListener('click', function() {
+    Rotate();
+  });
+}
+
 function handleRotatedViewResize() {
   const rotatedComic = document.getElementById('rotated-comic');
-  if (rotatedComic) {
+  if (rotatedComic && isFullscreenActive()) {
     maximizeRotatedImage(rotatedComic);
   }
   positionFullscreenToolbar();
@@ -2694,8 +2292,7 @@ function handleTouchEnd(e) {
   if (deltaTime > CONFIG.SWIPE_MAX_TIME) return;
 	
 	// Check if we're in landscape fullscreen mode
-  const rotatedComic = document.getElementById('rotated-comic');
-  const isLandscapeFullscreen = rotatedComic !== null && rotatedComic.className.includes('fullscreen-landscape');
+  const isLandscapeFullscreen = isFullscreenActive();
 	
 	// Determine swipe direction based on mode
 	if (isLandscapeFullscreen) {
@@ -2756,12 +2353,10 @@ document.addEventListener('touchend', handleTouchEnd, { passive: true });
   
   if (isIOS || isNonPWA) {
     document.getElementById('comic')?.addEventListener('click', function(e) {
-      // Don't trigger if already in fullscreen or if it was a swipe
-      const rotatedComic = document.getElementById('rotated-comic');
-      if (rotatedComic) return;
+      if (isFullscreenActive()) return;
       if (this.className.includes('normal')) {
         e.preventDefault();
-        Rotate(); // Enter landscape fullscreen
+        Rotate();
       }
     });
   }
@@ -2773,26 +2368,19 @@ window.addEventListener('orientationchange', function() {
     const orientation = screen.orientation?.type || '';
     const isLandscape = orientation.includes('landscape') || Math.abs(window.orientation) === 90;
     const rotatedComic = document.getElementById('rotated-comic');
-    
+
     if (isLandscape) {
-      // Device is in landscape
-      if (!rotatedComic) {
-        // Not in fullscreen yet - enter landscape fullscreen mode
+      if (!isFullscreenActive()) {
         const comic = document.getElementById('comic');
         if (comic && comic.className.includes('normal')) {
-          Rotate(); // Enter landscape fullscreen (device is already landscape)
+          Rotate();
         }
-      } else {
-        // Already in fullscreen - just reposition
+      } else if (rotatedComic) {
         maximizeRotatedImage(rotatedComic);
         positionFullscreenToolbar();
       }
-    } else {
-      // Device is in portrait
-      if (rotatedComic) {
-        // In fullscreen mode - exit it
-        Rotate(); // Exit fullscreen
-      }
+    } else if (isFullscreenActive()) {
+      Rotate();
     }
   }, 300);
 });
@@ -3102,19 +2690,19 @@ document.getElementById('startlast').addEventListener('change', function() {
   if (this.checked) setStartupMode('last');
 });
 
-document.getElementById('showfavs').onclick = function() {
+document.getElementById('showfavs').addEventListener('change', function() {
   const favs = loadFavs();
   if (this.checked) {
     STORAGE.set(CONFIG.STORAGE_KEYS.SHOW_FAVS, "true");
     if (favs.indexOf(formattedDate) === -1 && favs.length) {
-      currentselectedDate = new Date(favs[0]);
+      currentselectedDate = parseLocalDate(favs[0]) || currentselectedDate;
     }
   } else {
     STORAGE.set(CONFIG.STORAGE_KEYS.SHOW_FAVS, "false");
   }
   CompareDates();
   DisplayComic();
-};
+});
 
 // Load settings from localStorage
 // Swipe defaults to true for new users (null means never set)
@@ -3127,10 +2715,10 @@ setStartupMode(getStartupMode());
   const shuffleCheckbox = document.getElementById("shuffle");
   if (shuffleCheckbox) {
     shuffleCheckbox.checked = STORAGE.get(CONFIG.STORAGE_KEYS.SHUFFLE) === "true";
-    shuffleCheckbox.onclick = function() {
+    shuffleCheckbox.addEventListener('change', function() {
       STORAGE.set(CONFIG.STORAGE_KEYS.SHUFFLE, this.checked ? "true" : "false");
       resetShuffleHistory();
-    };
+    });
   }
 }
 
@@ -3581,85 +3169,60 @@ document.addEventListener('keydown', function(e) {
 // ========================================
 // COMIC PRELOADING FOR SMOOTHER NAVIGATION
 // ========================================
-let preloadedComics = new Map();
-
 function preloadAdjacentComics() {
-  // Preload next and previous comics in the background
   if (!formattedDate) return;
   if (notFound || !latestAvailableDate) return;
-  
-  const currentDate = new Date(formattedDate);
-  const startDate = new Date(CONFIG.COMIC_START_DATE);
+  if (navigator.connection?.saveData) return;
+
+  const currentDate = parseLocalDate(formattedDate) || new Date();
+  const startDate = parseLocalDate(CONFIG.COMIC_START_DATE) || new Date(2015, 4, 4);
   const preloadMaxDate = new Date(latestAvailableDate);
   preloadMaxDate.setHours(0, 0, 0, 0);
-  
-  // Preload next comic (skip Sundays - no comic dates)
+
   const nextDate = new Date(currentDate);
   nextDate.setDate(nextDate.getDate() + 1);
   const nextPublishDate = moveToComicPublishDate(nextDate, 1);
   if (nextPublishDate <= preloadMaxDate) {
     preloadComic(nextPublishDate);
   }
-  
-  // Preload previous comic (skip Sundays - no comic dates)
+
   const prevDate = new Date(currentDate);
   prevDate.setDate(prevDate.getDate() - 1);
   const prevPublishDate = moveToComicPublishDate(prevDate, -1);
   if (prevPublishDate >= startDate) {
     preloadComic(prevPublishDate);
   }
-  
-  // Clean up old preloaded comics if cache is too large
-  if (preloadedComics.size > CONFIG.MAX_PRELOAD_CACHE) {
-    const keysToDelete = Array.from(preloadedComics.keys()).slice(0, preloadedComics.size - CONFIG.MAX_PRELOAD_CACHE);
-    keysToDelete.forEach(key => preloadedComics.delete(key));
-  }
 }
 
 /**
- * Preloads a comic in the background
- * @param {Date} date - Date of the comic to preload
+ * Preloads a comic blob so DisplayComic can reuse it.
+ * @param {Date} date
  */
 function preloadComic(date) {
-  // Format date locally without affecting global state
   const d = date.getDate();
   const m = date.getMonth() + 1;
   const y = date.getFullYear();
   const formattedMonth = ("0" + m).slice(-2);
   const formattedDay = ("0" + d).slice(-2);
-  
   const preloadFormattedDate = `${y}-${formattedMonth}-${formattedDay}`;
   const preloadFormattedComicDate = `${y}${formattedMonth}${formattedDay}`;
-  
-  // Don't preload if already cached
-  if (preloadedComics.has(preloadFormattedDate)) return;
-  
-  const url = `https://dirkjan.nl/cartoon/${preloadFormattedComicDate}`;
-  
-  fetchWithFallback(url)
-    .then(response => response.text())
-    .then(text => {
-      if (text.includes("error404")) return;
-      
-      const imageUrl = extractComicImageUrl(text);
-      if (!imageUrl) return;
-      
-      return createComicObjectUrl(imageUrl).then(objectUrl => {
+  const cache = getComicBlobCache();
+  if (cache.has(preloadFormattedDate)) return;
+
+  fetchComicData(preloadFormattedComicDate, `https://dirkjan.nl/cartoon/${preloadFormattedComicDate}`)
+    .then(comicData => {
+      if (comicData.notFound || !comicData.imageUrl) return;
+      return createComicObjectUrl(comicData.imageUrl).then(objectUrl => {
         const img = new Image();
         img.onload = () => {
-          preloadedComics.set(preloadFormattedDate, imageUrl);
-          URL.revokeObjectURL(objectUrl);
+          cache.put(preloadFormattedDate, { imageUrl: comicData.imageUrl, objectUrl });
         };
         img.onerror = () => URL.revokeObjectURL(objectUrl);
         img.src = objectUrl;
       });
     })
-    .catch(() => {
-      // Silently fail for background preloading
-    });
+    .catch(() => {});
 }
-
-// We'll call preloadAdjacentComics() directly from within DisplayComic instead of wrapping it
 
 // ========================================
 // VISUAL FEEDBACK - Show keyboard shortcuts hint on first load (desktop only)

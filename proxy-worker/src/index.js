@@ -26,6 +26,9 @@ const UPSTREAM_TIMEOUT_MS = 15000;
 const MAX_REDIRECTS = 3;
 const MAX_CACHEABLE_RESPONSE_BYTES = 25 * 1024 * 1024;
 const MAX_TELEMETRY_BYTES = 1024;
+const DEFAULT_RATE_LIMIT_WINDOW_MS = 60000;
+const DEFAULT_RATE_LIMIT_MAX_REQUESTS = 120;
+const rateLimitBuckets = new Map();
 const TELEMETRY_EVENTS = new Set([
   'comic_parse_failed',
   'proxy_exhausted',
@@ -43,6 +46,12 @@ export default {
         status: 204,
         headers: buildCorsHeaders(request, allowedOrigins)
       });
+    }
+
+    if (isRateLimited(request, env)) {
+      const limited = jsonResponse({ error: 'Too many requests' }, 429);
+      limited.headers.set('retry-after', '60');
+      return withCors(request, limited, false, allowedOrigins);
     }
 
     const requestUrl = new URL(request.url);
@@ -356,6 +365,34 @@ function getAllowedOrigins(env) {
       .map(origin => origin.trim())
       .filter(Boolean)
   );
+}
+
+function getClientIp(request) {
+  return request.headers.get('cf-connecting-ip')
+    || request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+    || 'unknown';
+}
+
+function isRateLimited(request, env) {
+  const windowMs = Number.parseInt(env?.RATE_LIMIT_WINDOW_MS, 10) || DEFAULT_RATE_LIMIT_WINDOW_MS;
+  const maxRequests = Number.parseInt(env?.RATE_LIMIT_MAX, 10) || DEFAULT_RATE_LIMIT_MAX_REQUESTS;
+  const now = Date.now();
+  const key = getClientIp(request);
+  let bucket = rateLimitBuckets.get(key);
+
+  if (!bucket || now - bucket.windowStart >= windowMs) {
+    bucket = { windowStart: now, count: 0 };
+    rateLimitBuckets.set(key, bucket);
+  }
+
+  bucket.count += 1;
+  if (rateLimitBuckets.size > 10000) {
+    for (const [ip, entry] of rateLimitBuckets) {
+      if (now - entry.windowStart >= windowMs) rateLimitBuckets.delete(ip);
+    }
+  }
+
+  return bucket.count > maxRequests;
 }
 
 function isAllowedHost(hostname, allowedHosts) {

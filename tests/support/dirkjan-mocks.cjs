@@ -141,7 +141,7 @@ async function openApp(page, options = {}) {
     Object.defineProperty(navigator, 'serviceWorker', {
       value: {
         register: () => Promise.resolve(registration),
-        controller: initData.serviceWorkerUpdate ? {} : null,
+        controller: initData.serviceWorkerUpdate ? { postMessage: () => {} } : null,
         addEventListener: () => {},
         getRegistration: () => Promise.resolve(null)
       },
@@ -177,7 +177,7 @@ async function openApp(page, options = {}) {
     }
   });
 
-  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  await page.goto(options.path || '/', { waitUntil: 'domcontentloaded' });
   await expect(page.locator('#comic')).toHaveJSProperty('complete', true);
   if (options.expectComic !== false) {
     await expect(page.locator('#comic')).not.toHaveAttribute('src', /^$/);

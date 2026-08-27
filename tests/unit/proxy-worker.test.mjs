@@ -64,3 +64,9 @@ test('comic metadata has a cacheable trusted-image route', () => {
   assert.match(source, /metadata\.headers\.set\('cache-control'/);
   assert.match(source, /ctx\.waitUntil\(cache\.put\(cacheKey, metadata\.clone\(\)\)\)/);
 });
+
+test('proxy applies a per-IP request budget before upstream work', () => {
+  assert.match(source, /const DEFAULT_RATE_LIMIT_MAX_REQUESTS = 120/);
+  assert.match(source, /if \(isRateLimited\(request, env\)\)/);
+  assert.match(source, /jsonResponse\(\{ error: 'Too many requests' \}, 429\)/);
+});

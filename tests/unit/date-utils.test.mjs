@@ -32,3 +32,13 @@ test('stored dates are normalized and clamped to the latest candidate', () => {
   assert.equal(localDate(dates.clampToLatestComicCandidate('2026-05-03')), '2026-05-02');
   assert.equal(localDate(dates.clampToLatestComicCandidate('invalid')), '2026-05-08');
 });
+
+test('ISO calendar dates stay on the intended local day', () => {
+  const dates = context.createDateUtils(() => new Date(2026, 4, 2, 12));
+  const parsed = dates.parseLocalDate('2026-05-02');
+  assert.equal(parsed.getFullYear(), 2026);
+  assert.equal(parsed.getMonth(), 4);
+  assert.equal(parsed.getDate(), 2);
+  assert.equal(localDate(parsed), '2026-05-02');
+  assert.equal(localDate(dates.parseLocalDate('20260508')), '2026-05-08');
+});

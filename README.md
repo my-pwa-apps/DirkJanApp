@@ -6,8 +6,9 @@ The comic artwork remains the property of Mark Retera and dirkjan.nl. This repos
 
 ## Architecture
 
-- `index.html` provides the static, semantic application shell.
+- `index.html` provides the static, semantic application shell, including the hidden landscape fullscreen template.
 - `app.js` owns browser state, navigation, persistence, proxy fallback, and UI behavior.
+- `comic-loader.js`, `toolbar.js`, and `animation-utils.js` extract comic fetching/blob cache, dragging, and slide/morph transitions as IIFE modules.
 - `main.css` contains the responsive light/dark presentation.
 - `serviceworker.js` provides versioned app-shell, runtime, and image caches.
 - `proxy-worker/` contains the allowlisted Cloudflare Worker used to retrieve dirkjan.nl pages with CORS headers.
@@ -30,12 +31,15 @@ npx playwright install chromium
 npm run serve
 ```
 
+`npm run test:assets` verifies that every manifest, precache, HTML, and tile image reference exists and that root images are not orphaned.
+
 Open `http://127.0.0.1:8000`. The application can also be started automatically by Playwright on port `8010`.
 
 ## Validation
 
 ```powershell
 npm run test:syntax
+npm run test:assets
 npm run test:unit
 npm run test:e2e
 npm run test:cross-browser

@@ -728,6 +728,24 @@ input[type="date"]:focus-visible {
    FULLSCREEN TOOLBAR
    ======================================== */
 
+#fullscreen-shell[hidden] {
+    display: none !important;
+}
+
+#fullscreen-shell:not([hidden]) {
+    display: block;
+}
+
+#comic-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.3);
+    z-index: 10000;
+}
+
 .fullscreen-toolbar {
     background: var(--dark-gradient-strong);
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -1237,7 +1255,7 @@ img#comic.loaded {
 
 /* Hide footer in fullscreen/rotated mode */
 .rotated-state .app-footer,
-body:has(#comic-overlay) .app-footer {
+body:has(#fullscreen-shell:not([hidden])) .app-footer {
     display: none;
 }
 

@@ -8,7 +8,10 @@ async function swipe(page, startX, startY, endX, endY) {
       Object.defineProperty(event, property, {
         value: [{ clientX: x, clientY: y }]
       });
-      (document.getElementById('rotated-comic') || document.getElementById('comic')).dispatchEvent(event);
+      const shell = document.getElementById('fullscreen-shell');
+      const target = (shell && !shell.hidden && document.getElementById('rotated-comic'))
+        || document.getElementById('comic');
+      target.dispatchEvent(event);
     };
     dispatchTouch('touchstart', startX, startY, 'touches');
     dispatchTouch('touchend', endX, endY, 'changedTouches');
@@ -63,13 +66,15 @@ test('orientation enters and exits fullscreen while closing open settings', asyn
   await expect(page.locator('#settingsDIV')).toHaveClass(/visible/);
 
   await setOrientation(page, 'landscape-primary');
+  await expect(page.locator('#fullscreen-shell')).not.toHaveAttribute('hidden');
   await expect(page.locator('#rotated-comic')).toBeVisible();
   await expect(page.locator('#settingsDIV')).not.toHaveClass(/visible/);
   await expect(page.locator('#settingsDIV')).toHaveAttribute('inert', '');
   await expect(settings).toHaveAttribute('aria-expanded', 'false');
 
   await setOrientation(page, 'portrait-primary');
-  await expect(page.locator('#rotated-comic')).toHaveCount(0);
+  await expect(page.locator('#fullscreen-shell')).toHaveAttribute('hidden', '');
+  await expect(page.locator('#rotated-comic')).toBeHidden();
   await expect(page.locator('#comic')).toBeVisible();
   expect(result.errors).toEqual([]);
 });

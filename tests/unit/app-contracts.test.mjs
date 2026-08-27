@@ -24,25 +24,23 @@ test('comic fetch cancellation reaches proxy requests and body reads', () => {
   assert.match(appSource, /fetchWithFallback\(url, signal = null\)/);
   assert.match(appSource, /AbortSignal\.any\(\[signal, AbortSignal\.timeout\(CONFIG\.FETCH_TIMEOUT\)\]\)/);
   assert.match(appSource, /fetchComicData\(formattedComicDate, url, fetchSignal\)/);
-  assert.match(appSource, /fetchWithFallback\(pageUrl, signal\)/);
-  assert.match(appSource, /if \(error\.name === 'AbortError'\) throw error/);
+  assert.match(appSource, /COMIC_LOADER\.fetchComicData\(date, pageUrl, signal/);
 });
 
-test('comic extraction supports DirkJan article and WordPress image markup', () => {
-  assert.match(appSource, /<article class="cartoon"/);
-  assert.match(appSource, /wp-content\\\/uploads/);
-  assert.match(appSource, /error404/);
-  assert.match(appSource, /function normalizeComicImageUrl\(candidateUrl\)/);
-  assert.match(appSource, /\['dirkjan\.nl', 'www\.dirkjan\.nl'\]\.includes/);
+test('comic extraction is delegated to the comic-loader module', () => {
+  assert.match(appSource, /const \{ extractComicImageUrl, normalizeComicImageUrl \} = COMIC_LOADER/);
+  assert.match(appSource, /COMIC_LOADER\.fetchComicData\(/);
+  assert.match(appSource, /COMIC_LOADER\.resolveDisplayUrl\(/);
+  assert.match(appSource, /COMIC_LOADER\.createComicObjectUrl\(/);
+  assert.match(appSource, /isFullscreenActive\(\)/);
 });
 
 test('comic images load through the controlled proxy as revocable blob URLs', () => {
   assert.match(appSource, /async function createComicObjectUrl\(imageUrl, signal = null\)/);
-  assert.match(appSource, /fetchWithFallback\(imageUrl, signal\)/);
-  assert.match(appSource, /blob\.type\.startsWith\('image\/'\)/);
-  assert.match(appSource, /comicImg\.src = displayUrl/);
+  assert.match(appSource, /COMIC_ANIMATION\.animateTransition\(comicImg, displayUrl, direction/);
   assert.match(appSource, /URL\.revokeObjectURL\(previousComicObjectUrl\)/);
-  assert.match(appSource, /return createComicObjectUrl\(imageUrl\)\.then/);
+  assert.match(appSource, /COMIC_LOADER\.resolveDisplayUrl\(/);
+  assert.match(appSource, /getComicBlobCache\(\)/);
 });
 
 test('startup discovery failures retain a usable comic view', () => {
@@ -55,6 +53,34 @@ test('preloading does not probe beyond a known latest or current date', () => {
   assert.match(appSource, /const preloadMaxDate = new Date\(latestAvailableDate\)/);
   assert.match(appSource, /const nextPublishDate = moveToComicPublishDate\(nextDate, 1\)/);
   assert.match(appSource, /if \(nextPublishDate <= preloadMaxDate\)/);
+  assert.match(appSource, /cache\.put\(preloadFormattedDate, \{ imageUrl: comicData\.imageUrl, objectUrl \}\)/);
+  assert.match(appSource, /img\.onerror = \(\) => \{[\s\S]*URL\.revokeObjectURL\(objectUrl\)/);
+});
+
+test('service worker updates wait for an explicit user prompt', () => {
+  assert.match(appSource, /offerUpdate\(registration\.waiting\)/);
+  assert.match(appSource, /showUpdateNotification\(\(\) => \{/);
+  assert.match(appSource, /worker\.postMessage\(\{ type: 'SKIP_WAITING' \}\)/);
+  assert.match(appSource, /if \(!reloadingForUpdate\) return/);
+  assert.match(appSource, /postMessage\(\{ type: 'GET_VERSION' \}/);
+});
+
+test('date picker changes prefer the event target over the static rotated picker', () => {
+  assert.match(appSource, /function DateChange\(event\)/);
+  assert.match(appSource, /event\?\.target\?\.id === 'rotated-DatePicker'/);
+  assert.match(appSource, /sourcePicker === mainDatePicker && rotatedDatePicker/);
+});
+
+test('calendar dates are parsed as local days rather than UTC midnight', () => {
+  assert.match(appSource, /parseLocalDate,/);
+  assert.match(appSource, /currentselectedDate = parseLocalDate\(favs\[0\]\)/);
+  assert.match(appSource, /const parsed = parseLocalDate\(date\)/);
+  assert.doesNotMatch(appSource, /valueAsDate = getCurrentDate\(\)/);
+});
+
+test('random shortcut is applied before latest-startup discovery', () => {
+  assert.match(appSource, /const openRandomShortcut = urlParams\.get\('random'\) === 'true' && !showFavsChecked/);
+  assert.match(appSource, /if \(openRandomShortcut\) \{[\s\S]*DisplayComic\('morph', 'random'\)/);
 });
 
 test('latest comic lookup starts from today instead of the future date picker maximum', () => {

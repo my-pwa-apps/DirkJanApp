@@ -1,6 +1,6 @@
 // Service Worker for DirkJan PWA
 // Cache versioning - increment when you need to force cache refresh
-const CACHE_VERSION = 'v169';
+const CACHE_VERSION = 'v175';
 const CACHE_NAME = `dirkjan-cache-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `dirkjan-runtime-${CACHE_VERSION}`;
 const IMAGE_CACHE = `dirkjan-images-${CACHE_VERSION}`;
@@ -13,6 +13,9 @@ const PRECACHE_ASSETS = [
   './storage.js',
   './telemetry.js',
   './date-utils.js',
+  './comic-loader.js',
+  './toolbar.js',
+  './animation-utils.js',
   './app.js',
   './manifest.webmanifest',
   './dirk-jan-tekst.svg',
@@ -29,10 +32,11 @@ const NETWORK_TIMEOUT_MS = 15000;
 
 // Install event - pre-cache essential assets
 self.addEventListener('install', event => {
+  // Do not skipWaiting() here. A waiting worker keeps the current page on the
+  // cache generation it loaded; the in-app update prompt posts SKIP_WAITING.
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => cache.addAll(PRECACHE_ASSETS))
-      .then(() => self.skipWaiting())
   );
 });
 
@@ -224,6 +228,12 @@ self.addEventListener('message', event => {
   
   if (event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
+    return;
+  }
+
+  if (event.data.type === 'GET_VERSION') {
+    event.ports?.[0]?.postMessage({ type: 'VERSION', version: CACHE_VERSION });
+    return;
   }
   
   if (event.data.type === 'CLEAR_CACHE') {

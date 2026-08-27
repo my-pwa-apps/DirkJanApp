@@ -13,12 +13,13 @@ test('service worker version and caches use the same deploy version', () => {
 });
 
 test('install precache covers the DirkJan app shell', () => {
-  for (const asset of ['index.html', 'offline.html', 'main.css', 'storage.js', 'telemetry.js', 'date-utils.js', 'app.js', 'manifest.webmanifest', 'dirk-jan-tekst.svg']) {
+  for (const asset of ['index.html', 'offline.html', 'main.css', 'storage.js', 'telemetry.js', 'date-utils.js', 'comic-loader.js', 'toolbar.js', 'animation-utils.js', 'app.js', 'manifest.webmanifest', 'dirk-jan-tekst.svg']) {
     assert.ok(source.includes(`'./${asset}'`), `${asset} should be precached`);
   }
   assert.match(source, /cache\.addAll\(PRECACHE_ASSETS\)/);
-  assert.match(source, /self\.skipWaiting\(\)/);
-  assert.doesNotMatch(source, /cache\.addAll\(PRECACHE_ASSETS\)[\s\S]*?\.catch\(/);
+  const installBlock = source.match(/self\.addEventListener\('install'[\s\S]*?\n\}\);/)?.[0] || '';
+  assert.doesNotMatch(installBlock, /self\.skipWaiting\(\)/);
+  assert.doesNotMatch(installBlock, /\.catch\(/);
 });
 
 test('activation removes stale caches while preserving the current cache set', () => {
@@ -55,7 +56,9 @@ test('navigations use bounded network-first loading with an offline fallback', (
   assert.match(source, /function enforceCacheLimit\(cache, maxSize\)/);
 });
 
-test('update flow supports skip waiting messages', () => {
+test('update flow supports skip waiting and version messages', () => {
   assert.match(source, /event\.data\.type === 'SKIP_WAITING'/);
+  assert.match(source, /event\.data\.type === 'GET_VERSION'/);
   assert.match(source, /self\.skipWaiting\(\)/);
+  assert.doesNotMatch(source, /\.then\(\(\) => self\.skipWaiting\(\)\)/);
 });

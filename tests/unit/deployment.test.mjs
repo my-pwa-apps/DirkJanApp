@@ -26,6 +26,7 @@ test('service worker and HTML revalidate at the edge', () => {
 test('CI gates syntax, unit contracts, and Chromium workflows', () => {
   assert.match(workflow, /node-version: 22\.19/);
   assert.match(workflow, /npm run test:syntax/);
+  assert.match(workflow, /npm run test:assets/);
   assert.match(workflow, /npm run test:unit/);
   assert.match(workflow, /npm run check:cache-version/);
   assert.match(workflow, /npm audit --audit-level=moderate/);
@@ -34,7 +35,7 @@ test('CI gates syntax, unit contracts, and Chromium workflows', () => {
 });
 
 test('CI cache policy covers every served application source', () => {
-  for (const file of ['app.js', 'date-utils.js', 'storage.js', 'telemetry.js', 'index.html', 'offline.html', 'main.css', 'manifest.webmanifest']) {
+  for (const file of ['app.js', 'date-utils.js', 'storage.js', 'telemetry.js', 'comic-loader.js', 'toolbar.js', 'animation-utils.js', 'index.html', 'offline.html', 'main.css', 'manifest.webmanifest']) {
     assert.ok(cacheVersionCheck.includes(`'${file}'`), `${file} should require a cache version update`);
   }
   assert.match(cacheVersionCheck, /changedFiles\.includes\('serviceworker\.js'\)/);

@@ -6,10 +6,11 @@ Single-page Progressive Web App (PWA) for browsing DirkJan comics from dirkjan.n
 ## Architecture
 
 ### Core Files
-- **`app.js`** (2500+ lines): Single monolithic JavaScript file with clear section dividers (`// ========================================`)
-- **`main.css`** (1500+ lines): All styles, includes mobile-first responsive design
-- **`index.html`** (195 lines): Static HTML shell with inline onclick handlers
-- **`serviceworker.js`** (181 lines): PWA offline support with 3-tier caching
+- **`app.js`**: Browser orchestration with clear section dividers (`// ========================================`)
+- **`comic-loader.js`**, **`toolbar.js`**, **`animation-utils.js`**, **`date-utils.js`**, **`storage.js`**, **`telemetry.js`**: IIFE modules. Keep this pattern (not ES modules) so the service worker can precache classic scripts.
+- **`main.css`**: All styles, includes mobile-first responsive design
+- **`index.html`**: Static HTML shell including `#fullscreen-shell`. Bind events in `app.js`; do not add inline handlers.
+- **`serviceworker.js`**: PWA offline support with 3-tier caching. Do not call `skipWaiting()` during install; the in-app update prompt posts `SKIP_WAITING`.
 - **`manifest.webmanifest`**: PWA manifest with `"orientation": "any"` (orientation controlled via JavaScript API)
 
 ### Key Architectural Patterns
@@ -62,9 +63,9 @@ Never fetch dirkjan.nl directly - always through `fetchWithFallback()`.
 
 **5. Service Worker Versioning**
 ```javascript
-const CACHE_VERSION = 'v19'; // Increment this for every deployment
+const CACHE_VERSION = 'v171'; // Increment this for every deployment
 ```
-Every code change REQUIRES incrementing `CACHE_VERSION` in `serviceworker.js`. This triggers cache refresh and update notification to users.
+Every code change REQUIRES incrementing `CACHE_VERSION` in `serviceworker.js`. The new worker stays in `waiting` until the user accepts the in-app update prompt.
 
 **6. Dual Positioning System**
 - **Main toolbar**: Draggable, saves position to `CONFIG.STORAGE_KEYS.TOOLBAR_POS`
@@ -74,11 +75,6 @@ Every code change REQUIRES incrementing `CACHE_VERSION` in `serviceworker.js`. T
 
 **7. Device Rotation Handling**
 ```javascript
-// User can disable rotation via settings
-const deviceRotationEnabled = localStorage.getItem(CONFIG.STORAGE_KEYS.DEVICE_ROTATION);
-if (deviceRotationEnabled === "false") return; // Exit early from orientation handler
-
-// When enabled: landscape → fullscreen mode, portrait → exit fullscreen
 window.addEventListener('orientationchange', () => { /* debounced by 300ms */ });
 ```
 - Manifest allows "any" orientation
@@ -94,10 +90,10 @@ CONFIG.STORAGE_KEYS = {
   LAST_COMIC: 'lastcomic',   // Last viewed date
   TOOLBAR_POS: '...',        // {top: num, left: num}
   SETTINGS_POS: '...',       // {top: num, left: num}
-  DEVICE_ROTATION: '...',    // "true" or "false"
   SWIPE: 'stat',             // "true" or "false"
   SHOW_FAVS: 'showfavs',     // "true" or "false"
   LAST_DATE: 'lastdate',     // "true" or "false"
+  START_MODE: 'startmode',   // today | latest | last
   SETTINGS_VISIBLE: 'settings' // "true" or "false"
 }
 ```

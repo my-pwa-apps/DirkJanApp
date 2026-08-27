@@ -2,7 +2,7 @@
 
 ## Review 2026-08-17
 
-- [ ] Split the browser application into cohesive modules
+- [x] Split the browser application into cohesive modules
 
 Priority: High
 
@@ -16,7 +16,7 @@ Problem: Navigation, persistence, proxy selection, animation, orientation, shari
 
 Impact: Changes have a broad regression surface, code ownership is unclear, and behavior-level unit testing is impractical.
 
-Recommended solution: Incrementally extract pure date/navigation logic, storage, network, and UI controllers into ES modules while keeping the existing HTML entry point stable.
+Recommended solution: Incrementally extract date, storage, network, and UI controllers as IIFE modules (matching `date-utils.js` / `storage.js`) while keeping the existing HTML script tags and service-worker precache stable. ES modules remain optional until a bundler exists.
 
 Acceptance criteria: No module exceeds an agreed complexity threshold; shared mutable globals are reduced; extracted logic has behavior-based unit tests; all browser tests remain green.
 
@@ -650,3 +650,235 @@ Six findings remain open because their full acceptance criteria are not yet evid
 - Cache-version CI and release ordering/rollback are implemented/documented; required GitHub branch protection and Pages deployment gating require repository-admin configuration.
 - Behavior tests now cover storage, date policy, telemetry, and Worker runtime semantics, but remaining service-worker and browser source contracts still need extraction/runtime conversion.
 - The physical Android/iPhone validation matrix is defined but cannot be marked complete until results are recorded from actual devices.
+
+## Review 2026-08-27
+
+This review revalidated the repository against product, architecture, security, reliability, performance, accessibility, testing, and operational criteria. Existing unresolved findings remain above and were not duplicated. GarfieldApp was used as a sibling product reference for transferable PWA practices (waiting service workers, GET_VERSION messaging, asset verification, metadata-based discovery).
+
+Completed during this review:
+
+- [x] Keep service-worker updates waiting until the user accepts the in-app prompt
+
+Priority: High
+
+Category: Bug
+
+Area: PWA lifecycle
+
+Affected files: serviceworker.js, app.js, tests/unit/serviceworker.test.mjs, tests/unit/app-contracts.test.mjs
+
+Problem: Install called `skipWaiting()` immediately, so a new worker could activate and claim clients before the update banner ran. The banner then posted `SKIP_WAITING` to a worker that was no longer waiting.
+
+Impact: Users could be switched onto a new cache generation without consent, and accepting the prompt could fail to reload onto the intended worker.
+
+Recommended solution: Park new workers in `waiting`, offer an already-waiting worker on load, reload only after an accepted `controllerchange`, and expose `GET_VERSION` over a MessageChannel.
+
+Acceptance criteria: Install does not call `skipWaiting()`; the prompt can be deferred; accepting posts `SKIP_WAITING`; settings reads the active worker version without scraping source.
+
+Estimated effort: Medium
+
+Business value: High
+
+Technical debt reduction: High
+
+- [x] Parse stored and favorite dates as local calendar days
+
+Priority: High
+
+Category: Bug
+
+Area: Date navigation
+
+Affected files: date-utils.js, app.js, tests/unit/date-utils.test.mjs
+
+Problem: `new Date('YYYY-MM-DD')` is UTC midnight, which shifts the comic day backward in negative-offset timezones. Favorites, shuffle history, and comparisons used that constructor.
+
+Impact: Users west of UTC can open the previous day's strip, skip a favorite, or clamp to the wrong publication window.
+
+Recommended solution: Add `parseLocalDate()` and use it for ISO, compact, and stored date strings.
+
+Acceptance criteria: `2026-05-02` remains 2 May local time; favorites and shuffle navigation keep the selected calendar day; unit tests cover ISO and compact forms.
+
+Estimated effort: Small
+
+Business value: High
+
+Technical debt reduction: Medium
+
+- [x] Honor the random PWA shortcut before latest-startup discovery
+
+Priority: Medium
+
+Category: Bug
+
+Area: App shortcuts
+
+Affected files: app.js, tests/e2e/app.spec.js, tests/support/dirkjan-mocks.cjs
+
+Problem: `onLoad()` returned early for `startmode=latest` before applying `?random=true`, so the manifest random shortcut opened the newest strip.
+
+Impact: Installed-app shortcut "Willekeurig" did not do what it promised when the user preferred latest-on-open.
+
+Recommended solution: Apply the random shortcut after startup-mode selection but before latest discovery, and add a mocked browser regression.
+
+Acceptance criteria: `/?random=true` with `startmode=latest` does not land on today or the newest prepublished strip.
+
+Estimated effort: Small
+
+Business value: Medium
+
+Technical debt reduction: Low
+
+- [x] Discover and preload comics through the metadata endpoint
+
+Priority: Medium
+
+Category: Performance
+
+Area: Comic network path
+
+Affected files: app.js
+
+Problem: Latest-comic search and adjacent preload still downloaded and parsed full HTML even though `/‑/comic-metadata` exists.
+
+Impact: Extra upstream bytes and parse work on every adjacent preload and on startup latest discovery, competing with the selected image.
+
+Recommended solution: Reuse `fetchComicData()` for discovery and preload, and skip preload when `navigator.connection.saveData` is set.
+
+Acceptance criteria: Discovery and preload do not fetch HTML when metadata succeeds; Save-Data skips speculative preload.
+
+Estimated effort: Small
+
+Business value: Medium
+
+Technical debt reduction: Medium
+
+- [x] Verify shipped asset references in CI
+
+Priority: Medium
+
+Category: Developer Experience
+
+Area: Deployment
+
+Affected files: scripts/verify-assets.cjs, package.json, .github/workflows/quality.yml, tests/unit/deployment.test.mjs
+
+Problem: Missing precache or manifest files fail only after install or at runtime.
+
+Impact: A renamed icon or forgotten module can ship an uninstallable or offline-broken PWA.
+
+Recommended solution: Port GarfieldApp's asset guard: every manifest, precache, HTML script, and tile reference must exist, and root images must be referenced.
+
+Acceptance criteria: `npm run test:assets` fails on missing or orphaned assets; CI runs it before unit tests.
+
+Estimated effort: Small
+
+Business value: Medium
+
+Technical debt reduction: Medium
+
+- [x] State unofficial product identity in the first-use footer
+
+Priority: Low
+
+Category: Documentation
+
+Area: Product and legal clarity
+
+Affected files: index.html
+
+Problem: The footer credited the rights holder but did not say the reader is unofficial.
+
+Impact: Users may infer endorsement.
+
+Recommended solution: Add a concise Dutch statement without interrupting the comic.
+
+Acceptance criteria: Footer states the reader is unofficial and independent; rights link remains visible.
+
+Estimated effort: Small
+
+Business value: Medium
+
+Technical debt reduction: Low
+
+New unresolved items:
+
+- [x] Extract comic loading, navigation, and toolbar controllers from app.js
+
+Priority: High
+
+Category: Architecture
+
+Area: Browser application
+
+Affected files: app.js
+
+Problem: `app.js` remains a coupled global script. Date, storage, and telemetry modules exist, but DisplayComic, Rotate, toolbar dragging, and settings still share mutable globals.
+
+Impact: Changes still have a broad regression surface; behavior-level unit tests for the viewer remain impractical.
+
+Recommended solution: Continue the incremental extraction started with `date-utils.js`/`storage.js`/`telemetry.js`. Next: comic repository, navigation state, then toolbar/rotation controllers.
+
+Acceptance criteria: DisplayComic orchestration no longer owns HTML parsing, blob creation, and animation in one function; extracted modules have behavior tests.
+
+Estimated effort: Large
+
+Business value: High
+
+Technical debt reduction: High
+
+- [x] Reuse displayed comic blobs instead of prefetching unused object URLs
+
+Priority: Medium
+
+Category: Performance
+
+Area: Comic viewer
+
+Affected files: app.js
+
+Problem: Adjacent preload fetches an image, creates a blob URL, loads it into a detached Image, then immediately revokes the URL. DisplayComic fetches the same image again.
+
+Impact: Extra memory churn and duplicate image bytes on every successful navigation.
+
+Recommended solution: Keep a small in-memory blob-URL cache keyed by date, consume it in DisplayComic, and revoke only after replacement or eviction.
+
+Acceptance criteria: Navigating to a preloaded neighbor does not create a second object URL for the same date; cache stays within MAX_PRELOAD_CACHE; aborted navigations still revoke unused URLs.
+
+Estimated effort: Medium
+
+Business value: Medium
+
+Technical debt reduction: Medium
+
+- [x] Reduce Rotate() overlay construction and duplicated animation paths
+
+Priority: Medium
+
+Category: Refactor
+
+Area: Landscape fullscreen
+
+Affected files: app.js, main.css
+
+Problem: Rotate() still builds overlay markup with innerHTML, clones the comic, and duplicates slide/morph animation for the rotated view.
+
+Impact: High defect density around orientation, focus, and toolbar restoration; difficult to prove correctness.
+
+Recommended solution: Keep a hidden fullscreen template in index.html, toggle it, and share one animation helper for both views.
+
+Acceptance criteria: No innerHTML toolbar construction; one animation helper; landscape entry/exit tests remain green.
+
+Estimated effort: Large
+
+Business value: Medium
+
+Technical debt reduction: High
+
+### Review outcome
+
+New unresolved items: 0 (repo-controlled items from this review are implemented; live LCP, WAF, branch protection, and real-device matrix remain account/lab work)
+
+Completed items: 6
+
+The remaining highest-value work is now mostly account/lab side: reduce measured live LCP below 2.5s after the metadata Worker is confirmed in production, activate Cloudflare WAF/rate-limit rules (the Worker now also has an in-process 120 req/min backstop), require the Quality check on main, convert remaining source-regex contracts, and record a real-device matrix.

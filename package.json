@@ -13,13 +13,15 @@
     "test:e2e": "playwright test",
     "test:lighthouse": "node tests/support/lighthouse-audit.cjs",
     "test:workers": "node tests/support/live-worker-health.cjs",
-    "test:predeploy": "npm run test:syntax && npm run test:unit && playwright test --project=chromium --workers=1 && playwright test --project=mobile-chrome --workers=1 && npm run test:cross-browser -- --workers=1 && npm run test:lighthouse && npm run test:workers",
+    "test:predeploy": "npm run test:syntax && npm run test:assets && npm run test:unit && playwright test --project=chromium --workers=1 && playwright test --project=mobile-chrome --workers=1 && npm run test:cross-browser -- --workers=1 && npm run test:lighthouse && npm run test:workers",
     "test:pwa": "playwright test tests/e2e/pwa-offline.spec.js --project=chromium",
     "test:unit": "node --test tests/unit/*.test.mjs",
     "test:usability": "playwright test tests/e2e/usability.spec.js",
     "test:production": "playwright test tests/e2e/production-smoke.spec.js",
     "test:headed": "playwright test --headed",
-    "test:syntax": "node --check app.js && node --check date-utils.js && node --check storage.js && node --check telemetry.js && node --check serviceworker.js && node --check proxy-worker/src/index.js && node --check scripts/check-cache-version.mjs && node --check playwright.config.js && node --check playwright.cross-browser.config.js && node --check tests/support/static-server.cjs && node --check tests/support/lighthouse-audit.cjs && node --check tests/support/live-worker-health.cjs",
+    "test:syntax": "node --check app.js && node --check date-utils.js && node --check storage.js && node --check telemetry.js && node --check comic-loader.js && node --check toolbar.js && node --check animation-utils.js && node --check serviceworker.js && node --check proxy-worker/src/index.js && node --check scripts/check-cache-version.mjs && node --check scripts/bump-cache-version.mjs && node --check scripts/verify-assets.cjs && node --check playwright.config.js && node --check playwright.cross-browser.config.js && node --check tests/support/static-server.cjs && node --check tests/support/lighthouse-audit.cjs && node --check tests/support/live-worker-health.cjs",
+    "bump:version": "node scripts/bump-cache-version.mjs",
+    "test:assets": "node scripts/verify-assets.cjs",
     "check:cache-version": "node scripts/check-cache-version.mjs"
   },
   "devDependencies": {

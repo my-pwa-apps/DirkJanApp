@@ -30,6 +30,8 @@ Pages must not deploy browser code that depends on an unavailable Worker contrac
 
 The Worker grants browser CORS only to configured `ALLOWED_ORIGINS`. Originless health checks remain supported.
 
+The Worker also applies an in-process per-IP budget (default 120 requests per minute, overridable with `RATE_LIMIT_WINDOW_MS` and `RATE_LIMIT_MAX`). This is a backstop, not a substitute for edge WAF rules: isolate counts reset on deploy and are not shared across Worker instances.
+
 Configure a Cloudflare rate-limiting rule for the Worker hostname:
 
 - Match proxy GET/HEAD requests.

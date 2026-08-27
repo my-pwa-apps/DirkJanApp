@@ -54,6 +54,20 @@ test('stale future last comic is clamped before startup fetches', async ({ page 
   expect(result.errors).toEqual([]);
 });
 
+test('random shortcut opens a random comic instead of the latest startup comic', async ({ page }) => {
+  await page.addInitScript(() => { Math.random = () => 0.1; });
+  const result = await openApp(page, {
+    path: '/?random=true',
+    initialStorage: {
+      startmode: 'latest'
+    }
+  });
+
+  await expect(page.locator('#DatePicker')).not.toHaveValue('2026-05-08');
+  await expect(page.locator('#DatePicker')).not.toHaveValue('2026-05-02');
+  expect(result.errors).toEqual([]);
+});
+
 test('startup shows today when last comic is not remembered', async ({ page }) => {
   const result = await openApp(page);
 
