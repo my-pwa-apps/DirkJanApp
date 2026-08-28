@@ -70,10 +70,16 @@ test('service worker updates wait for an explicit user prompt', () => {
   assert.match(appSource, /postMessage\(\{ type: 'GET_VERSION' \}/);
 });
 
-test('date picker changes prefer the event target over the static rotated picker', () => {
+test('date picker changes use the main picker value', () => {
   assert.match(appSource, /function DateChange\(event\)/);
-  assert.match(appSource, /event\?\.target\?\.id === 'rotated-DatePicker'/);
-  assert.match(appSource, /sourcePicker === mainDatePicker && rotatedDatePicker/);
+  assert.match(appSource, /event\?\.target\?\.value \|\| mainDatePicker\?\.value/);
+});
+
+test('landscape fullscreen hides the toolbar and always allows swipe navigation', () => {
+  assert.doesNotMatch(appSource, /getElementById\(['"]fullscreen-toolbar['"]\)/);
+  assert.doesNotMatch(appSource, /rotated-First|rotated-Next|rotated-DatePicker/);
+  assert.match(appSource, /if \(!isFullscreenActive\(\) && !document\.getElementById\("swipe"\)\.checked\) return/);
+  assert.match(appSource, /lastSwipeTime = Date\.now\(\)/);
 });
 
 test('calendar dates are parsed as local days rather than UTC midnight', () => {

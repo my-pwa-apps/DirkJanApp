@@ -68,6 +68,7 @@ test('orientation enters and exits fullscreen while closing open settings', asyn
   await setOrientation(page, 'landscape-primary');
   await expect(page.locator('#fullscreen-shell')).not.toHaveAttribute('hidden');
   await expect(page.locator('#rotated-comic')).toBeVisible();
+  await expect(page.locator('#fullscreen-toolbar')).toHaveCount(0);
   await expect(page.locator('#settingsDIV')).not.toHaveClass(/visible/);
   await expect(page.locator('#settingsDIV')).toHaveAttribute('inert', '');
   await expect(settings).toHaveAttribute('aria-expanded', 'false');

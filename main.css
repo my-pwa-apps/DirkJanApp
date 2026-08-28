@@ -787,7 +787,7 @@ input[type="date"]:focus-visible {
 
 #rotated-comic.fullscreen-landscape {
     left: 50% !important;
-    top: 40% !important;
+    top: 50% !important;
     transform: translate(-50%, -50%);
 }
 
@@ -925,7 +925,7 @@ input[type="date"]:focus-visible {
 .rotated-comic-outgoing.fullscreen-landscape {
     position: fixed;
     left: 50%;
-    top: 40%;
+    top: 50%;
     transform: translate(-50%, -50%);
     margin: 0;
 }

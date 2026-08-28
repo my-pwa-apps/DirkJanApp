@@ -27,6 +27,7 @@ const CONFIG = Object.freeze({
   // Swipe detection
   SWIPE_MIN_DISTANCE: 50,              // Minimum swipe distance in px
   SWIPE_MAX_TIME: 500,                 // Maximum swipe time in ms
+  SWIPE_CLICK_DEBOUNCE_MS: 300,        // Ignore fullscreen exit clicks after a swipe
   
   // Toolbar snapping
   SNAP_THRESHOLD: 80,                  // Distance in px within which toolbar snaps to optimal position
@@ -348,6 +349,7 @@ let notFoundRetries = 0;        // Prevents infinite 404 recursion
 let currentComicObjectUrl = null;
 let comicBlobCache = null;
 let fullscreenControlsBound = false;
+let lastSwipeTime = 0;
 
 function getComicBlobCache() {
   if (!comicBlobCache) {
@@ -1060,9 +1062,6 @@ function updateDatePickerMax(maxDateValue) {
   
   const mainPicker = document.getElementById("DatePicker");
   if (mainPicker) mainPicker.setAttribute("max", formattedMax);
-  
-  const rotatedPicker = document.getElementById("rotated-DatePicker");
-  if (rotatedPicker) rotatedPicker.setAttribute("max", formattedMax);
 }
 
 /**
@@ -1549,26 +1548,11 @@ function RandomClick()
 
 /**
  * Handles date picker changes
- * Syncs both main and rotated date pickers
  */
 function DateChange(event)
 {
-  // Get the date from either the main or rotated date picker
   const mainDatePicker = document.getElementById('DatePicker');
-  const rotatedDatePicker = document.getElementById('rotated-DatePicker');
-  const sourcePicker = event?.target?.id === 'rotated-DatePicker' || (isFullscreenActive() && event?.target === rotatedDatePicker)
-    ? rotatedDatePicker
-    : mainDatePicker;
-
-  let selectedDate;
-  if (sourcePicker && sourcePicker.value) {
-    selectedDate = sourcePicker.value;
-    if (sourcePicker === rotatedDatePicker && mainDatePicker) {
-      mainDatePicker.value = selectedDate;
-    } else if (sourcePicker === mainDatePicker && rotatedDatePicker) {
-      rotatedDatePicker.value = selectedDate;
-    }
-  }
+  const selectedDate = event?.target?.value || mainDatePicker?.value;
   
   if (selectedDate) {
     currentselectedDate = clampToLatestComicCandidate(selectedDate);
@@ -1669,12 +1653,6 @@ function DisplayComic(direction = null, notFoundBehavior = 'nearest')
   formattedDate = dateParts.year+"-"+dateParts.month+"-"+dateParts.day;
   formattedComicDate = dateParts.year+dateParts.month+dateParts.day;
   document.getElementById('DatePicker').value = formattedDate;
-  
-  // Also sync the rotated date picker if it exists
-  const rotatedDatePicker = document.getElementById('rotated-DatePicker');
-  if (rotatedDatePicker) {
-    rotatedDatePicker.value = formattedDate;
-  }
   
   const url = `https://dirkjan.nl/cartoon/${formattedComicDate}`;
 
@@ -1872,9 +1850,6 @@ function setButtonStates(states) {
   for (const [id, disabled] of Object.entries(states)) {
     const mainButton = document.getElementById(id);
     if (mainButton) mainButton.disabled = disabled;
-    
-    const rotatedButton = document.getElementById(`rotated-${id}`);
-    if (rotatedButton) rotatedButton.disabled = disabled;
   }
 }
 
@@ -1893,12 +1868,8 @@ function CompareDates() {
   };
   const currentTime = normalizeDate(currentselectedDate);
   
-  // Handle date picker state
-  const datePickers = ['DatePicker', 'rotated-DatePicker'];
-  datePickers.forEach(id => {
-    const picker = document.getElementById(id);
-    if (picker) picker.disabled = showFavsChecked;
-  });
+  const datePicker = document.getElementById('DatePicker');
+  if (datePicker) datePicker.disabled = showFavsChecked;
   
   // Determine start and end dates based on mode
   const startDate = showFavsChecked && favs.length > 0 
@@ -1987,6 +1958,7 @@ function Rotate() {
     if (mainToolbar) {
       mainToolbar.style.visibility = 'hidden';
     }
+    document.body.style.overflow = '';
     
     // Make sure original comic is in normal state
     element.className = "normal";
@@ -2120,8 +2092,7 @@ function Rotate() {
     const shell = document.getElementById('fullscreen-shell');
     const overlay = document.getElementById('comic-overlay');
     const clonedComic = document.getElementById('rotated-comic');
-    const fullscreenToolbar = document.getElementById('fullscreen-toolbar');
-    if (!shell || !overlay || !clonedComic || !fullscreenToolbar) {
+    if (!shell || !overlay || !clonedComic) {
       isRotating = false;
       return;
     }
@@ -2137,13 +2108,12 @@ function Rotate() {
     clonedComic.alt = element.alt;
     clonedComic.className = 'fullscreen-landscape';
     clonedComic.style.display = 'block';
-    fullscreenToolbar.style.display = 'flex';
     shell.hidden = false;
     document.body.classList.add('rotated-state');
+    document.body.style.overflow = 'hidden';
 
-    bindFullscreenControls(overlay, fullscreenToolbar);
+    bindFullscreenControls(overlay, clonedComic);
     CompareDates();
-    positionFullscreenToolbar();
     window.addEventListener('resize', handleRotatedViewResize);
     window.addEventListener('orientationchange', handleRotatedViewResize);
 
@@ -2171,31 +2141,28 @@ function Rotate() {
  * Handles resize and orientation change in rotated view
  * Repositions comic and toolbar appropriately
  */
-function bindFullscreenControls(overlay, fullscreenToolbar) {
+function bindFullscreenControls(overlay, clonedComic) {
   if (fullscreenControlsBound) return;
   fullscreenControlsBound = true;
 
-  document.getElementById('rotated-First')?.addEventListener('click', FirstClick);
-  document.getElementById('rotated-Previous')?.addEventListener('click', PreviousClick);
-  document.getElementById('rotated-Random')?.addEventListener('click', RandomClick);
-  document.getElementById('rotated-Next')?.addEventListener('click', NextClick);
-  document.getElementById('rotated-Current')?.addEventListener('click', CurrentClick);
-  const rotatedDatePicker = document.getElementById('rotated-DatePicker');
-  rotatedDatePicker?.addEventListener('input', DateChange);
-  rotatedDatePicker?.addEventListener('click', () => rotatedDatePicker.showPicker?.());
+  const bindSwipeTarget = (target) => {
+    target.addEventListener('touchstart', handleTouchStart, { passive: false });
+    target.addEventListener('touchmove', handleTouchMove, { passive: false });
+    target.addEventListener('touchend', function(e) {
+      handleTouchEnd(e);
+      e.stopPropagation();
+    }, { passive: true });
+  };
 
-  fullscreenToolbar.addEventListener('click', function(e) {
-    e.stopPropagation();
-  });
-  overlay.addEventListener('touchstart', handleTouchStart, { passive: false });
-  overlay.addEventListener('touchmove', handleTouchMove, { passive: false });
-  overlay.addEventListener('touchend', function(e) {
-    handleTouchEnd(e);
-    e.stopPropagation();
-  }, { passive: true });
-  overlay.addEventListener('click', function() {
+  const exitFullscreen = () => {
+    if (Date.now() - lastSwipeTime < CONFIG.SWIPE_CLICK_DEBOUNCE_MS) return;
     Rotate();
-  });
+  };
+
+  bindSwipeTarget(overlay);
+  bindSwipeTarget(clonedComic);
+  overlay.addEventListener('click', exitFullscreen);
+  clonedComic.addEventListener('click', exitFullscreen);
 }
 
 function handleRotatedViewResize() {
@@ -2203,7 +2170,6 @@ function handleRotatedViewResize() {
   if (rotatedComic && isFullscreenActive()) {
     maximizeRotatedImage(rotatedComic);
   }
-  positionFullscreenToolbar();
 }
 
 // ========================================
@@ -2248,8 +2214,7 @@ function handleTouchStart(e) {
 	touchStartY = touch.clientY;
 	touchStartTime = Date.now();
 	
-	// Early return for swipe gesture handling, but keep tracking for tap detection
-	if (!document.getElementById("swipe").checked) return;
+	if (!isFullscreenActive() && !document.getElementById("swipe").checked) return;
 }
 
 /**
@@ -2258,7 +2223,7 @@ function handleTouchStart(e) {
  * @param {TouchEvent} e - Touch event
  */
 function handleTouchMove(e) {
-	if (!document.getElementById("swipe").checked) return;
+	if (!isFullscreenActive() && !document.getElementById("swipe").checked) return;
 	
 	// Prevent default scrolling behavior during swipe
 	const touch = e.touches[0];
@@ -2288,36 +2253,31 @@ function handleTouchEnd(e) {
 	const absX = Math.abs(deltaX);
 	const absY = Math.abs(deltaY);
 	
-	// For swipe navigation, check if swipe is enabled
-	if (!document.getElementById("swipe").checked) return;
+	const isLandscapeFullscreen = isFullscreenActive();
+	if (!isLandscapeFullscreen && !document.getElementById("swipe").checked) return;
 	
 	// Check if the swipe is valid (meets distance and time requirements)
   if (deltaTime > CONFIG.SWIPE_MAX_TIME) return;
 	
-	// Check if we're in landscape fullscreen mode
-  const isLandscapeFullscreen = isFullscreenActive();
-	
+	const markSwipe = () => {
+    lastSwipeTime = Date.now();
+  };
+
 	// Determine swipe direction based on mode
 	if (isLandscapeFullscreen) {
-    // Landscape fullscreen (no rotation): Normal horizontal/vertical mapping
     if (absX > absY && absX > CONFIG.SWIPE_MIN_DISTANCE) {
-      // Horizontal swipe
       if (deltaX < 0) {
-        // Swipe Left -> Next
-        if (canNavigate('next')) NextClick();
-      } else {
-        // Swipe Right -> Previous
-        if (canNavigate('prev')) PreviousClick();
+        if (canNavigate('next')) {
+          markSwipe();
+          NextClick();
+        }
+      } else if (canNavigate('prev')) {
+        markSwipe();
+        PreviousClick();
       }
-    } else if (absY > absX && absY > CONFIG.SWIPE_MIN_DISTANCE) {
-      // Vertical swipe
-      if (deltaY < 0) {
-        // Swipe Up -> Latest
-        if (canNavigate('current')) CurrentClick();
-      } else {
-        // Swipe Down -> Random
-        if (canNavigate('random')) RandomClick();
-      }
+    } else if (absY > absX && absY > CONFIG.SWIPE_MIN_DISTANCE && deltaY < 0 && canNavigate('random')) {
+      markSwipe();
+      RandomClick();
     }
   } else {
     // Normal portrait mode: Horizontal for Next/Prev, Vertical for Random/Latest
@@ -2380,7 +2340,6 @@ window.addEventListener('orientationchange', function() {
         }
       } else if (rotatedComic) {
         maximizeRotatedImage(rotatedComic);
-        positionFullscreenToolbar();
       }
     } else if (isFullscreenActive()) {
       Rotate();
@@ -2391,28 +2350,8 @@ window.addEventListener('orientationchange', function() {
 // Unified touch event handling for toolbar and buttons
 (function() {
   const isAndroid = /Android/i.test(navigator.userAgent);
-  
-  // Handle fullscreen toolbar touch events - prevent swipe propagation
-  document.body.addEventListener('touchstart', function(e) {
-    if (e.target.closest('#fullscreen-toolbar')) {
-      e.stopPropagation();
-    }
-  }, { capture: true });
-  
-  document.body.addEventListener('touchmove', function(e) {
-    if (e.target.closest('#fullscreen-toolbar')) {
-      e.stopPropagation();
-    }
-  }, { capture: true });
-  
-  // Unified touchend handler for all toolbar buttons
+
   document.body.addEventListener('touchend', function(e) {
-    // Stop swipe on fullscreen toolbar
-    if (e.target.closest('#fullscreen-toolbar')) {
-      e.stopPropagation();
-    }
-    
-    // Handle button state reset
     const button = e.target.closest('.toolbar-button, .toolbar-datepicker-btn');
     if (button) {
       const delay = isAndroid ? 200 : 150;
@@ -2990,29 +2929,7 @@ function maximizeRotatedImage(imgElement) {
   imgElement.style.boxShadow = '0 5px 15px rgba(0,0,0,0.3)';
 }
 
-// Position the fullscreen toolbar based on device orientation
-function positionFullscreenToolbar() {
-  const toolbar = document.getElementById('fullscreen-toolbar');
-  if (!toolbar) return;
-  
-  // For rotated mode, let CSS handle the positioning via media queries
-  // Just ensure the toolbar has the necessary base styles
-  toolbar.style.position = 'fixed';
-  toolbar.style.zIndex = '10002';
-  
-  // Clear any inline positioning to let CSS media queries take over
-  toolbar.style.left = '';
-  toolbar.style.bottom = '';
-  toolbar.style.top = '';
-  toolbar.style.transform = '';
-  toolbar.style.flexDirection = '';
-  toolbar.style.width = '';
-  toolbar.style.maxWidth = '';
-  toolbar.style.height = '';
-}
-
-/**
- * Positions the main toolbar centered between logo and comic image
+/* Positions the main toolbar centered between logo and comic image
  * @param {HTMLElement} toolbar - The toolbar element to position
  * @param {boolean} savePosition - Whether to save the calculated position to localStorage
  */
