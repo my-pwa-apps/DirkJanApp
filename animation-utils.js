@@ -47,6 +47,10 @@
           outgoingClone.classList.remove('slide-out-left', 'slide-out-right', 'slide-in-left', 'slide-in-right', 'no-transition', 'loading', 'loaded', 'dissolve');
           if (preserveInlineStyles) {
             outgoingClone.style.cssText = target.style.cssText;
+            const computedTransform = global.getComputedStyle?.(target).transform;
+            outgoingClone.style.transform = computedTransform && computedTransform !== 'none'
+              ? computedTransform
+              : 'translate(-50%, -50%)';
             outgoingClone.style.transition = 'transform 0.4s ease-out';
           }
           container.appendChild(outgoingClone);

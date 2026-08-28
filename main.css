@@ -734,6 +734,7 @@ input[type="date"]:focus-visible {
 
 #fullscreen-shell:not([hidden]) {
     display: block;
+    overflow: hidden;
 }
 
 #comic-overlay {
@@ -787,7 +788,11 @@ input[type="date"]:focus-visible {
 #rotated-comic.fullscreen-landscape {
     left: 50% !important;
     top: 40% !important;
-    transform: translate(-50%, -50%) !important;
+    transform: translate(-50%, -50%);
+}
+
+#rotated-comic.no-transition {
+    transition: none !important;
 }
 
 .fullscreen-toolbar.landscape-toolbar {
@@ -893,12 +898,12 @@ input[type="date"]:focus-visible {
 
 /* Slide animations for landscape fullscreen (no rotation) */
 #rotated-comic.fullscreen-landscape.slide-out-left,
-.rotated-comic-outgoing.fullscreen-landscape.slide-out-left {
+#fullscreen-shell .rotated-comic-outgoing.fullscreen-landscape.slide-out-left {
     transform: translate(calc(-50% - 100vw - 20px), -50%) !important;
 }
 
 #rotated-comic.fullscreen-landscape.slide-out-right,
-.rotated-comic-outgoing.fullscreen-landscape.slide-out-right {
+#fullscreen-shell .rotated-comic-outgoing.fullscreen-landscape.slide-out-right {
     transform: translate(calc(-50% + 100vw + 20px), -50%) !important;
 }
 
@@ -913,7 +918,16 @@ input[type="date"]:focus-visible {
 /* Outgoing rotated comic clone for filmstrip effect */
 .rotated-comic-outgoing {
     pointer-events: none;
+    z-index: 10001;
     transition: transform 0.4s ease-out;
+}
+
+.rotated-comic-outgoing.fullscreen-landscape {
+    position: fixed;
+    left: 50%;
+    top: 40%;
+    transform: translate(-50%, -50%);
+    margin: 0;
 }
 
 /* Blur morph for rotated comic */

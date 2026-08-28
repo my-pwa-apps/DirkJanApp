@@ -1741,8 +1741,15 @@ function DisplayComic(direction = null, notFoundBehavior = 'nearest')
         currentComicObjectUrl = displayUrl;
         
         const animateTransition = () => {
-          if (comicImg.src && comicImg.src !== window.location.href && direction) {
+          const hasPortraitSrc = comicImg.src && comicImg.src !== window.location.href;
+          const hasRotatedSrc = Boolean(rotatedComic?.src);
+          if (direction && (hasRotatedSrc || hasPortraitSrc)) {
             isAnimating = true;
+          }
+          if (rotatedComic) {
+            comicImg.src = displayUrl;
+            comicImg.classList.remove('loading', 'slide-in-left', 'slide-in-right');
+            return animateRotatedComic(rotatedComic, displayUrl, direction);
           }
           return COMIC_ANIMATION.animateTransition(comicImg, displayUrl, direction, {
             container: wrapper
@@ -1765,11 +1772,6 @@ function DisplayComic(direction = null, notFoundBehavior = 'nearest')
             statusEl.textContent = `Strip van ${dateParts.day}-${dateParts.month}-${dateParts.year} geladen`;
           }
           setComicStatus('idle');
-          
-          // Also update the rotated comic if it exists (with animation)
-          if (rotatedComic) {
-            animateRotatedComic(rotatedComic, displayUrl, direction);
-          }
 
           if (previousComicObjectUrl && previousComicObjectUrl !== displayUrl) {
             URL.revokeObjectURL(previousComicObjectUrl);
@@ -1848,10 +1850,11 @@ function DisplayComic(direction = null, notFoundBehavior = 'nearest')
  * @param {HTMLElement} rotatedComic - The rotated comic element
  * @param {string} newSrc - The new image URL
  * @param {string} direction - 'next', 'prev', or 'morph'
+ * @returns {Promise<void>}
  */
 function animateRotatedComic(rotatedComic, newSrc, direction) {
-  if (!rotatedComic || !newSrc) return;
-  COMIC_ANIMATION.animateTransition(rotatedComic, newSrc, direction, {
+  if (!rotatedComic || !newSrc) return Promise.resolve();
+  return COMIC_ANIMATION.animateTransition(rotatedComic, newSrc, direction, {
     container: document.getElementById('fullscreen-shell') || document.body,
     outgoingClass: 'rotated-comic-outgoing',
     morphClass: 'rotated-comic-morph-outgoing',

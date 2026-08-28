@@ -43,6 +43,11 @@ test('comic images load through the controlled proxy as revocable blob URLs', ()
   assert.match(appSource, /getComicBlobCache\(\)/);
 });
 
+test('fullscreen navigation uses the landscape filmstrip instead of the hidden portrait comic', () => {
+  assert.match(appSource, /if \(rotatedComic\) \{[\s\S]*return animateRotatedComic\(rotatedComic, displayUrl, direction\)/);
+  assert.match(appSource, /function animateRotatedComic\([\s\S]*return COMIC_ANIMATION\.animateTransition\(rotatedComic/);
+});
+
 test('startup discovery failures retain a usable comic view', () => {
   assert.match(appSource, /discoverLatestAvailableComic\(\)\.then\(latestDate => \{[\s\S]*?\}\)\.catch\(\(\) => \{\s*CompareDates\(\);\s*DisplayComic\(null, 'nearest'\)/);
   assert.match(appSource, /comicImg\.alt = `DirkJan strip van \$\{dateParts\.day\}-\$\{dateParts\.month\}-\$\{dateParts\.year\} laden`/);
