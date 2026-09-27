@@ -214,11 +214,58 @@
     return createComicObjectUrl(imageUrl, { ...objectUrlOptions, signal });
   }
 
+  /**
+   * Loads and decodes an image before it is committed to the page, so transitions
+   * never animate a blank or broken frame.
+   * @param {string} imageUrl
+   * @param {{ timeoutMs?: number, signal?: AbortSignal|null, ImageCtor?: Function }} [options]
+   * @returns {Promise<{ width: number, height: number }>}
+   */
+  function decodeComicImage(imageUrl, { timeoutMs = 8000, signal = null, ImageCtor = global.Image } = {}) {
+    return new Promise((resolve, reject) => {
+      const abortError = () => new DOMException('Aborted', 'AbortError');
+      if (signal?.aborted) {
+        reject(abortError());
+        return;
+      }
+      const image = new ImageCtor();
+      let settled = false;
+      const finish = (error, result) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        signal?.removeEventListener('abort', onAbort);
+        image.onload = null;
+        image.onerror = null;
+        if (error) reject(error);
+        else resolve(result);
+      };
+      const onAbort = () => finish(abortError());
+      const onReady = async () => {
+        if (!image.naturalWidth) {
+          finish(new Error('Comic image is empty'));
+          return;
+        }
+        // Firefox rejects decode() for renderable images with trailing bytes; the load already proved them valid.
+        if (typeof image.decode === 'function') {
+          try { await image.decode(); } catch (_) { /* best-effort pre-decode */ }
+        }
+        finish(null, { width: image.naturalWidth, height: image.naturalHeight });
+      };
+      const timer = setTimeout(() => finish(new Error('Comic image decode timed out')), timeoutMs);
+      signal?.addEventListener('abort', onAbort, { once: true });
+      image.onload = onReady;
+      image.onerror = () => finish(new Error('Comic image failed to decode'));
+      image.src = imageUrl;
+    });
+  }
+
   global.COMIC_LOADER = Object.freeze({
     extractComicImageUrl,
     normalizeComicImageUrl,
     createComicBlobCache,
     createComicObjectUrl,
+    decodeComicImage,
     fetchComicData,
     resolveDisplayUrl
   });

@@ -337,8 +337,8 @@ async function tryRemainingProxies(url, excludeIndex, startTime, signal = null) 
 // ========================================
 
 // Comic state
-let pictureUrl = '';           // Current comic image URL
-let formattedDate = '';         // Current formatted date for sharing (YYYY-MM-DD)
+let committedComic = null;      // Comic currently on screen: { date, imageUrl, objectUrl }
+let formattedDate = '';         // Currently selected date (YYYY-MM-DD); may still be loading
 let formattedComicDate = '';    // Date formatted for API calls (YYYYMMDD)
 let comicstartDate = CONFIG.COMIC_START_DATE;
 let currentselectedDate;        // Currently selected date object
@@ -498,16 +498,16 @@ function storeToolbarPosition(top, left, toolbarEl, overrides = {}) {
 function loadFavs() {
   if (Array.isArray(_cachedFavs)) return _cachedFavs;
   const parsed = STORAGE.getJSON(CONFIG.STORAGE_KEYS.FAVS, []);
-  return (_cachedFavs = Array.isArray(parsed) ? parsed : []);
+  return (_cachedFavs = DATE_UTILS.normalizeFavoriteDates(parsed, CONFIG.COMIC_START_DATE));
 }
 
 /**
- * Saves favorites to localStorage with deduplication
+ * Saves favorites to localStorage after validation and deduplication
  * @param {Array<string>} arr - Array of favorite dates to save
  */
 function saveFavs(arr) {
   if (!Array.isArray(arr)) return;
-  const deduped = Array.from(new Set(arr)).sort();
+  const deduped = DATE_UTILS.normalizeFavoriteDates(arr, CONFIG.COMIC_START_DATE);
   _cachedFavs = deduped;
   if (!STORAGE.set(CONFIG.STORAGE_KEYS.FAVS, JSON.stringify(deduped))) {
     showNotification('Favorieten konden niet worden opgeslagen.', true);
@@ -736,17 +736,19 @@ function makeDraggable(element, dragHandle, storageKey, onDragStart = null, onDr
  * @returns {Promise<void>}
  */
 async function Share() {
-  if (!pictureUrl) {
+  // Snapshot the comic on screen so a navigation mid-share cannot change what is shared
+  const comic = committedComic;
+  if (!comic) {
     alert('Sorry, er is geen strip beschikbaar om te delen.');
     return;
   }
 
-  const shareText = `Bekijk deze DirkJan-strip van ${formattedDate}!`;
+  const shareText = `Bekijk deze DirkJan-strip van ${comic.date}!`;
   const shareUrl = new URL('./', window.location.href).href;
   const isAndroid = /Android/i.test(navigator.userAgent);
 
   if (!navigator.share) {
-    fallbackShare(shareText, shareUrl);
+    fallbackShare(shareText, shareUrl, comic.imageUrl);
     return;
   }
 
@@ -757,13 +759,13 @@ async function Share() {
   }
 
   try {
-    await shareWithImage(shareText, shareUrl);
+    await shareWithImage(comic, shareText);
   } catch (error) {
     // If user cancelled the share dialog, just return
     if (error.name === 'AbortError') return;
     if (isAndroid) {
       try {
-        const androidShareText = `DirkJan-strip van ${formattedDate}\n\nAfbeelding: ${pictureUrl}\n\nApp: ${shareUrl}`;
+        const androidShareText = `DirkJan-strip van ${comic.date}\n\nAfbeelding: ${comic.imageUrl}\n\nApp: ${shareUrl}`;
         
         try {
           await navigator.share({
@@ -780,7 +782,7 @@ async function Share() {
         try {
           await navigator.share({
             title: 'DirkJan-strip',
-            text: `Stripafbeelding: ${pictureUrl}`,
+            text: `Stripafbeelding: ${comic.imageUrl}`,
             url: shareUrl
           });
           return;
@@ -792,25 +794,25 @@ async function Share() {
         
         await navigator.share({
           title: 'DirkJan-strip',
-          text: `${shareText}\n\nStripafbeelding: ${pictureUrl}\n\nApp: ${shareUrl}`
+          text: `${shareText}\n\nStripafbeelding: ${comic.imageUrl}\n\nApp: ${shareUrl}`
         });
       } catch (androidError) {
         // Only show fallback if it wasn't a user cancellation
         if (androidError.name !== 'AbortError') {
-          fallbackShare(shareText, shareUrl);
+          fallbackShare(shareText, shareUrl, comic.imageUrl);
         }
       }
     } else {
       try {
         await navigator.share({
           title: 'DirkJan-strip',
-          text: `${shareText}\n\nBekijk de stripafbeelding: ${pictureUrl}`,
+          text: `${shareText}\n\nBekijk de stripafbeelding: ${comic.imageUrl}`,
           url: shareUrl
         });
       } catch (textError) {
         // Only show fallback if it wasn't a user cancellation
         if (textError.name !== 'AbortError') {
-          fallbackShare(shareText, shareUrl);
+          fallbackShare(shareText, shareUrl, comic.imageUrl);
         }
       }
     }
@@ -823,14 +825,14 @@ async function Share() {
 }
 
 /**
- * Attempts to share comic with image attachment
- * Tries multiple CORS proxies to fetch the image
+ * Attempts to share comic with image attachment.
+ * Reuses the already displayed image blob and only refetches through the proxy when needed.
+ * @param {{date: string, imageUrl: string, objectUrl: string}} comic - Committed comic snapshot
  * @param {string} shareText - Text to share
- * @param {string} shareUrl - URL to share
  * @returns {Promise<void>}
  * @throws {Error} If image sharing is not supported or fails
  */
-async function shareWithImage(shareText, shareUrl) {
+async function shareWithImage(comic, shareText) {
   // Safe feature detection since some browsers throw for canShare with files param
   const fileShareSupported = (() => {
     try {
@@ -848,18 +850,14 @@ async function shareWithImage(shareText, shareUrl) {
     } finally { clearTimeout(t); }
   };
 
-  // Build URL attempts using the intelligent proxy selection
-  // Try proxies in order based on recent success
-  const attempts = [];
+  // The displayed blob is local and instant; proxies are the fallback if it was revoked
+  const attempts = comic.objectUrl ? [comic.objectUrl] : [];
   
   // Add proxies in priority order (starting with last working one)
   for (let i = 0; i < CONFIG.CORS_PROXIES.length; i++) {
     const proxyIndex = (workingProxyIndex + i) % CONFIG.CORS_PROXIES.length;
-    attempts.push(`${CONFIG.CORS_PROXIES[proxyIndex]}${encodeURIComponent(pictureUrl)}`);
+    attempts.push(`${CONFIG.CORS_PROXIES[proxyIndex]}${encodeURIComponent(comic.imageUrl)}`);
   }
-  
-  // Add direct URL as final fallback
-  attempts.push(pictureUrl);
 
   let blob = null;
   for (const url of attempts) {
@@ -886,7 +884,7 @@ async function shareWithImage(shareText, shareUrl) {
         canvas.getContext('2d').drawImage(img, 0, 0);
         canvas.toBlob(jBlob => {
           if (!jBlob) return reject(new Error('JPEG conversion failed'));
-          resolve(new File([jBlob], `dirkjan-comic-${formattedDate}.jpg`, { type: 'image/jpeg' }));
+          resolve(new File([jBlob], `dirkjan-comic-${comic.date}.jpg`, { type: 'image/jpeg' }));
         }, 'image/jpeg', 0.9);
       };
       img.onerror = () => {
@@ -896,7 +894,7 @@ async function shareWithImage(shareText, shareUrl) {
       img.src = objectUrl;
     });
   } else {
-    finalFile = new File([blob], `dirkjan-comic-${formattedDate}.jpg`, { type: 'image/jpeg' });
+    finalFile = new File([blob], `dirkjan-comic-${comic.date}.jpg`, { type: 'image/jpeg' });
   }
 
   // Share prioritizing file only (best chance some Android shells actually attach the image)
@@ -929,10 +927,11 @@ async function shareWithImage(shareText, shareUrl) {
  * Fallback share method using clipboard
  * @param {string} text - Share text
  * @param {string} url - Share URL
+ * @param {string} imageUrl - Comic image URL of the committed comic
  */
-function fallbackShare(text, url) {
+function fallbackShare(text, url, imageUrl) {
 	// Try to copy to clipboard with image URL included
-	const shareContent = `${text}\n${url}\n\nStripafbeelding: ${pictureUrl}`;
+	const shareContent = `${text}\n${url}\n\nStripafbeelding: ${imageUrl}`;
 	
 	if (navigator.clipboard && navigator.clipboard.writeText) {
 		navigator.clipboard.writeText(shareContent).then(() => {
@@ -1369,9 +1368,14 @@ function importFavorites(event) {
       input.value = '';
       return;
     }
-    // Keep only valid date strings (YYYY-MM-DD) and de-duplicate against existing
+    // Keep only real published dates and de-duplicate against existing
     const existing = loadFavs();
-    const valid = imported.filter(d => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d));
+    const valid = DATE_UTILS.normalizeFavoriteDates(imported, CONFIG.COMIC_START_DATE);
+    if (valid.length === 0) {
+      showNotification('Geen geldige favorieten gevonden.', true);
+      input.value = '';
+      return;
+    }
     const merged = existing.slice();
     let added = 0;
     valid.forEach(d => {
@@ -1675,6 +1679,8 @@ function DisplayComic(direction = null, notFoundBehavior = 'nearest')
   }
   currentFetchController = new AbortController();
   const fetchSignal = currentFetchController.signal;
+  const comicDate = formattedDate;
+  let pendingImageUrl = null;
   
   fetchComicData(formattedComicDate, url, fetchSignal)
     .then(function(comicData)
@@ -1686,9 +1692,9 @@ function DisplayComic(direction = null, notFoundBehavior = 'nearest')
       {
         notFoundRetries = 0; // Reset 404 retry counter on success
         // Extract image URL using multiple methods for reliability
-        pictureUrl = comicData.imageUrl;
+        const imageUrl = comicData.imageUrl;
         
-        if (!pictureUrl) {
+        if (!imageUrl) {
           TELEMETRY.report('comic_parse_failed', 'image_missing');
           throw new Error('Could not extract comic image URL from page');
         }
@@ -1697,11 +1703,20 @@ function DisplayComic(direction = null, notFoundBehavior = 'nearest')
 
         return COMIC_LOADER.resolveDisplayUrl(
           formattedDate,
-          pictureUrl,
+          imageUrl,
           getComicBlobCache(),
           fetchSignal,
           { fetchWithFallback, minImageSize: CONFIG.MIN_IMAGE_SIZE }
-        );
+        ).then(displayUrl => COMIC_LOADER.decodeComicImage(displayUrl, {
+          timeoutMs: CONFIG.IMAGE_FETCH_TIMEOUT,
+          signal: fetchSignal
+        }).then(() => {
+          pendingImageUrl = imageUrl;
+          return displayUrl;
+        }, error => {
+          URL.revokeObjectURL(displayUrl);
+          throw error;
+        }));
       }
 
       return null;
@@ -1717,6 +1732,7 @@ function DisplayComic(direction = null, notFoundBehavior = 'nearest')
       {
         const previousComicObjectUrl = currentComicObjectUrl;
         currentComicObjectUrl = displayUrl;
+        committedComic = Object.freeze({ date: comicDate, imageUrl: pendingImageUrl, objectUrl: displayUrl });
         
         const animateTransition = () => {
           const hasPortraitSrc = comicImg.src && comicImg.src !== window.location.href;
@@ -1771,6 +1787,7 @@ function DisplayComic(direction = null, notFoundBehavior = 'nearest')
       }
       comicImg.classList.remove('loading');
       comicImg.src = ""; // Clear the image
+      committedComic = null;
       comicImg.alt = "Kan strip niet laden. Probeer het later opnieuw.";
       const offline = navigator.onLine === false;
       setComicStatus(
@@ -1817,6 +1834,7 @@ function DisplayComic(direction = null, notFoundBehavior = 'nearest')
     if (comicImg) {
       comicImg.classList.remove('loading');
       comicImg.src = "";
+      committedComic = null;
       comicImg.alt = "Kan strip niet weergeven. Probeer het opnieuw.";
       setComicStatus('failed', 'De strip kon niet worden weergegeven. Probeer het opnieuw.');
     }

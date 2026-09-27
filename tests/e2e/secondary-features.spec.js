@@ -74,7 +74,43 @@ test('share fallback exposes manual copy content without Web Share or clipboard'
   await page.locator('#share').click();
   expect(promptData.type).toBe('prompt');
   expect(promptData.defaultValue).toContain('2026-05-02');
-  expect(promptData.defaultValue).toContain('dirkjan.nl/wp-content/uploads');
+  expect(result.errors).toEqual([]);
+});
+
+test('favorites import rejects impossible and out-of-range dates', async ({ page }) => {
+  const result = await openApp(page);
+  const input = page.locator('#importFavsInput');
+  await input.setInputFiles({
+    name: 'favorites.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify(['2026-02-31', '2015-05-01', '2030-01-01']))
+  });
+  await expect(page.locator('#notificationToast')).toContainText('Geen geldige favorieten gevonden');
+  await expect.poll(() => page.evaluate(() => JSON.parse(localStorage.getItem('favs') || '[]'))).toEqual([]);
+  expect(result.errors).toEqual([]);
+});
+
+test('share uses the comic on screen while another date is still loading', async ({ page }) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'share', { configurable: true, value: undefined });
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: undefined });
+  });
+  const result = await openApp(page);
+  // Hold the next comic's metadata so its navigation stays in flight.
+  await page.route('**/-/comic-metadata?date=20260420*', () => {});
+  await page.locator('#DatePicker').fill('2026-04-20');
+  await page.locator('#DatePicker').dispatchEvent('input');
+  await expect(page.locator('#DatePicker')).toHaveValue('2026-04-20');
+
+  let promptValue;
+  page.once('dialog', async prompt => {
+    promptValue = prompt.defaultValue();
+    await prompt.dismiss();
+  });
+  await page.locator('#share').click();
+  await expect.poll(() => promptValue).toContain('2026-05-02');
+  expect(promptValue).toContain('20260502-dirkjan-test.png');
+  expect(promptValue).not.toContain('2026-04-20');
   expect(result.errors).toEqual([]);
 });
 

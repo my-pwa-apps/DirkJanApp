@@ -42,3 +42,23 @@ test('ISO calendar dates stay on the intended local day', () => {
   assert.equal(localDate(parsed), '2026-05-02');
   assert.equal(localDate(dates.parseLocalDate('20260508')), '2026-05-08');
 });
+
+test('favorites keep only real calendar days inside the published range', () => {
+  const dates = context.createDateUtils(() => new Date(2026, 4, 2, 12));
+  const normalized = dates.normalizeFavoriteDates([
+    '2026-05-01',
+    '2026/04/30',
+    { date: '2026-04-29' },
+    '2026-05-01',
+    '2026-02-31',
+    '2015-05-03',
+    '2026-05-09',
+    '2026-5-1',
+    42,
+    null
+  ], '2015/05/04');
+  assert.deepEqual([...normalized], ['2026-04-29', '2026-04-30', '2026-05-01']);
+  assert.equal(dates.normalizeFavoriteDate('2015-05-04', '2015/05/04'), '2015-05-04');
+  assert.equal(dates.normalizeFavoriteDate('2026-05-08', '2015/05/04'), '2026-05-08');
+  assert.deepEqual([...dates.normalizeFavoriteDates('not-an-array', '2015/05/04')], []);
+});

@@ -8,7 +8,8 @@ The comic artwork remains the property of Mark Retera and dirkjan.nl. This repos
 
 - `index.html` provides the static, semantic application shell, including the hidden landscape fullscreen template.
 - `app.js` owns browser state, navigation, persistence, proxy fallback, and UI behavior.
-- `comic-loader.js`, `toolbar.js`, and `animation-utils.js` extract comic fetching/blob cache, dragging, and slide/morph transitions as IIFE modules.
+- `comic-loader.js`, `toolbar.js`, and `animation-utils.js` extract comic fetching/blob cache, image decoding, dragging, and slide/morph transitions as IIFE modules. A comic image is decoded before it is committed to the page, and sharing always uses the committed comic snapshot rather than a date that is still loading.
+- `date-utils.js` owns publication-date rules, including favorite validation (real calendar days within the published range) for stored and imported favorites.
 - `main.css` contains the responsive light/dark presentation.
 - `serviceworker.js` provides versioned app-shell, runtime, and image caches.
 - `proxy-worker/` contains the allowlisted Cloudflare Worker used to retrieve dirkjan.nl pages with CORS headers.
@@ -38,6 +39,7 @@ Open `http://127.0.0.1:8000`. The application can also be started automatically 
 ## Validation
 
 ```powershell
+npm run test:lint
 npm run test:syntax
 npm run test:assets
 npm run test:unit
@@ -45,6 +47,10 @@ npm run test:e2e
 npm run test:cross-browser
 npm run test:pwa
 ```
+
+`test:lint` runs ESLint with `no-undef` as an error, which catches stale or misspelled globals across the classic scripts. The IIFE module globals are declared in `eslint.config.mjs`; add new ones there.
+
+`tests/unit/module-boundaries.test.mjs` caps `app.js` at a no-growth limit and other browser modules at 800 lines. Put new cohesive features in their own IIFE module instead of growing `app.js`.
 
 `npm test` runs unit tests and the default Chromium/Pixel browser matrix. `npm run test:predeploy` additionally runs Lighthouse, cross-browser coverage, and the live proxy health check; it requires network access and is intentionally broader than CI.
 

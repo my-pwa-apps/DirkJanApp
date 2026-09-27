@@ -11,6 +11,8 @@ const context = {
   AbortSignal,
   AbortController,
   setTimeout,
+  clearTimeout,
+  DOMException,
   fetch() { throw new Error('unexpected fetch'); }
 };
 context.globalThis = context;
@@ -75,6 +77,40 @@ test('resolveDisplayUrl reuses a matching cached blob and otherwise fetches a ne
     }
   );
   assert.equal(created, 'blob:fresh');
+});
+
+test('decodeComicImage resolves decoded dimensions and rejects broken, timed-out, or aborted images', async () => {
+  class FakeImage {
+    constructor() { this.naturalWidth = 0; this.naturalHeight = 0; }
+    set src(value) {
+      this._src = value;
+      if (value === 'blob:hang') return;
+      queueMicrotask(() => {
+        if (value === 'blob:broken') { this.onerror?.(); return; }
+        if (value === 'blob:good' || value === 'blob:undecodable') { this.naturalWidth = 900; this.naturalHeight = 300; }
+        this.onload?.();
+      });
+    }
+    get src() { return this._src; }
+    decode() {
+      return this._src === 'blob:undecodable'
+        ? Promise.reject(new DOMException('Invalid image', 'EncodingError'))
+        : Promise.resolve();
+    }
+  }
+
+  const ok = await loader.decodeComicImage('blob:good', { ImageCtor: FakeImage });
+  assert.deepEqual({ ...ok }, { width: 900, height: 300 });
+  const renderable = await loader.decodeComicImage('blob:undecodable', { ImageCtor: FakeImage });
+  assert.deepEqual({ ...renderable }, { width: 900, height: 300 });
+  await assert.rejects(loader.decodeComicImage('blob:broken', { ImageCtor: FakeImage }), /failed to decode/);
+  await assert.rejects(loader.decodeComicImage('blob:empty', { ImageCtor: FakeImage }), /empty/);
+  await assert.rejects(loader.decodeComicImage('blob:hang', { ImageCtor: FakeImage, timeoutMs: 5 }), /timed out/);
+
+  const controller = new AbortController();
+  const pending = loader.decodeComicImage('blob:hang', { ImageCtor: FakeImage, signal: controller.signal });
+  controller.abort();
+  await assert.rejects(pending, error => error.name === 'AbortError');
 });
 
 test('fetchComicData prefers metadata and falls back to HTML extraction', async () => {
