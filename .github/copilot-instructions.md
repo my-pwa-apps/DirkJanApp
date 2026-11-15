@@ -107,6 +107,9 @@ Use `UTILS.safeJSONParse()` for all reads. Settings save on click, positions sav
 3. Add JSDoc comments for new functions: `/** Description @param {type} name - desc @returns {type} */`
 4. Never break existing localStorage keys (migration needed if changing structure)
 5. Test on mobile (PWA behavior differs from desktop browser)
+6. Run `npm run test:lint`; register new IIFE module globals in `eslint.config.mjs`
+7. Keep `app.js` under its no-growth cap (`tests/unit/module-boundaries.test.mjs`); put new features in their own IIFE module
+8. Share or act on `committedComic` (what is on screen), not `formattedDate` (which may still be loading)
 
 ### Positioning Elements
 ```javascript

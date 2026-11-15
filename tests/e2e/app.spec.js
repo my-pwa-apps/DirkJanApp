@@ -80,7 +80,7 @@ test('throttled latest discovery does not probe more archive dates', async ({ pa
     }
   }));
   const result = await openApp(page);
-  const discoveryError = await page.evaluate(() => discoverLatestAvailableComic().catch(error => error.name));
+  const discoveryError = await page.evaluate(() => window.discoverLatestAvailableComic().catch(error => error.name));
   expect(discoveryError).toBe('RateLimitError');
   expect(result.proxyRequests.some(url => /2026050[5-7]/.test(url))).toBe(false);
   await expect.poll(() => page.locator('#comic').evaluate(img => img.naturalWidth)).toBeGreaterThan(0);

@@ -71,6 +71,42 @@
       return normalizedDate > latestCandidate ? latestCandidate : normalizedDate;
     }
 
+    /**
+     * Validates a favorite as a real `YYYY-MM-DD` calendar day inside the published range.
+     * @param {*} value - Candidate favorite (string or `{ date }` object)
+     * @param {string|Date} startDate - First published comic date
+     * @param {Date} [latestDate] - Latest possible comic date
+     * @returns {string|null} Canonical `YYYY-MM-DD` date or null when invalid
+     */
+    function normalizeFavoriteDate(value, startDate, latestDate = getLatestComicCandidateDate()) {
+      const candidate = value && typeof value === 'object' ? value.date : value;
+      if (typeof candidate !== 'string') return null;
+      const match = candidate.match(/^(\d{4})([-/])(\d{2})\2(\d{2})$/);
+      if (!match) return null;
+      const [year, month, day] = [Number(match[1]), Number(match[3]), Number(match[4])];
+      const date = new Date(year, month - 1, day);
+      if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return null;
+      const firstDate = parseLocalDate(startDate);
+      if (firstDate && date < firstDate) return null;
+      if (latestDate && date > latestDate) return null;
+      return `${match[1]}-${match[3]}-${match[4]}`;
+    }
+
+    /**
+     * Normalizes a favorites list: drops invalid entries, de-duplicates, and sorts.
+     * @param {*} values - Candidate favorites array
+     * @param {string|Date} startDate - First published comic date
+     * @returns {string[]} Sorted canonical favorite dates
+     */
+    function normalizeFavoriteDates(values, startDate) {
+      if (!Array.isArray(values)) return [];
+      const latestDate = getLatestComicCandidateDate();
+      const normalized = values
+        .map(value => normalizeFavoriteDate(value, startDate, latestDate))
+        .filter(Boolean);
+      return Array.from(new Set(normalized)).sort();
+    }
+
     return Object.freeze({
       getCurrentDate,
       parseLocalDate,
@@ -78,7 +114,9 @@
       moveToComicPublishDate,
       getStartupComicDate,
       getLatestComicCandidateDate,
-      clampToLatestComicCandidate
+      clampToLatestComicCandidate,
+      normalizeFavoriteDate,
+      normalizeFavoriteDates
     });
   }
 
