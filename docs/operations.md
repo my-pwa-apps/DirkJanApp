@@ -45,6 +45,12 @@ These dashboard rules require Cloudflare account access and cannot be activated 
 
 Production comic traffic uses only the controlled first-party Worker. Browser telemetry must contain only an allowlisted event name and coarse error code; dates, URLs, favorites, free text, IP-derived identifiers, and persistent IDs are prohibited.
 
+## Upstream Throttling
+
+The comic origin can return nginx HTTP 429 responses during browsing bursts. The metadata route must preserve that status and `Retry-After`, rather than convert it to HTTP 502 and trigger a duplicate HTML request. CORS exposes `Retry-After` to the browser.
+
+Comic requests use normal browser/proxy caching, not `cache: 'no-cache'`. The browser retries HTTP 429 at most twice, with 1.5-second exponential backoff and a 5-second maximum delay. Longer server-requested waits show the recovery controls without retrying early. Navigating away cancels the pending retry.
+
 ## Hosting Decision
 
 Cloudflare Pages remains appropriate while the app is static and the proxy deploys independently. Workers Static Assets would provide atomic static/API deployment and service bindings, but adds migration and rollback complexity. Reassess when atomic deployment materially reduces incidents or the app gains server-rendered/API features.

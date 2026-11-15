@@ -24,6 +24,67 @@
   }
 
   /**
+   * Waits before retrying without keeping superseded navigation requests alive.
+   * @param {number} delay - Delay in milliseconds
+   * @param {AbortSignal|null} signal - Navigation cancellation signal
+   * @returns {Promise<void>}
+   */
+  function waitForRetry(delay, signal) {
+    return new Promise((resolve, reject) => {
+      const onAbort = () => {
+        clearTimeout(timer);
+        reject(signal.reason);
+      };
+      const timer = setTimeout(() => {
+        signal?.removeEventListener('abort', onAbort);
+        resolve();
+      }, delay);
+      signal?.addEventListener('abort', onAbort, { once: true });
+      if (signal?.aborted) onAbort();
+    });
+  }
+
+  /**
+   * Retries temporary throttling with bounded backoff and honors Retry-After.
+   * @param {string|URL} url - Controlled proxy endpoint
+   * @param {object} options - Timeout, cancellation and retry limits
+   * @returns {Promise<Response>} Unconsumed response
+   */
+  async function fetchWithRateLimitRetry(url, options) {
+    const {
+      fetchTimeout,
+      signal = null,
+      fetchImpl = global.fetch.bind(global),
+      maxRetries = 0,
+      retryDelay = 0,
+      maxRetryDelay = 0
+    } = options;
+
+    for (let attempt = 0; ; attempt++) {
+      const response = await fetchImpl(url, {
+        signal: combineSignals(signal, createTimeoutSignal(fetchTimeout)),
+        mode: 'cors',
+        credentials: 'omit'
+      });
+      if (response.status !== 429) return response;
+
+      const retryAfter = response.headers.get('retry-after');
+      const seconds = retryAfter === null ? NaN : Number(retryAfter);
+      const serverDelay = Number.isFinite(seconds)
+        ? seconds * 1000
+        : Date.parse(retryAfter) - Date.now();
+      const delay = Math.max(retryDelay * 2 ** attempt, Number.isFinite(serverDelay) ? serverDelay : 0);
+      await response.body?.cancel();
+      if (attempt >= maxRetries || delay > maxRetryDelay) {
+        const error = new Error('Comic requests temporarily rate limited');
+        error.name = 'RateLimitError';
+        throw error;
+      }
+      await waitForRetry(delay, signal);
+    }
+  }
+
+  /**
    * Resolves a comic image URL and restricts it to trusted DirkJan origins.
    * @param {string} candidateUrl
    * @returns {string|null}
@@ -167,15 +228,15 @@
       metadataEndpoint,
       fetchTimeout,
       fetchWithFallback,
+      retryOptions = {},
       fetchImpl = global.fetch.bind(global)
     } = options;
 
     try {
       const metadataUrl = new URL(metadataEndpoint);
       metadataUrl.searchParams.set('date', date);
-      const timeoutSignal = createTimeoutSignal(fetchTimeout);
-      const response = await fetchImpl(metadataUrl, {
-        signal: combineSignals(signal, timeoutSignal)
+      const response = await fetchWithRateLimitRetry(metadataUrl, {
+        ...retryOptions, fetchTimeout, signal, fetchImpl
       });
       if (response.status === 404) return { notFound: true, imageUrl: null };
       if (!response.ok) throw new Error(`Metadata request failed: ${response.status}`);
@@ -184,7 +245,7 @@
       if (!imageUrl) throw new Error('Invalid comic metadata');
       return { notFound: false, imageUrl };
     } catch (error) {
-      if (error.name === 'AbortError') throw error;
+      if (error.name === 'AbortError' || error.name === 'RateLimitError') throw error;
       const response = await fetchWithFallback(pageUrl, signal);
       const html = await response.text();
       return {
@@ -215,6 +276,7 @@
   }
 
   global.COMIC_LOADER = Object.freeze({
+    fetchWithRateLimitRetry,
     extractComicImageUrl,
     normalizeComicImageUrl,
     createComicBlobCache,

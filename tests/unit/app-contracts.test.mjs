@@ -22,7 +22,7 @@ test('proxy state stays aligned with the configured first-party endpoint', () =>
 
 test('comic fetch cancellation reaches proxy requests and body reads', () => {
   assert.match(appSource, /fetchWithFallback\(url, signal = null\)/);
-  assert.match(appSource, /AbortSignal\.any\(\[signal, AbortSignal\.timeout\(CONFIG\.FETCH_TIMEOUT\)\]\)/);
+  assert.match(appSource, /COMIC_LOADER\.fetchWithRateLimitRetry\(fullUrl, \{[\s\S]*?fetchTimeout: CONFIG\.FETCH_TIMEOUT,\s*signal/);
   assert.match(appSource, /fetchComicData\(formattedComicDate, url, fetchSignal\)/);
   assert.match(appSource, /COMIC_LOADER\.fetchComicData\(date, pageUrl, signal/);
 });

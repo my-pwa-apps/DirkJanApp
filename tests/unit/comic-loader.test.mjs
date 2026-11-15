@@ -11,6 +11,7 @@ const context = {
   AbortSignal,
   AbortController,
   setTimeout,
+  clearTimeout,
   fetch() { throw new Error('unexpected fetch'); }
 };
 context.globalThis = context;
@@ -98,4 +99,88 @@ test('fetchComicData prefers metadata and falls back to HTML extraction', async 
   });
   assert.equal(htmlFallback.imageUrl, 'https://dirkjan.nl/wp-content/uploads/fallback.jpg');
   assert.equal(htmlFallback.notFound, false);
+});
+
+test('rate-limit retries recover metadata and image requests without bypassing caches', async () => {
+  const requests = [];
+  let metadataAttempts = 0;
+  const data = await loader.fetchComicData('20260502', 'https://dirkjan.nl/cartoon/20260502', null, {
+    metadataEndpoint: 'https://proxy.example/-/comic-metadata',
+    fetchTimeout: 1000,
+    retryOptions: { maxRetries: 2, retryDelay: 1, maxRetryDelay: 10 },
+    fetchWithFallback() { throw new Error('must not refetch HTML when throttled'); },
+    fetchImpl: async (url, options) => {
+      requests.push(options);
+      metadataAttempts++;
+      return metadataAttempts === 1
+        ? new Response('throttled', { status: 429, headers: { 'retry-after': '0' } })
+        : Response.json({ date: '20260502', imageUrl: 'https://dirkjan.nl/comic.png' });
+    }
+  });
+  let imageAttempts = 0;
+  const objectUrl = await loader.createComicObjectUrl(data.imageUrl, {
+    minImageSize: 1,
+    createObjectUrl: () => 'blob:recovered',
+    fetchWithFallback: url => loader.fetchWithRateLimitRetry(url, {
+      fetchTimeout: 1000, maxRetries: 2, retryDelay: 1, maxRetryDelay: 10,
+      fetchImpl: async (url, options) => {
+        requests.push(options);
+        imageAttempts++;
+        return imageAttempts === 1
+          ? new Response('throttled', { status: 429 })
+          : new Response(new Blob(['image'], { type: 'image/png' }));
+      }
+    })
+  });
+  assert.equal(metadataAttempts, 2);
+  assert.equal(imageAttempts, 2);
+  assert.equal(objectUrl, 'blob:recovered');
+  assert.ok(requests.every(options => options.cache === undefined));
+});
+
+test('persistent throttling is bounded and does not trigger an HTML fallback', async () => {
+  let attempts = 0;
+  await assert.rejects(loader.fetchComicData('20260502', 'https://dirkjan.nl/cartoon/20260502', null, {
+    metadataEndpoint: 'https://proxy.example/-/comic-metadata',
+    fetchTimeout: 1000,
+    retryOptions: { maxRetries: 2, retryDelay: 1, maxRetryDelay: 10 },
+    fetchImpl: async () => {
+      attempts++;
+      return new Response('throttled', { status: 429 });
+    },
+    fetchWithFallback() { assert.fail('must not amplify rate-limited requests'); }
+  }), { name: 'RateLimitError' });
+  assert.equal(attempts, 3);
+});
+
+test('long Retry-After values are not retried before the server allows it', async () => {
+  for (const retryAfter of ['60', new Date(Date.now() + 60000).toUTCString()]) {
+    let attempts = 0;
+    await assert.rejects(loader.fetchWithRateLimitRetry('https://proxy.example/', {
+      fetchTimeout: 1000, maxRetries: 2, retryDelay: 1, maxRetryDelay: 10,
+      fetchImpl: async () => {
+        attempts++;
+        return new Response('throttled', { status: 429, headers: { 'retry-after': retryAfter } });
+      }
+    }), { name: 'RateLimitError' });
+    assert.equal(attempts, 1);
+  }
+});
+
+test('navigation cancellation interrupts backoff without retrying or fetching HTML', async () => {
+  const controller = new AbortController();
+  let attempts = 0;
+  const result = loader.fetchComicData('20260502', 'https://dirkjan.nl/cartoon/20260502', controller.signal, {
+    metadataEndpoint: 'https://proxy.example/-/comic-metadata',
+    fetchTimeout: 1000,
+    retryOptions: { maxRetries: 2, retryDelay: 100, maxRetryDelay: 1000 },
+    fetchImpl: async () => {
+      attempts++;
+      setTimeout(() => controller.abort(), 5);
+      return new Response('throttled', { status: 429 });
+    },
+    fetchWithFallback() { assert.fail('cancelled navigation must not fetch HTML'); }
+  });
+  await assert.rejects(result, { name: 'AbortError' });
+  assert.equal(attempts, 1);
 });

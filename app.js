@@ -23,6 +23,11 @@ const CONFIG = Object.freeze({
   // Fetch timeouts
   FETCH_TIMEOUT: 10000,                // 10 second timeout for HTML
   IMAGE_FETCH_TIMEOUT: 8000,           // 8 second timeout for images
+  RATE_LIMIT_RETRY: Object.freeze({
+    maxRetries: 2,
+    retryDelay: 1500,
+    maxRetryDelay: 5000
+  }),
   
   // Swipe detection
   SWIPE_MIN_DISTANCE: 50,              // Minimum swipe distance in px
@@ -198,6 +203,7 @@ async function fetchWithFallback(url, signal = null) {
   } catch (error) {
     if (error.name === 'NotFoundError') throw error; // Don't retry 404s
     if (error.name === 'AbortError') throw error;
+    if (error.name === 'RateLimitError') throw error;
     return await tryRemainingProxies(url, primaryProxyIndex, startTime, signal);
   }
 }
@@ -260,14 +266,10 @@ async function tryProxy(url, proxyIndex, startTime, signal = null) {
   
   try {
     const fullUrl = `${proxyUrl}${encodeURIComponent(url)}`;
-    const fetchSignal = signal
-      ? AbortSignal.any([signal, AbortSignal.timeout(CONFIG.FETCH_TIMEOUT)])
-      : AbortSignal.timeout(CONFIG.FETCH_TIMEOUT);
-    const response = await fetch(fullUrl, { 
-      signal: fetchSignal,
-      mode: 'cors',
-      credentials: 'omit',
-      cache: 'no-cache' // Prevent stale cached errors
+    const response = await COMIC_LOADER.fetchWithRateLimitRetry(fullUrl, {
+      ...CONFIG.RATE_LIMIT_RETRY,
+      fetchTimeout: CONFIG.FETCH_TIMEOUT,
+      signal
     });
     
     if (response.status === 404) {
@@ -1024,6 +1026,7 @@ async function findLatestAvailableComic(startDate, minDate) {
         return testDate;
       }
     } catch (error) {
+      if (error.name === 'RateLimitError') throw error;
       // Network error, continue to previous day
     }
     
@@ -1581,6 +1584,7 @@ async function fetchComicData(date, pageUrl, signal) {
   return COMIC_LOADER.fetchComicData(date, pageUrl, signal, {
     metadataEndpoint: CONFIG.COMIC_METADATA_ENDPOINT,
     fetchTimeout: CONFIG.FETCH_TIMEOUT,
+    retryOptions: CONFIG.RATE_LIMIT_RETRY,
     fetchWithFallback
   });
 }
@@ -1777,6 +1781,8 @@ function DisplayComic(direction = null, notFoundBehavior = 'nearest')
         offline ? 'offline' : 'failed',
         offline
           ? 'Je bent offline. Maak opnieuw verbinding en probeer het nog eens.'
+          : error.name === 'RateLimitError'
+          ? 'De stripwebsite ontvangt te veel verzoeken. Wacht even en probeer het opnieuw.'
           : 'De strip kon niet worden geladen. Probeer het opnieuw.'
       );
     });

@@ -164,6 +164,24 @@ test('comic metadata extracts a trusted image and is cached', async () => {
   assert.equal(fetchCount, 1);
 });
 
+test('metadata preserves upstream throttling and exposes Retry-After without caching it', async () => {
+  let attempts = 0;
+  const response = await run(new Request('https://proxy.example/-/comic-metadata?date=20260502', {
+    headers: { origin: 'https://dirkjanapp.pages.dev' }
+  }), async () => {
+    attempts++;
+    return new Response('nginx: Too Many Requests', {
+      status: 429, headers: { 'retry-after': '3' }
+    });
+  });
+  assert.equal(response.status, 429);
+  assert.equal(response.headers.get('retry-after'), '3');
+  assert.equal(response.headers.get('access-control-expose-headers'), 'Retry-After');
+  assert.equal(response.headers.get('cache-control'), null);
+  assert.deepEqual(await response.json(), { error: 'Upstream rate limited' });
+  assert.equal(attempts, 1);
+});
+
 test('follows allowed redirects and revalidates the destination host', async () => {
   const requestedUrls = [];
   const response = await run(proxyRequest('https://dirkjan.nl/start'), async request => {

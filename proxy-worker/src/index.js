@@ -201,6 +201,13 @@ async function handleComicMetadata(request, allowedHosts, allowedOrigins, ctx) {
   if (upstreamResponse.status === 404) {
     return withCors(request, jsonResponse({ error: 'Comic not found' }, 404), false, allowedOrigins);
   }
+  if (upstreamResponse.status === 429) {
+    const limited = jsonResponse({ error: 'Upstream rate limited' }, 429);
+    const retryAfter = upstreamResponse.headers.get('retry-after');
+    if (retryAfter) limited.headers.set('retry-after', retryAfter);
+    await upstreamResponse.body?.cancel();
+    return withCors(request, limited, false, allowedOrigins);
+  }
   if (!upstreamResponse.ok) {
     return withCors(request, jsonResponse({ error: 'Upstream fetch failed' }, 502), false, allowedOrigins);
   }
@@ -479,6 +486,7 @@ function buildCorsHeaders(request, allowedOrigins) {
 
   headers.set('access-control-allow-methods', 'GET, HEAD, POST, OPTIONS');
   headers.set('access-control-allow-headers', 'Content-Type, Accept, Accept-Language');
+  headers.set('access-control-expose-headers', 'Retry-After');
   headers.set('access-control-max-age', '86400');
   headers.set('timing-allow-origin', '*');
 

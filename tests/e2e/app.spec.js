@@ -40,6 +40,53 @@ test('private proxy failure exposes recovery without contacting public proxies',
   expect(result.errors).toEqual([]);
 });
 
+test('temporary metadata and image throttling recover automatically', async ({ page }) => {
+  let metadataAttempts = 0;
+  let imageAttempts = 0;
+  await page.route('**/-/comic-metadata?date=20260502', route => {
+    metadataAttempts++;
+    if (metadataAttempts > 1) return route.fallback();
+    return route.fulfill({
+      status: 429, body: 'Too Many Requests',
+      headers: { 'Access-Control-Allow-Origin': '*', 'Retry-After': '0' }
+    });
+  });
+  await page.route('**/*20260502-dirkjan-test.png*', route => {
+    imageAttempts++;
+    expect(route.request().headers()['cache-control']).toBeUndefined();
+    if (imageAttempts > 1) return route.fallback();
+    return route.fulfill({
+      status: 429, body: 'Too Many Requests',
+      headers: { 'Access-Control-Allow-Origin': '*', 'Retry-After': '0' }
+    });
+  });
+  const result = await openApp(page, { expectComic: false });
+  await expect(page.locator('#comic')).toHaveAttribute('alt', /02-05-2026 door Mark Retera/);
+  await expect.poll(() => page.locator('#comic').evaluate(img => img.naturalWidth)).toBeGreaterThan(0);
+  await expect(page.locator('#comic-status')).not.toBeVisible();
+  expect(metadataAttempts).toBe(2);
+  expect(imageAttempts).toBe(2);
+  expect(result.errors).toEqual([]);
+});
+
+test('throttled latest discovery does not probe more archive dates', async ({ page }) => {
+  await page.route('**/-/comic-metadata?date=20260508', route => route.fulfill({
+    status: 429,
+    body: 'Too Many Requests',
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Expose-Headers': 'Retry-After',
+      'Retry-After': '60'
+    }
+  }));
+  const result = await openApp(page);
+  const discoveryError = await page.evaluate(() => discoverLatestAvailableComic().catch(error => error.name));
+  expect(discoveryError).toBe('RateLimitError');
+  expect(result.proxyRequests.some(url => /2026050[5-7]/.test(url))).toBe(false);
+  await expect.poll(() => page.locator('#comic').evaluate(img => img.naturalWidth)).toBeGreaterThan(0);
+  expect(result.errors).toEqual([]);
+});
+
 test('stale future last comic is clamped before startup fetches', async ({ page }) => {
   const result = await openApp(page, {
     initialStorage: {

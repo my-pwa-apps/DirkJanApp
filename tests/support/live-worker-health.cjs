@@ -12,12 +12,22 @@ const checks = [
     url: 'https://corsproxy.garfieldapp.workers.dev/-/comic-metadata?date=20260502',
     validate: async response => {
       const body = await response.json();
-      return response.ok && body.date === '20260502' && /^https:\/\/(?:www\.)?dirkjan\.nl\//.test(body.imageUrl);
+      if (!response.ok || body.date !== '20260502' || !/^https:\/\/(?:www\.)?dirkjan\.nl\//.test(body.imageUrl)) {
+        return false;
+      }
+      const image = await fetch(`https://corsproxy.garfieldapp.workers.dev/?${encodeURIComponent(body.imageUrl)}`, {
+        headers, signal: AbortSignal.timeout(20_000)
+      });
+      return image.ok &&
+        image.headers.get('access-control-allow-origin') === headers.Origin &&
+        image.headers.get('content-type')?.startsWith('image/') &&
+        (await image.arrayBuffer()).byteLength >= 400;
     }
   }
 ];
 
 const headers = {
+  Origin: 'https://dirkjanapp.pages.dev',
   'User-Agent': 'DirkJanApp predeploy health check (+https://dirkjanapp.pages.dev)'
 };
 
@@ -26,7 +36,8 @@ async function runCheck(check) {
   const timeout = setTimeout(() => controller.abort(), 20_000);
   try {
     const response = await fetch(check.url, { headers, signal: controller.signal });
-    const ok = await check.validate(response);
+    const ok = response.headers.get('access-control-allow-origin') === headers.Origin &&
+      await check.validate(response);
     if (!ok) {
       throw new Error(`${check.name} failed with HTTP ${response.status}`);
     }
