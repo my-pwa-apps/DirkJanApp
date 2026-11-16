@@ -12,10 +12,14 @@ function createCache() {
   const entries = new Map();
   return {
     async match(request) {
-      return entries.get(`${request.method}:${request.url}`)?.clone();
+      const entry = entries.get(`${request.method}:${request.url}`);
+      return entry && entry.until > Date.now() ? entry.response.clone() : undefined;
     },
     async put(request, response) {
-      entries.set(`${request.method}:${request.url}`, response.clone());
+      const ttl = Number(response.headers.get('cache-control')?.match(/max-age=(\d+)/)?.[1] || 3600);
+      entries.set(`${request.method}:${request.url}`, {
+        response: response.clone(), until: Date.now() + ttl * 1000
+      });
     }
   };
 }
@@ -175,11 +179,193 @@ test('metadata preserves upstream throttling and exposes Retry-After without cac
     });
   });
   assert.equal(response.status, 429);
-  assert.equal(response.headers.get('retry-after'), '3');
+  assert.equal(response.headers.get('retry-after'), '60');
   assert.equal(response.headers.get('access-control-expose-headers'), 'Retry-After');
-  assert.equal(response.headers.get('cache-control'), null);
+  assert.equal(response.headers.get('cache-control'), 'no-store');
   assert.deepEqual(await response.json(), { error: 'Upstream rate limited' });
   assert.equal(attempts, 1);
+});
+
+test('readers and metadata/HTML routes share public comic pages with canonical keys', async () => {
+  globalThis.caches = { default: createCache() };
+  let upstreamCount = 0;
+  globalThis.fetch = async () => {
+    upstreamCount++;
+    return new Response('<article class="cartoon"><img src="https://dirkjan.nl/wp-content/uploads/comic.png"></article>', {
+      headers: { 'content-type': 'text/html' }
+    });
+  };
+  const waits = [];
+  const ctx = { waitUntil: promise => waits.push(promise) };
+  const url = 'https://proxy.example/-/comic-metadata?extra=ignored&date=20200117';
+  const first = await worker.fetch(new Request(url, { headers: { origin: 'https://dirkjanapp.pages.dev' } }), ENV, ctx);
+  await Promise.all(waits.splice(0));
+  assert.equal(first.status, 200);
+  assert.equal(first.headers.get('cache-control'), 'public, max-age=86400');
+  const metadata = await worker.fetch(new Request('https://proxy.example/-/comic-metadata?date=20200117', {
+    headers: { origin: 'https://garfieldapp.pages.dev', 'cache-control': 'no-cache' }
+  }), ENV, ctx);
+  const html = await worker.fetch(proxyRequest('https://dirkjan.nl/cartoon/20200117'), ENV, ctx);
+  const head = await worker.fetch(new Request('https://proxy.example/-/comic-metadata?date=20200117', { method: 'HEAD' }), ENV, ctx);
+  assert.equal(metadata.headers.get('x-proxy-cache'), 'HIT');
+  assert.equal(metadata.headers.get('access-control-allow-origin'), 'https://garfieldapp.pages.dev');
+  assert.equal(html.headers.get('x-proxy-cache'), 'HIT');
+  assert.match(await html.text(), /article/);
+  assert.equal(await head.text(), '');
+  assert.equal(upstreamCount, 1);
+});
+
+test('public images without Content-Length are cached but unknown oversized streams are rejected', async () => {
+  globalThis.caches = { default: createCache() };
+  let upstreamCount = 0;
+  let cancelled = false;
+  globalThis.fetch = async request => {
+    upstreamCount++;
+    if (request.url.endsWith('large.png')) {
+      const chunk = new Uint8Array(1024 * 1024);
+      return new Response(new ReadableStream({
+        pull(controller) { controller.enqueue(chunk); },
+        cancel() { cancelled = true; }
+      }), { headers: { 'content-type': 'image/png' } });
+    }
+    return new Response(new Uint8Array(500), { headers: { 'content-type': 'image/png' } });
+  };
+  const waits = [];
+  const ctx = { waitUntil: promise => waits.push(promise) };
+  const request = proxyRequest('https://dirkjan.nl/wp-content/uploads/comic.png');
+  const first = await worker.fetch(request, ENV, ctx);
+  await Promise.all(waits.splice(0));
+  const cached = await worker.fetch(proxyRequest('https://dirkjan.nl/wp-content/uploads/comic.png', {
+    headers: { 'cache-control': 'no-cache' }
+  }), ENV, ctx);
+  assert.equal(first.headers.get('content-length'), '500');
+  assert.equal(cached.headers.get('cache-control'), 'public, max-age=86400');
+  assert.equal(cached.headers.get('x-proxy-cache'), 'HIT');
+  assert.equal((await cached.arrayBuffer()).byteLength, 500);
+  assert.equal(upstreamCount, 1);
+  const large = await worker.fetch(proxyRequest('https://dirkjan.nl/wp-content/uploads/large.png'), ENV, ctx);
+  assert.equal(large.status, 413);
+  assert.equal(cancelled, true);
+  assert.equal(waits.length, 0);
+});
+
+test('private and cookie-bearing comic responses do not enter the shared caches', async () => {
+  for (const headers of [
+    { 'cache-control': 'private' }, { 'cache-control': 'no-store' },
+    { 'set-cookie': 'session=example' }, { vary: '*' }, { vary: 'User-Agent' }
+  ]) {
+    globalThis.caches = { default: createCache() };
+    let attempts = 0;
+    globalThis.fetch = async () => {
+      attempts++;
+      return new Response('<article class="cartoon"><img src="https://dirkjan.nl/comic.png"></article>', { headers });
+    };
+    const waits = [];
+    const ctx = { waitUntil: promise => waits.push(promise) };
+    const request = new Request('https://proxy.example/-/comic-metadata?date=20200117');
+    const first = await worker.fetch(request, ENV, ctx);
+    await worker.fetch(request, ENV, ctx);
+    assert.equal(first.headers.get('cache-control'), 'no-store');
+    assert.equal(attempts, 2);
+    assert.equal(waits.length, 0);
+  }
+});
+
+test('missing metadata is cached briefly and can become available after expiry', async t => {
+  t.mock.timers.enable({ apis: ['Date'], now: Date.now() });
+  globalThis.caches = { default: createCache() };
+  let attempts = 0;
+  globalThis.fetch = async () => {
+    attempts++;
+    return attempts === 1 ? new Response('missing', { status: 404 }) : new Response(
+      '<article class="cartoon"><img src="https://dirkjan.nl/comic.png"></article>'
+    );
+  };
+  const waits = [];
+  const ctx = { waitUntil: promise => waits.push(promise) };
+  const request = new Request('https://proxy.example/-/comic-metadata?date=20300101');
+  assert.equal((await worker.fetch(request, ENV, ctx)).status, 404);
+  await Promise.all(waits.splice(0));
+  assert.equal((await worker.fetch(request, ENV, ctx)).status, 404);
+  assert.equal(attempts, 1);
+  t.mock.timers.tick(61000);
+  const found = await worker.fetch(request, ENV, ctx);
+  await Promise.all(waits);
+  assert.equal(found.status, 200);
+  assert.equal(found.headers.get('cache-control'), 'public, max-age=600');
+  assert.equal(attempts, 2);
+});
+
+test('soft 404 pages and non-image error bodies never poison long-lived comic caches', async t => {
+  t.mock.timers.enable({ apis: ['Date'], now: Date.now() });
+  globalThis.caches = { default: createCache() };
+  let pageAttempts = 0;
+  let imageAttempts = 0;
+  globalThis.fetch = async (request, init) => {
+    assert.equal(init.cf.cacheTtlByStatus['200-299'], -1);
+    if (request.url.includes('/cartoon/')) {
+      pageAttempts++;
+      return new Response(pageAttempts === 1
+        ? '<body class="error404">Unavailable</body>'
+        : '<article class="cartoon"><img src="https://dirkjan.nl/comic.png"></article>');
+    }
+    imageAttempts++;
+    return new Response('<h1>Temporarily unavailable</h1>', { headers: { 'content-type': 'text/html' } });
+  };
+  const waits = [];
+  const ctx = { waitUntil: promise => waits.push(promise) };
+  const request = new Request('https://proxy.example/-/comic-metadata?date=20200101');
+  assert.equal((await worker.fetch(request, ENV, ctx)).status, 404);
+  await Promise.all(waits.splice(0));
+  t.mock.timers.tick(61000);
+  assert.equal((await worker.fetch(request, ENV, ctx)).status, 200);
+  await Promise.all(waits.splice(0));
+  assert.equal(pageAttempts, 2);
+  const image = proxyRequest('https://dirkjan.nl/wp-content/uploads/comic.png');
+  await worker.fetch(image, ENV, ctx);
+  await worker.fetch(image, ENV, ctx);
+  assert.equal(imageAttempts, 2);
+  assert.equal(waits.length, 0);
+});
+
+test('edge cooldown blocks uncached dates and images, allows cached comics, and expires', async t => {
+  t.mock.timers.enable({ apis: ['Date'], now: Date.now() });
+  globalThis.caches = { default: createCache() };
+  let attempts = 0;
+  let throttle = false;
+  globalThis.fetch = async () => {
+    attempts++;
+    return throttle
+      ? new Response('throttled', { status: 429, headers: { 'retry-after': '90' } })
+      : new Response('cached comic', { headers: { 'content-type': 'image/png' } });
+  };
+  const waits = [];
+  const ctx = { waitUntil: promise => waits.push(promise) };
+  const warm = proxyRequest('https://dirkjan.nl/wp-content/uploads/warm.png');
+  await worker.fetch(warm, ENV, ctx);
+  await Promise.all(waits.splice(0));
+  throttle = true;
+  const first = await worker.fetch(proxyRequest('https://dirkjan.nl/cartoon/20200101'), ENV, ctx);
+  assert.equal(first.status, 429);
+  assert.equal(first.headers.get('retry-after'), '90');
+  for (const request of [
+    new Request('https://proxy.example/-/comic-metadata?date=20200102'),
+    proxyRequest('https://www.dirkjan.nl/wp-content/uploads/cold.png')
+  ]) {
+    assert.equal((await worker.fetch(request, ENV, ctx)).status, 429);
+  }
+  const cached = await worker.fetch(warm, ENV, ctx);
+  assert.equal(cached.status, 200);
+  assert.equal(cached.headers.get('x-proxy-cache'), 'HIT');
+  assert.equal(attempts, 2);
+  t.mock.timers.tick(60000);
+  assert.equal((await worker.fetch(proxyRequest('https://dirkjan.nl/cartoon/20200103'), ENV, ctx)).headers.get('retry-after'), '30');
+  assert.equal(attempts, 2);
+  t.mock.timers.tick(31000);
+  throttle = false;
+  assert.equal((await worker.fetch(proxyRequest('https://dirkjan.nl/cartoon/20200103'), ENV, ctx)).status, 200);
+  await Promise.all(waits);
+  assert.equal(attempts, 3);
 });
 
 test('follows allowed redirects and revalidates the destination host', async () => {

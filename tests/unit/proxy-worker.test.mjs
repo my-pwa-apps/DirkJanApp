@@ -13,10 +13,10 @@ test('proxy bounds upstream requests and validates every redirect', () => {
   assert.match(source, /!isAllowedHost\(redirectUrl\.hostname, allowedHosts\)/);
 });
 
-test('proxy avoids caching unknown or oversized response bodies', () => {
+test('proxy bounds unknown and declared oversized response bodies before caching comics', () => {
   assert.match(source, /const MAX_CACHEABLE_RESPONSE_BYTES = 25 \* 1024 \* 1024/);
   assert.match(source, /contentLength > MAX_CACHEABLE_RESPONSE_BYTES/);
-  assert.match(source, /contentLength !== null && !bypassCache/);
+  assert.match(source, /size > MAX_CACHEABLE_RESPONSE_BYTES/);
   assert.match(source, /'400-599': -1/);
 });
 

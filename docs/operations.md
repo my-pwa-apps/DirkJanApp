@@ -47,9 +47,27 @@ Production comic traffic uses only the controlled first-party Worker. Browser te
 
 ## Upstream Throttling
 
-The comic origin can return nginx HTTP 429 responses during browsing bursts. The metadata route must preserve that status and `Retry-After`, rather than convert it to HTTP 502 and trigger a duplicate HTML request. CORS exposes `Retry-After` to the browser.
+The comic origin can return nginx HTTP 429 responses during browsing bursts. The metadata route preserves that status and exposes `Retry-After` through CORS. Neither HTTP service errors nor throttling trigger duplicate HTML requests or a backward discovery scan.
 
-Comic requests use normal browser/proxy caching, not `cache: 'no-cache'`. The browser retries HTTP 429 at most twice, with 1.5-second exponential backoff and a 5-second maximum delay. Longer server-requested waits show the recovery controls without retrying early. Navigating away cancels the pending retry.
+### Shared edge caching
+
+- The HTML and metadata routes reuse the same public comic-page cache. Metadata keys include only the date, so query ordering and extra parameters do not fragment it.
+- Successful dated pages and metadata are cached for 10 minutes, or 24 hours when the comic date is more than seven days old. Public image responses are cached for 24 hours.
+- Missing metadata is cached for only 60 seconds, including WordPress `error404` pages returned as HTTP 200. Malformed pages and non-image error bodies are not put in long-lived comic caches.
+- Comic bodies are bounded to 25 MiB, including responses without `Content-Length`. Cookie-bearing, private, `no-store`, and differently negotiated responses are not shared. Upstream comic subrequests bypass the implicit fetch cache; only validated responses enter the explicit cache.
+- Browser `no-cache`/`no-store` request headers do not force public comic cache misses. Other shared-proxy hosts retain their previous cache behavior.
+
+After an upstream 429, the Worker stores an internal cooldown marker for at least 60 seconds, or longer when `Retry-After` requires it. Other uncached DirkJan requests at that edge receive HTTP 429 with the remaining wait instead of contacting the origin. Cached comics remain available. The HTTP 429 itself is `no-store`; the marker is separate from comic content.
+
+Cloudflare's Cache API is data-center-local and evictable. This is best-effort shared caching/cooldown protection, not global coordination or a distributed lock: simultaneous cold misses can still reach the origin. No Durable Object or other new Cloudflare resource is required.
+
+### Browser request budget
+
+The loader coalesces identical in-flight requests within a tab, including their body reads. Each consumer receives an independent response; cancelling one navigation does not cancel other consumers. Successful metadata is reused for 10 minutes and missing metadata for 60 seconds in a bounded in-memory cache.
+
+Cooldown expiry is persisted through the storage adapter, so other tabs and reloads respect it. An HTTP 429 without usable `Retry-After` starts a 60-second cooldown; numeric and HTTP-date values are honored. Cached metadata remains usable. Short server-requested waits can still recover automatically: retries are bounded to two, with 1.5-second exponential backoff and a five-second maximum wait. Longer waits show the recovery controls without retrying early.
+
+Automatic adjacent-comic preloads have been removed. Background latest discovery probes only the newest candidate; a full backward search happens only for explicit latest navigation or latest startup mode. Failed network/service requests stop discovery rather than probing additional dates. A successful latest-mode startup therefore needs one metadata request and one image request, with no speculative image requests.
 
 ## Hosting Decision
 

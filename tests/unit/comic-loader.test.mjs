@@ -18,6 +18,7 @@ const context = {
 context.globalThis = context;
 vm.runInNewContext(source, context);
 const loader = context.COMIC_LOADER;
+const coordinatorOptions = { cooldownMs: 60000, metadataTtl: 600000, missingTtl: 60000, maxEntries: 10 };
 
 test('extracts trusted DirkJan article and WordPress image URLs', () => {
   const article = '<article class="cartoon"><img src="https://dirkjan.nl/wp-content/uploads/comic.jpg"></article>';
@@ -218,4 +219,130 @@ test('navigation cancellation interrupts backoff without retrying or fetching HT
   });
   await assert.rejects(result, { name: 'AbortError' });
   assert.equal(attempts, 1);
+});
+
+test('coordinator coalesces metadata and image fetches, with independent response bodies and cancellation', async () => {
+  const coordinator = loader.createRequestCoordinator(coordinatorOptions);
+  for (const url of [
+    'https://proxy.example/-/comic-metadata?date=20260502',
+    'https://proxy.example/?image'
+  ]) {
+    let attempts = 0;
+    let release;
+    let upstreamSignal;
+    const fetchImpl = (url, { signal }) => {
+      attempts++;
+      upstreamSignal = signal;
+      return new Promise(resolve => { release = resolve; });
+    };
+    const controller = new AbortController();
+    const first = coordinator.fetch(url, { fetchTimeout: 1000, fetchImpl, signal: controller.signal });
+    const second = coordinator.fetch(url, { fetchTimeout: 1000, fetchImpl });
+    const third = coordinator.fetch(url, { fetchTimeout: 1000, fetchImpl });
+    controller.abort();
+    await assert.rejects(first, { name: 'AbortError' });
+    assert.equal(upstreamSignal.aborted, false);
+    release(Response.json({ date: '20260502', imageUrl: 'https://dirkjan.nl/comic.png' }));
+    const [a, b] = await Promise.all([second, third]);
+    assert.deepEqual(await a.json(), await b.json());
+    assert.equal(attempts, 1);
+  }
+});
+
+test('coordinator aborts abandoned network work and allows a later fetch of the same URL', async () => {
+  const coordinator = loader.createRequestCoordinator(coordinatorOptions);
+  let upstreamSignal;
+  const controller = new AbortController();
+  const abandoned = coordinator.fetch('https://proxy.example/?image', {
+    fetchTimeout: 1000, signal: controller.signal,
+    fetchImpl: (url, { signal }) => {
+      upstreamSignal = signal;
+      return new Promise((resolve, reject) => signal.addEventListener('abort', () => reject(signal.reason)));
+    }
+  });
+  controller.abort();
+  await assert.rejects(abandoned, { name: 'AbortError' });
+  assert.equal(upstreamSignal.aborted, true);
+  const fresh = await coordinator.fetch('https://proxy.example/?image', {
+    fetchTimeout: 1000, fetchImpl: async () => new Response('fresh')
+  });
+  assert.equal(await fresh.text(), 'fresh');
+});
+
+test('metadata reuse and short negative caching reduce requests but transient failures are not cached', async () => {
+  let now = 0;
+  const coordinator = loader.createRequestCoordinator({ ...coordinatorOptions, now: () => now });
+  let attempts = 0;
+  let status = 200;
+  const options = {
+    fetchTimeout: 1000,
+    fetchImpl: async () => {
+      attempts++;
+      return Response.json({ date: '20260502', imageUrl: 'https://dirkjan.nl/comic.png' }, { status });
+    }
+  };
+  const url = 'https://proxy.example/-/comic-metadata?date=20260502';
+  await coordinator.fetch(url, options);
+  await coordinator.fetch(url, options);
+  assert.equal(attempts, 1);
+  now += coordinatorOptions.metadataTtl + 1;
+  status = 404;
+  assert.equal((await coordinator.fetch(url, options)).status, 404);
+  await coordinator.fetch(url, options);
+  assert.equal(attempts, 2);
+  now += coordinatorOptions.missingTtl + 1;
+  status = 502;
+  await coordinator.fetch(url, options);
+  await coordinator.fetch(url, options);
+  assert.equal(attempts, 4);
+});
+
+test('cooldown is shared across URLs and coordinator instances, survives reloads, and honors expiry', async () => {
+  let now = 1000;
+  let persisted = 0;
+  const settings = {
+    ...coordinatorOptions, now: () => now,
+    readCooldown: () => persisted, writeCooldown: until => { persisted = until; }
+  };
+  const coordinator = loader.createRequestCoordinator(settings);
+  const cachedUrl = 'https://proxy.example/-/comic-metadata?date=20260502';
+  await coordinator.fetch(cachedUrl, {
+    fetchTimeout: 1000,
+    fetchImpl: async () => Response.json({ date: '20260502', imageUrl: 'https://dirkjan.nl/comic.png' })
+  });
+  let attempts = 0;
+  const options = {
+    fetchTimeout: 1000, maxRetries: 2, retryDelay: 1, maxRetryDelay: 5,
+    fetchImpl: async () => {
+      attempts++;
+      return new Response('throttled', { status: 429 });
+    }
+  };
+  await assert.rejects(coordinator.fetch('https://proxy.example/?image', options), { name: 'RateLimitError' });
+  assert.equal(persisted, 61000);
+  assert.equal(coordinator.isCoolingDown(), true);
+  assert.equal((await coordinator.fetch(cachedUrl, options)).status, 200);
+  await assert.rejects(coordinator.fetch('https://proxy.example/?other-image', options), { name: 'RateLimitError' });
+  const reloaded = loader.createRequestCoordinator(settings);
+  await assert.rejects(reloaded.fetch(cachedUrl, options), { name: 'RateLimitError' });
+  assert.equal(attempts, 1);
+  now = persisted + 1;
+  assert.equal(reloaded.isCoolingDown(), false);
+  const recovered = await reloaded.fetch(cachedUrl, {
+    fetchTimeout: 1000,
+    fetchImpl: async () => { attempts++; return Response.json({ date: '20260502', imageUrl: 'https://dirkjan.nl/comic.png' }); }
+  });
+  assert.equal(recovered.status, 200);
+  assert.equal(attempts, 2);
+});
+
+test('metadata service failures do not cause duplicate HTML requests', async () => {
+  for (const status of [429, 500, 502, 503, 504]) {
+    await assert.rejects(loader.fetchComicData('20260502', 'https://dirkjan.nl/cartoon/20260502', null, {
+      metadataEndpoint: 'https://proxy.example/-/comic-metadata',
+      fetchTimeout: 1000,
+      fetchImpl: async () => new Response('temporary failure', { status }),
+      fetchWithFallback() { assert.fail('service failures must not amplify origin traffic'); }
+    }));
+  }
 });

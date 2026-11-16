@@ -22,7 +22,7 @@ test('proxy state stays aligned with the configured first-party endpoint', () =>
 
 test('comic fetch cancellation reaches proxy requests and body reads', () => {
   assert.match(appSource, /fetchWithFallback\(url, signal = null\)/);
-  assert.match(appSource, /COMIC_LOADER\.fetchWithRateLimitRetry\(fullUrl, \{[\s\S]*?fetchTimeout: CONFIG\.FETCH_TIMEOUT,\s*signal/);
+  assert.match(appSource, /comicRequests\.fetch\(fullUrl, \{[\s\S]*?fetchTimeout: CONFIG\.FETCH_TIMEOUT,\s*signal/);
   assert.match(appSource, /fetchComicData\(formattedComicDate, url, fetchSignal\)/);
   assert.match(appSource, /COMIC_LOADER\.fetchComicData\(date, pageUrl, signal/);
 });
@@ -31,12 +31,11 @@ test('comic extraction is delegated to the comic-loader module', () => {
   assert.match(appSource, /const \{ extractComicImageUrl, normalizeComicImageUrl \} = COMIC_LOADER/);
   assert.match(appSource, /COMIC_LOADER\.fetchComicData\(/);
   assert.match(appSource, /COMIC_LOADER\.resolveDisplayUrl\(/);
-  assert.match(appSource, /COMIC_LOADER\.createComicObjectUrl\(/);
+  assert.match(appSource, /COMIC_LOADER\.createRequestCoordinator\(/);
   assert.match(appSource, /isFullscreenActive\(\)/);
 });
 
 test('comic images load through the controlled proxy as revocable blob URLs', () => {
-  assert.match(appSource, /async function createComicObjectUrl\(imageUrl, signal = null\)/);
   assert.match(appSource, /COMIC_ANIMATION\.animateTransition\(comicImg, displayUrl, direction/);
   assert.match(appSource, /URL\.revokeObjectURL\(previousComicObjectUrl\)/);
   assert.match(appSource, /COMIC_LOADER\.resolveDisplayUrl\(/);
@@ -51,15 +50,6 @@ test('fullscreen navigation uses the landscape filmstrip instead of the hidden p
 test('startup discovery failures retain a usable comic view', () => {
   assert.match(appSource, /discoverLatestAvailableComic\(\)\.then\(latestDate => \{[\s\S]*?\}\)\.catch\(\(\) => \{\s*CompareDates\(\);\s*DisplayComic\(null, 'nearest'\)/);
   assert.match(appSource, /comicImg\.alt = `DirkJan strip van \$\{dateParts\.day\}-\$\{dateParts\.month\}-\$\{dateParts\.year\} laden`/);
-});
-
-test('preloading does not probe beyond a known latest or current date', () => {
-  assert.match(appSource, /if \(notFound \|\| !latestAvailableDate\) return/);
-  assert.match(appSource, /const preloadMaxDate = new Date\(latestAvailableDate\)/);
-  assert.match(appSource, /const nextPublishDate = moveToComicPublishDate\(nextDate, 1\)/);
-  assert.match(appSource, /if \(nextPublishDate <= preloadMaxDate\)/);
-  assert.match(appSource, /cache\.put\(preloadFormattedDate, \{ imageUrl: comicData\.imageUrl, objectUrl \}\)/);
-  assert.match(appSource, /img\.onerror = \(\) => \{[\s\S]*URL\.revokeObjectURL\(objectUrl\)/);
 });
 
 test('service worker updates wait for an explicit user prompt', () => {
@@ -96,7 +86,7 @@ test('random shortcut is applied before latest-startup discovery', () => {
 
 test('latest comic lookup starts from today instead of the future date picker maximum', () => {
   assert.match(appSource, /\} = DATE_UTILS/);
-  assert.match(appSource, /function discoverLatestAvailableComic\(\)/);
+  assert.match(appSource, /function discoverLatestAvailableComic\(background = false\)/);
   assert.match(appSource, /return findLatestAvailableComic\(latestCandidate, searchMinDate\)/);
   assert.match(appSource, /START_LATEST: 'startlatest'/);
   assert.match(appSource, /START_MODE: 'startmode'/);

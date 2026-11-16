@@ -48,7 +48,7 @@ test('temporary metadata and image throttling recover automatically', async ({ p
     if (metadataAttempts > 1) return route.fallback();
     return route.fulfill({
       status: 429, body: 'Too Many Requests',
-      headers: { 'Access-Control-Allow-Origin': '*', 'Retry-After': '0' }
+      headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Expose-Headers': 'Retry-After', 'Retry-After': '0' }
     });
   });
   await page.route('**/*20260502-dirkjan-test.png*', route => {
@@ -57,7 +57,7 @@ test('temporary metadata and image throttling recover automatically', async ({ p
     if (imageAttempts > 1) return route.fallback();
     return route.fulfill({
       status: 429, body: 'Too Many Requests',
-      headers: { 'Access-Control-Allow-Origin': '*', 'Retry-After': '0' }
+      headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Expose-Headers': 'Retry-After', 'Retry-After': '0' }
     });
   });
   const result = await openApp(page, { expectComic: false });
@@ -70,20 +70,75 @@ test('temporary metadata and image throttling recover automatically', async ({ p
 });
 
 test('throttled latest discovery does not probe more archive dates', async ({ page }) => {
-  await page.route('**/-/comic-metadata?date=20260508', route => route.fulfill({
-    status: 429,
-    body: 'Too Many Requests',
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Expose-Headers': 'Retry-After',
-      'Retry-After': '60'
-    }
-  }));
+  await page.route('**/-/comic-metadata?date=20260508', async route => {
+    await page.waitForFunction(() => document.querySelector('#comic').naturalWidth > 0);
+    return route.fulfill({
+      status: 429,
+      body: 'Too Many Requests',
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Expose-Headers': 'Retry-After',
+        'Retry-After': '60'
+      }
+    });
+  });
   const result = await openApp(page);
   const discoveryError = await page.evaluate(() => window.discoverLatestAvailableComic().catch(error => error.name));
   expect(discoveryError).toBe('RateLimitError');
   expect(result.proxyRequests.some(url => /2026050[5-7]/.test(url))).toBe(false);
   await expect.poll(() => page.locator('#comic').evaluate(img => img.naturalWidth)).toBeGreaterThan(0);
+  expect(result.errors).toEqual([]);
+});
+
+test('startup fetches only the displayed image and reuses latest discovery metadata', async ({ page }) => {
+  await page.clock.install();
+  const result = await openApp(page, { initialStorage: { startmode: 'latest' } });
+  await expect(page.locator('#comic-announcer')).toHaveText(/08-05-2026 geladen/);
+  await page.clock.fastForward(30000);
+  expect(result.proxyRequests).toEqual([
+    'https://dirkjan.nl/cartoon/20260508',
+    'https://dirkjan.nl/wp-content/uploads/20260508-dirkjan-test.png'
+  ]);
+  expect(result.errors).toEqual([]);
+});
+
+test('background discovery probes only one date and explicit latest search reuses the missing result', async ({ page }) => {
+  const result = await openApp(page, { unavailableDates: ['20260508'] });
+  await expect(page.locator('#comic-announcer')).toHaveText(/02-05-2026 geladen/);
+  expect(result.proxyRequests.some(url => /2026050[5-7]/.test(url))).toBe(false);
+  await page.getByRole('button', { name: 'Nieuwste' }).click();
+  await expect(page.locator('#comic-announcer')).toHaveText(/07-05-2026 geladen/);
+  expect(result.proxyRequests.filter(url => url === 'https://dirkjan.nl/cartoon/20260508')).toHaveLength(1);
+  expect(result.errors).toEqual([]);
+});
+
+test('cooldown suppresses navigation and retry traffic until expiry', async ({ page }) => {
+  await page.clock.install();
+  const requests = [];
+  page.on('request', request => {
+    if (request.url().includes('corsproxy.garfieldapp.workers.dev')) requests.push(request.url());
+  });
+  await page.route('**/-/comic-metadata?date=20260508', async route => {
+    await page.waitForFunction(() => document.querySelector('#comic').naturalWidth > 0);
+    return route.fulfill({
+      status: 429, body: 'Too Many Requests',
+      headers: {
+        'Access-Control-Allow-Origin': '*', 'Access-Control-Expose-Headers': 'Retry-After', 'Retry-After': '60'
+      }
+    });
+  });
+  const result = await openApp(page);
+  await expect.poll(() => page.evaluate(() => Number(localStorage.getItem('comicCooldownUntil')) > Date.now())).toBe(true);
+  const before = requests.length;
+  await page.locator('#DatePicker').fill('2026-04-30');
+  await page.locator('#DatePicker').dispatchEvent('input');
+  await expect(page.locator('#comic-status')).toContainText('te veel verzoeken');
+  await page.getByRole('button', { name: 'Opnieuw proberen' }).click();
+  expect(requests).toHaveLength(before);
+  await page.clock.fastForward(61000);
+  await page.getByRole('button', { name: 'Opnieuw proberen' }).click();
+  await expect(page.locator('#comic-announcer')).toHaveText(/30-04-2026 geladen/);
+  expect(requests).toHaveLength(before + 2);
   expect(result.errors).toEqual([]);
 });
 

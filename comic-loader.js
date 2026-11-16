@@ -85,6 +85,122 @@
   }
 
   /**
+   * Coordinates fetches in this tab and persists cooldowns for other tabs/reloads.
+   * @param {object} options - Cache limits, clock, and storage callbacks
+   * @returns {object} Shared request and cooldown helpers
+   */
+  function createRequestCoordinator({
+    cooldownMs,
+    metadataTtl,
+    missingTtl,
+    maxEntries,
+    now = Date.now,
+    readCooldown = () => 0,
+    writeCooldown = () => {}
+  }) {
+    const pending = new Map();
+    const metadataCache = new Map();
+    let cooldownUntil = 0;
+
+    const remainingCooldown = () => {
+      const saved = readCooldown();
+      cooldownUntil = Math.max(cooldownUntil, Number.isFinite(saved) ? saved : 0);
+      return Math.max(0, cooldownUntil - now());
+    };
+    const rateLimitError = () => {
+      const error = new Error('Comic requests temporarily rate limited');
+      error.name = 'RateLimitError';
+      return error;
+    };
+
+    /**
+     * Joins an in-flight fetch without letting one consumer cancel other consumers.
+     * @param {string|URL} url - Controlled proxy endpoint
+     * @param {object} options - Request timeout, retries, and cancellation signal
+     * @returns {Promise<Response>} An independently consumable response
+     */
+    function fetchShared(url, options) {
+      const { signal = null, fetchImpl = global.fetch.bind(global) } = options;
+      if (signal?.aborted) return Promise.reject(signal.reason);
+      const key = String(url);
+      const cached = metadataCache.get(key);
+      if (cached?.until > now()) return Promise.resolve(new Response(cached.body, cached.init));
+      metadataCache.delete(key);
+      let entry = pending.get(key);
+      if (!entry) {
+        if (remainingCooldown()) return Promise.reject(rateLimitError());
+        const controller = new AbortController();
+        entry = { controller, consumers: 0 };
+        const current = entry;
+        const load = async () => {
+          const response = await fetchWithRateLimitRetry(url, {
+            ...options,
+            signal: controller.signal,
+            fetchImpl: async (target, init) => {
+              if (remainingCooldown()) throw rateLimitError();
+              const result = await fetchImpl(target, init);
+              if (result.status === 429) {
+                remainingCooldown();
+                const retryAfter = result.headers.get('retry-after');
+                const seconds = retryAfter === null ? NaN : Number(retryAfter);
+                const delay = Number.isFinite(seconds) ? seconds * 1000 : Date.parse(retryAfter) - now();
+                cooldownUntil = Math.max(cooldownUntil, now() + (Number.isFinite(delay) ? Math.max(0, delay) : cooldownMs));
+                writeCooldown(cooldownUntil);
+                if (!Number.isFinite(delay)) {
+                  const limited = new Response(result.body, result);
+                  limited.headers.set('retry-after', String(Math.ceil(cooldownMs / 1000)));
+                  return limited;
+                }
+              }
+              return result;
+            }
+          });
+          const body = await response.arrayBuffer();
+          const init = { status: response.status, statusText: response.statusText, headers: [...response.headers] };
+          if (new URL(url).pathname === '/-/comic-metadata' && (response.ok || response.status === 404)) {
+            const value = response.ok ? await new Response(body, init).json() : null;
+            if (!response.ok || (value?.date === new URL(url).searchParams.get('date') && normalizeComicImageUrl(value.imageUrl))) {
+              metadataCache.set(key, { body, init, until: now() + (response.ok ? metadataTtl : missingTtl) });
+              while (metadataCache.size > maxEntries) metadataCache.delete(metadataCache.keys().next().value);
+            }
+          }
+          return { body, init };
+        };
+        entry.promise = load().finally(() => {
+          if (pending.get(key) === current) pending.delete(key);
+        });
+        pending.set(key, entry);
+      }
+
+      entry.consumers++;
+      return new Promise((resolve, reject) => {
+        let settled = false;
+        const finish = (error, value) => {
+          if (settled) return;
+          settled = true;
+          signal?.removeEventListener('abort', onAbort);
+          entry.consumers--;
+          if (!entry.consumers && pending.get(key) === entry) {
+            pending.delete(key);
+            entry.controller.abort();
+          }
+          if (error) reject(error);
+          else resolve(new Response(value.body, value.init));
+        };
+        const onAbort = () => finish(signal.reason);
+        signal?.addEventListener('abort', onAbort, { once: true });
+        entry.promise.then(value => finish(null, value), error => finish(error));
+        if (signal?.aborted) onAbort();
+      });
+    }
+
+    return Object.freeze({
+      fetch: fetchShared,
+      isCoolingDown: () => remainingCooldown() > 0
+    });
+  }
+
+  /**
    * Resolves a comic image URL and restricts it to trusted DirkJan origins.
    * @param {string} candidateUrl
    * @returns {string|null}
@@ -229,23 +345,28 @@
       fetchTimeout,
       fetchWithFallback,
       retryOptions = {},
+      fetchRequest = fetchWithRateLimitRetry,
       fetchImpl = global.fetch.bind(global)
     } = options;
 
     try {
       const metadataUrl = new URL(metadataEndpoint);
       metadataUrl.searchParams.set('date', date);
-      const response = await fetchWithRateLimitRetry(metadataUrl, {
+      const response = await fetchRequest(metadataUrl, {
         ...retryOptions, fetchTimeout, signal, fetchImpl
       });
       if (response.status === 404) return { notFound: true, imageUrl: null };
-      if (!response.ok) throw new Error(`Metadata request failed: ${response.status}`);
+      if (!response.ok) {
+        const error = new Error(`Metadata request failed: ${response.status}`);
+        error.name = 'MetadataError';
+        throw error;
+      }
       const metadata = await response.json();
       const imageUrl = metadata.date === date ? normalizeComicImageUrl(metadata.imageUrl) : null;
       if (!imageUrl) throw new Error('Invalid comic metadata');
       return { notFound: false, imageUrl };
     } catch (error) {
-      if (error.name === 'AbortError' || error.name === 'RateLimitError') throw error;
+      if (['AbortError', 'RateLimitError', 'MetadataError', 'TimeoutError'].includes(error.name)) throw error;
       const response = await fetchWithFallback(pageUrl, signal);
       const html = await response.text();
       return {
@@ -322,6 +443,7 @@
   }
 
   global.COMIC_LOADER = Object.freeze({
+    createRequestCoordinator,
     fetchWithRateLimitRetry,
     extractComicImageUrl,
     normalizeComicImageUrl,

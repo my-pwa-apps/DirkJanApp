@@ -9,6 +9,7 @@ The comic artwork remains the property of Mark Retera and dirkjan.nl. This repos
 - `index.html` provides the static, semantic application shell, including the hidden landscape fullscreen template.
 - `app.js` owns browser state, navigation, persistence, proxy fallback, and UI behavior.
 - `comic-loader.js`, `toolbar.js`, and `animation-utils.js` extract comic fetching/blob cache, image decoding, dragging, and slide/morph transitions as IIFE modules. A comic image is decoded before it is committed to the page, and sharing always uses the committed comic snapshot rather than a date that is still loading.
+- Comic fetching coalesces in-flight requests per tab, reuses metadata, and shares a persisted rate-limit cooldown across tabs. Adjacent images are fetched only on navigation; background latest discovery probes one candidate.
 - `date-utils.js` owns publication-date rules, including favorite validation (real calendar days within the published range) for stored and imported favorites.
 - `main.css` contains the responsive light/dark presentation.
 - `serviceworker.js` provides versioned app-shell, runtime, and image caches.

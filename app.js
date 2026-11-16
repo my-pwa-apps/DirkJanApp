@@ -28,6 +28,12 @@ const CONFIG = Object.freeze({
     retryDelay: 1500,
     maxRetryDelay: 5000
   }),
+  COMIC_REQUESTS: Object.freeze({
+    cooldownMs: 60000,
+    metadataTtl: 600000,
+    missingTtl: 60000,
+    maxEntries: 100
+  }),
   
   // Swipe detection
   SWIPE_MIN_DISTANCE: 50,              // Minimum swipe distance in px
@@ -62,7 +68,8 @@ const CONFIG = Object.freeze({
     SETTINGS_VISIBLE: 'settings',
     KEYBOARD_HINT: 'keyboardHintSeen',
     DARK_MODE: 'darkmode',
-    SHUFFLE: 'shuffle'
+    SHUFFLE: 'shuffle',
+    COMIC_COOLDOWN: 'comicCooldownUntil'
   })
 });
 
@@ -179,6 +186,11 @@ function dismissUpdate() {
 
 // AbortController for cancelling in-flight comic fetches on re-navigation
 let currentFetchController = null;
+const comicRequests = COMIC_LOADER.createRequestCoordinator({
+  ...CONFIG.COMIC_REQUESTS,
+  readCooldown: () => STORAGE.getJSON(CONFIG.STORAGE_KEYS.COMIC_COOLDOWN, 0),
+  writeCooldown: until => STORAGE.set(CONFIG.STORAGE_KEYS.COMIC_COOLDOWN, JSON.stringify(until))
+});
 
 // Track which proxy is currently working best
 let workingProxyIndex = 0;
@@ -266,7 +278,7 @@ async function tryProxy(url, proxyIndex, startTime, signal = null) {
   
   try {
     const fullUrl = `${proxyUrl}${encodeURIComponent(url)}`;
-    const response = await COMIC_LOADER.fetchWithRateLimitRetry(fullUrl, {
+    const response = await comicRequests.fetch(fullUrl, {
       ...CONFIG.RATE_LIMIT_RETRY,
       fetchTimeout: CONFIG.FETCH_TIMEOUT,
       signal
@@ -1017,36 +1029,29 @@ async function findLatestAvailableComic(startDate, minDate) {
     const formattedDay = ("0" + d).slice(-2);
     const dateStr = `${y}${formattedMonth}${formattedDay}`;
     
-    try {
-      const comicData = await fetchComicData(dateStr, `https://dirkjan.nl/cartoon/${dateStr}`);
-      if (!comicData.notFound && comicData.imageUrl) {
-        latestAvailableDate = new Date(testDate);
-        updateDatePickerMax(latestAvailableDate);
-        return testDate;
-      }
-    } catch (error) {
-      if (error.name === 'RateLimitError') throw error;
-      // Network error, continue to previous day
+    const comicData = await fetchComicData(dateStr, `https://dirkjan.nl/cartoon/${dateStr}`);
+    if (!comicData.notFound && comicData.imageUrl) {
+      latestAvailableDate = new Date(testDate);
+      updateDatePickerMax(latestAvailableDate);
+      return testDate;
     }
     
     // Go back one day
     testDate.setDate(testDate.getDate() - 1);
   }
   
-  // Fallback to minDate if nothing found
-  latestAvailableDate = new Date(minDate);
-  updateDatePickerMax(latestAvailableDate);
   return minDate;
 }
 
 /**
  * Finds the latest available comic in the current prepublication window
- * @returns {Promise<Date>} The latest available comic date
+ * @param {boolean} background - Probe only the newest candidate without scanning
+ * @returns {Promise<Date>} The latest available comic date or search minimum
  */
-function discoverLatestAvailableComic() {
+function discoverLatestAvailableComic(background = false) {
   const latestCandidate = getLatestComicCandidateDate();
   const searchMinDate = new Date(latestCandidate);
-  searchMinDate.setDate(searchMinDate.getDate() - 7);
+  searchMinDate.setDate(searchMinDate.getDate() - (background ? 0 : 7));
   return findLatestAvailableComic(latestCandidate, searchMinDate);
 }
 
@@ -1112,7 +1117,7 @@ function onLoad()
     currentselectedDate = pickRandomComicDate();
     CompareDates();
     DisplayComic('morph', 'random');
-    discoverLatestAvailableComic().then(() => CompareDates()).catch(() => {});
+    discoverLatestAvailableComic(true).then(() => CompareDates()).catch(() => {});
     return;
   }
 
@@ -1139,7 +1144,7 @@ function onLoad()
     CompareDates();
     DisplayComic();
 
-    discoverLatestAvailableComic().then(() => {
+    discoverLatestAvailableComic(true).then(() => {
       if (document.getElementById("showfavs").checked) return;
       CompareDates();
     }).catch(() => {});
@@ -1150,7 +1155,7 @@ function onLoad()
     CompareDates();
     DisplayComic();
 
-    discoverLatestAvailableComic().then(() => {
+    discoverLatestAvailableComic(true).then(() => {
       CompareDates();
     }).catch(() => {});
   }
@@ -1520,6 +1525,8 @@ function CurrentClick()
         currentselectedDate = latestDate;
         CompareDates();
         DisplayComic('morph', 'nearest');
+      }).catch(() => {
+        showNotification('De nieuwste strip kon niet worden opgezocht. Wacht even en probeer opnieuw.', true);
       });
       return;
     }
@@ -1570,25 +1577,12 @@ function DateChange(event)
 
 const { extractComicImageUrl, normalizeComicImageUrl } = COMIC_LOADER;
 
-/**
- * Fetches a comic image through the controlled proxy and returns a local blob URL.
- * @param {string} imageUrl - Trusted DirkJan image URL
- * @param {AbortSignal|null} signal - Optional navigation cancellation signal
- * @returns {Promise<string>} Browser-local URL containing the proxied image bytes
- */
-async function createComicObjectUrl(imageUrl, signal = null) {
-  return COMIC_LOADER.createComicObjectUrl(imageUrl, {
-    fetchWithFallback,
-    minImageSize: CONFIG.MIN_IMAGE_SIZE,
-    signal
-  });
-}
-
 async function fetchComicData(date, pageUrl, signal) {
   return COMIC_LOADER.fetchComicData(date, pageUrl, signal, {
     metadataEndpoint: CONFIG.COMIC_METADATA_ENDPOINT,
     fetchTimeout: CONFIG.FETCH_TIMEOUT,
     retryOptions: CONFIG.RATE_LIMIT_RETRY,
+    fetchRequest: comicRequests.fetch,
     fetchWithFallback
   });
 }
@@ -1826,14 +1820,6 @@ function DisplayComic(direction = null, notFoundBehavior = 'nearest')
     if (heartButton) heartButton.setAttribute('aria-pressed', 'true');
   }
   
-  if (comicImg.complete && comicImg.naturalWidth) {
-    preloadAdjacentComics();
-  } else {
-    comicImg.addEventListener('load', () => {
-      preloadAdjacentComics();
-    }, { once: true });
-  }
-  
   } catch (error) {
     console.error('Error in DisplayComic():', error);
     const comicImg = document.getElementById("comic");
@@ -1912,7 +1898,7 @@ function CompareDates() {
     First: currentTime <= startDate,
     Previous: currentTime <= startDate,
     Next: currentTime >= endDate,
-    Current: currentTime >= endDate && !showFavsChecked,
+    Current: Boolean(latestAvailableDate) && currentTime >= endDate && !showFavsChecked,
     Random: showFavsChecked && favs.length <= 1
   };
   
@@ -3109,64 +3095,6 @@ document.addEventListener('keydown', function(e) {
       break;
   }
 });
-
-// ========================================
-// COMIC PRELOADING FOR SMOOTHER NAVIGATION
-// ========================================
-function preloadAdjacentComics() {
-  if (!formattedDate) return;
-  if (notFound || !latestAvailableDate) return;
-  if (navigator.connection?.saveData) return;
-
-  const currentDate = parseLocalDate(formattedDate) || new Date();
-  const startDate = parseLocalDate(CONFIG.COMIC_START_DATE) || new Date(2015, 4, 4);
-  const preloadMaxDate = new Date(latestAvailableDate);
-  preloadMaxDate.setHours(0, 0, 0, 0);
-
-  const nextDate = new Date(currentDate);
-  nextDate.setDate(nextDate.getDate() + 1);
-  const nextPublishDate = moveToComicPublishDate(nextDate, 1);
-  if (nextPublishDate <= preloadMaxDate) {
-    preloadComic(nextPublishDate);
-  }
-
-  const prevDate = new Date(currentDate);
-  prevDate.setDate(prevDate.getDate() - 1);
-  const prevPublishDate = moveToComicPublishDate(prevDate, -1);
-  if (prevPublishDate >= startDate) {
-    preloadComic(prevPublishDate);
-  }
-}
-
-/**
- * Preloads a comic blob so DisplayComic can reuse it.
- * @param {Date} date
- */
-function preloadComic(date) {
-  const d = date.getDate();
-  const m = date.getMonth() + 1;
-  const y = date.getFullYear();
-  const formattedMonth = ("0" + m).slice(-2);
-  const formattedDay = ("0" + d).slice(-2);
-  const preloadFormattedDate = `${y}-${formattedMonth}-${formattedDay}`;
-  const preloadFormattedComicDate = `${y}${formattedMonth}${formattedDay}`;
-  const cache = getComicBlobCache();
-  if (cache.has(preloadFormattedDate)) return;
-
-  fetchComicData(preloadFormattedComicDate, `https://dirkjan.nl/cartoon/${preloadFormattedComicDate}`)
-    .then(comicData => {
-      if (comicData.notFound || !comicData.imageUrl) return;
-      return createComicObjectUrl(comicData.imageUrl).then(objectUrl => {
-        const img = new Image();
-        img.onload = () => {
-          cache.put(preloadFormattedDate, { imageUrl: comicData.imageUrl, objectUrl });
-        };
-        img.onerror = () => URL.revokeObjectURL(objectUrl);
-        img.src = objectUrl;
-      });
-    })
-    .catch(() => {});
-}
 
 // ========================================
 // VISUAL FEEDBACK - Show keyboard shortcuts hint on first load (desktop only)

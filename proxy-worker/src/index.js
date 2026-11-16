@@ -20,6 +20,9 @@ const HOP_BY_HOP_HEADERS = new Set([
 ]);
 
 const HTML_CACHE_TTL = 600;
+const MISSING_COMIC_CACHE_TTL = 60;
+const UPSTREAM_COOLDOWN_SECONDS = 60;
+const ARCHIVE_AGE_MS = 7 * 86400 * 1000;
 const IMAGE_CACHE_TTL = 86400;
 const DEFAULT_CACHE_TTL = 3600;
 const UPSTREAM_TIMEOUT_MS = 15000;
@@ -120,21 +123,9 @@ export default {
       );
     }
 
-    const cacheKey = new Request(upstreamUrl.toString(), { method: request.method });
-    const cache = caches.default;
-    const clientCacheControl = request.headers.get('cache-control') || '';
-    const bypassCache = clientCacheControl.includes('no-cache') || clientCacheControl.includes('no-store');
-
-    if (request.method === 'GET' && !bypassCache) {
-      const cached = await cache.match(cacheKey);
-      if (cached) {
-        return withCors(request, cached, true, allowedOrigins);
-      }
-    }
-
-    let upstreamResponse;
     try {
-      upstreamResponse = await fetchAllowedUpstream(upstreamUrl, request, allowedHosts);
+      const { response, cacheHit } = await fetchProxyResource(upstreamUrl, request, allowedHosts, ctx);
+      return withCors(request, response, cacheHit, allowedOrigins);
     } catch (error) {
       console.error(JSON.stringify({
         message: 'upstream fetch failed',
@@ -152,26 +143,147 @@ export default {
       );
     }
 
-    const contentLength = parseContentLength(upstreamResponse.headers.get('content-length'));
-    if (contentLength !== null && contentLength > MAX_CACHEABLE_RESPONSE_BYTES) {
-      await upstreamResponse.body?.cancel();
-      return withCors(
-        request,
-        jsonResponse({ error: 'Upstream response too large' }, 413),
-        false,
-        allowedOrigins
-      );
-    }
-
-    const response = sanitizeUpstreamResponse(upstreamResponse);
-
-    if (request.method === 'GET' && upstreamResponse.ok && contentLength !== null && !bypassCache) {
-      ctx.waitUntil(cache.put(cacheKey, response.clone()));
-    }
-
-    return withCors(request, response, false, allowedOrigins);
   }
 };
+
+/**
+ * Identifies public comic resources without changing other shared-proxy hosts.
+ * @param {URL} url - Validated upstream URL
+ * @returns {boolean} Whether the comic cache policy applies
+ */
+function isComicResource(url) {
+  return DEFAULT_ALLOWED_HOSTS.includes(url.hostname) &&
+    (/^\/cartoon\/\d{8}(?:_[\w-]+)?\/?$/.test(url.pathname) ||
+      url.pathname.startsWith('/wp-content/uploads/'));
+}
+
+/**
+ * Keeps personalized or differently negotiated responses out of shared comic caches.
+ * @param {Response} response - Response before CORS decoration
+ * @returns {boolean} Whether the response is safe to share
+ */
+function isPublicComicResponse(response) {
+  const vary = (response.headers.get('vary') || '').toLowerCase().split(',').map(value => value.trim()).filter(Boolean);
+  return !response.headers.has('set-cookie') &&
+    !/\b(private|no-store)\b/i.test(response.headers.get('cache-control') || '') &&
+    vary.every(header => header === 'accept-encoding' || header === 'origin');
+}
+
+/**
+ * Reads a public comic body with an enforced byte limit, even without Content-Length.
+ * @param {Response} response - Upstream response
+ * @returns {Promise<ArrayBuffer|null>} Bytes, or null when the limit is exceeded
+ */
+async function readComicBody(response) {
+  if (!response.body) return new ArrayBuffer(0);
+  const reader = response.body.getReader();
+  const chunks = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > MAX_CACHEABLE_RESPONSE_BYTES) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes.buffer;
+}
+
+/**
+ * Returns a host-wide edge-local cooldown response, never a cacheable comic error.
+ * @param {number} until - Cooldown expiry in epoch milliseconds
+ * @returns {Response} Explicit HTTP 429 with the remaining wait
+ */
+function upstreamLimitedResponse(until) {
+  const response = jsonResponse({ error: 'Upstream rate limited' }, 429);
+  response.headers.set('retry-after', String(Math.max(1, Math.ceil((until - Date.now()) / 1000))));
+  response.headers.set('cache-control', 'no-store');
+  return response;
+}
+
+/**
+ * Shares cached comic pages between HTML and metadata routes and readers at this edge.
+ * @param {URL} upstreamUrl - Validated upstream URL
+ * @param {Request} request - Client request
+ * @param {string[]} allowedHosts - Redirect allowlist
+ * @param {object} ctx - Worker execution context
+ * @returns {Promise<{response: Response, cacheHit: boolean}>} Proxied resource
+ */
+async function fetchProxyResource(upstreamUrl, request, allowedHosts, ctx) {
+  const cache = caches.default;
+  const comic = isComicResource(upstreamUrl);
+  const dirkjan = DEFAULT_ALLOWED_HOSTS.includes(upstreamUrl.hostname);
+  const keyUrl = comic ? new URL('/-/comic-resource', request.url) : upstreamUrl;
+  if (comic) keyUrl.searchParams.set('url', upstreamUrl.toString());
+  const cacheKey = new Request(keyUrl, { method: 'GET' });
+  const bypassCache = !comic && /no-cache|no-store/.test(request.headers.get('cache-control') || '');
+  if (!bypassCache) {
+    const cached = await cache.match(cacheKey);
+    if (cached) {
+      return {
+        response: request.method === 'HEAD' ? new Response(null, cached) : cached,
+        cacheHit: true
+      };
+    }
+  }
+
+  const cooldownKey = new Request(new URL('/-/dirkjan-upstream-cooldown', request.url));
+  if (dirkjan) {
+    const cooldown = await cache.match(cooldownKey);
+    const until = cooldown ? (await cooldown.json()).until : 0;
+    if (until > Date.now()) return { response: upstreamLimitedResponse(until), cacheHit: false };
+  }
+
+  const upstream = await fetchAllowedUpstream(upstreamUrl, request, allowedHosts);
+  if (dirkjan && upstream.status === 429) {
+    const retryAfter = upstream.headers.get('retry-after');
+    const seconds = retryAfter === null ? NaN : Number(retryAfter);
+    const serverUntil = Number.isFinite(seconds) ? Date.now() + seconds * 1000 : Date.parse(retryAfter);
+    const until = Math.max(Date.now() + UPSTREAM_COOLDOWN_SECONDS * 1000, serverUntil || 0);
+    await upstream.body?.cancel();
+    const marker = jsonResponse({ until }, 200);
+    marker.headers.set('cache-control', `public, max-age=${Math.ceil((until - Date.now()) / 1000)}`);
+    await cache.put(cooldownKey, marker);
+    return { response: upstreamLimitedResponse(until), cacheHit: false };
+  }
+
+  const contentLength = parseContentLength(upstream.headers.get('content-length'));
+  if (contentLength !== null && contentLength > MAX_CACHEABLE_RESPONSE_BYTES) {
+    await upstream.body?.cancel();
+    return { response: jsonResponse({ error: 'Upstream response too large' }, 413), cacheHit: false };
+  }
+  let response = sanitizeUpstreamResponse(upstream);
+  const publicComic = comic && response.status === 200 && isPublicComicResponse(response);
+  if (request.method === 'GET' && publicComic) {
+    const body = await readComicBody(response);
+    if (body === null) {
+      return { response: jsonResponse({ error: 'Upstream response too large' }, 413), cacheHit: false };
+    }
+    response = new Response(body, response);
+    response.headers.delete('content-encoding');
+    response.headers.set('content-length', String(body.byteLength));
+    const html = upstreamUrl.pathname.startsWith('/cartoon/') ? new TextDecoder().decode(body) : null;
+    const validComic = html !== null
+      ? !html.includes('error404') && Boolean(extractTrustedComicImageUrl(html))
+      : response.headers.get('content-type')?.startsWith('image/');
+    if (validComic) {
+      response.headers.set('cache-control', `public, max-age=${getCacheTtl(upstreamUrl)}`);
+      ctx.waitUntil(cache.put(cacheKey, response.clone()));
+    }
+  } else if (request.method === 'GET' && upstream.ok && contentLength !== null && !bypassCache && !comic) {
+    ctx.waitUntil(cache.put(cacheKey, response.clone()));
+  }
+  return { response, cacheHit: false };
+}
 
 async function handleComicMetadata(request, allowedHosts, allowedOrigins, ctx) {
   if (request.method !== 'GET' && request.method !== 'HEAD') {
@@ -184,37 +296,46 @@ async function handleComicMetadata(request, allowedHosts, allowedOrigins, ctx) {
   }
 
   const cache = caches.default;
-  const cacheKey = new Request(request.url, { method: request.method });
-  const bypassCache = /no-cache|no-store/.test(request.headers.get('cache-control') || '');
-  if (!bypassCache) {
-    const cached = await cache.match(cacheKey);
-    if (cached) return withCors(request, cached, true, allowedOrigins);
-  }
+  const metadataUrl = new URL('/-/comic-metadata', request.url);
+  metadataUrl.searchParams.set('date', date);
+  const cacheKey = new Request(metadataUrl);
+  const cached = await cache.match(cacheKey);
+  if (cached) return withCors(request, cached, true, allowedOrigins);
 
   let upstreamResponse;
+  const pageUrl = new URL(`https://dirkjan.nl/cartoon/${date}`);
   try {
-    upstreamResponse = await fetchAllowedUpstream(new URL(`https://dirkjan.nl/cartoon/${date}`), request, allowedHosts);
+    const result = await fetchProxyResource(pageUrl, new Request(request, { method: 'GET' }), allowedHosts, ctx);
+    upstreamResponse = result.response;
   } catch (error) {
+    console.error(JSON.stringify({ message: 'comic metadata fetch failed', error: error.message }));
     return withCors(request, jsonResponse({ error: error?.name === 'TimeoutError' ? 'Upstream timed out' : 'Upstream fetch failed' }, error?.name === 'TimeoutError' ? 504 : 502), false, allowedOrigins);
   }
 
+  const missingComic = () => {
+    const missing = jsonResponse({ error: 'Comic not found' }, 404);
+    missing.headers.set('cache-control', `public, max-age=${MISSING_COMIC_CACHE_TTL}`);
+    ctx.waitUntil(cache.put(cacheKey, missing.clone()));
+    return withCors(request, missing, false, allowedOrigins);
+  };
   if (upstreamResponse.status === 404) {
-    return withCors(request, jsonResponse({ error: 'Comic not found' }, 404), false, allowedOrigins);
+    await upstreamResponse.body?.cancel();
+    return missingComic();
   }
   if (upstreamResponse.status === 429) {
-    const limited = jsonResponse({ error: 'Upstream rate limited' }, 429);
-    const retryAfter = upstreamResponse.headers.get('retry-after');
-    if (retryAfter) limited.headers.set('retry-after', retryAfter);
-    await upstreamResponse.body?.cancel();
-    return withCors(request, limited, false, allowedOrigins);
+    return withCors(request, upstreamResponse, false, allowedOrigins);
   }
   if (!upstreamResponse.ok) {
     return withCors(request, jsonResponse({ error: 'Upstream fetch failed' }, 502), false, allowedOrigins);
   }
 
-  const html = await upstreamResponse.text();
+  const body = await readComicBody(upstreamResponse);
+  if (body === null) {
+    return withCors(request, jsonResponse({ error: 'Upstream response too large' }, 413), false, allowedOrigins);
+  }
+  const html = new TextDecoder().decode(body);
   if (html.includes('error404')) {
-    return withCors(request, jsonResponse({ error: 'Comic not found' }, 404), false, allowedOrigins);
+    return missingComic();
   }
   const imageUrl = extractTrustedComicImageUrl(html);
   if (!imageUrl) {
@@ -222,8 +343,9 @@ async function handleComicMetadata(request, allowedHosts, allowedOrigins, ctx) {
   }
 
   const metadata = jsonResponse({ date, imageUrl }, 200);
-  metadata.headers.set('cache-control', `public, max-age=${HTML_CACHE_TTL}`);
-  if (request.method === 'GET' && !bypassCache) ctx.waitUntil(cache.put(cacheKey, metadata.clone()));
+  const publicPage = isPublicComicResponse(upstreamResponse);
+  metadata.headers.set('cache-control', publicPage ? `public, max-age=${getCacheTtl(pageUrl)}` : 'no-store');
+  if (publicPage) ctx.waitUntil(cache.put(cacheKey, metadata.clone()));
   return withCors(request, metadata, false, allowedOrigins);
 }
 
@@ -295,7 +417,7 @@ async function fetchAllowedUpstream(initialUrl, request, allowedHosts) {
       cf: {
         cacheEverything: request.method === 'GET',
         cacheTtlByStatus: {
-          '200-299': getCacheTtl(currentUrl),
+          '200-299': isComicResource(currentUrl) ? -1 : getCacheTtl(currentUrl),
           '300-399': 0,
           '400-599': -1
         }
@@ -440,7 +562,6 @@ function sanitizeUpstreamResponse(upstreamResponse) {
 
   headers.set('x-proxy-by', 'dirkjanapp-corsproxy');
   headers.set('x-proxy-target', upstreamResponse.url);
-  headers.set('vary', 'Origin');
 
   return new Response(upstreamResponse.body, {
     status: upstreamResponse.status,
@@ -453,6 +574,8 @@ function getCacheTtl(targetUrl) {
   const pathname = targetUrl.pathname.toLowerCase();
 
   if (pathname.includes('/cartoon/')) {
+    const date = pathname.match(/\/cartoon\/(\d{4})(\d{2})(\d{2})/)?.slice(1).join('-');
+    if (date && Date.parse(date) < Date.now() - ARCHIVE_AGE_MS) return IMAGE_CACHE_TTL;
     return HTML_CACHE_TTL;
   }
 
@@ -466,6 +589,11 @@ function getCacheTtl(targetUrl) {
 function withCors(request, response, cacheHit = false, allowedOrigins = new Set()) {
   const headers = new Headers(response.headers);
   const corsHeaders = buildCorsHeaders(request, allowedOrigins);
+  headers.delete('access-control-allow-origin');
+  const vary = headers.get('vary');
+  if (!vary?.split(',').some(value => value.trim().toLowerCase() === 'origin')) {
+    headers.set('vary', vary ? `${vary}, Origin` : 'Origin');
+  }
 
   for (const [key, value] of corsHeaders.entries()) {
     headers.set(key, value);
@@ -473,7 +601,7 @@ function withCors(request, response, cacheHit = false, allowedOrigins = new Set(
 
   headers.set('x-proxy-cache', cacheHit ? 'HIT' : 'MISS');
 
-  return new Response(response.body, {
+  return new Response(request.method === 'HEAD' ? null : response.body, {
     status: response.status,
     statusText: response.statusText,
     headers
